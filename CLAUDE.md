@@ -27,4 +27,5 @@ One place for: who's coming, the itinerary, shared expenses, and a
   every balance sums to exactly zero (leftover cents from a split go to the first people in it).
 
 ## Roadmap
-See `docs/ROADMAP.md`.
+See `docs/ROADMAP.md`. Outside APIs we plan to use (and why): `docs/API-RESEARCH.md`.
+API keys never go in `app/` — secret-key calls go through Supabase Edge Functions.
