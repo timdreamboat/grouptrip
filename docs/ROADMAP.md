@@ -10,15 +10,14 @@
 - Share a trip by link (anyone with the link can view/edit — no accounts yet)
 - Publish `app/` on GitHub Pages
 
-## v1.5 — outside services (see docs/API-RESEARCH.md)
-- Flights: enter flight number + date → auto-fill airports/times (AeroDataBox), arrivals board
-- Place search + map for itinerary (Google Places, Leaflet/OSM)
-- Restaurant "Reserve" buttons via booking links (OpenTable/Resy partner APIs are invite-only)
-- Venmo / PayPal.me pay buttons on Settle up
-- Weather (Open-Meteo), calendar export (.ics), activities (Viator)
+## v1.5 — embedded connections (see docs/API-RESEARCH.md)
+- Flights: flight number + date → embedded live flight map (adsb.fi) + FlightAware link
+- Restaurants: OpenTable booking embedded in the itinerary item; Resy as a link
+- Map (OpenStreetMap/Google embed), weather (Windy embed), shared Google Calendar embed
+- Pay-back buttons open Venmo / PayPal
 
 ## v2 — nicer splitting
-- Uneven splits (by amount / by shares), multiple currencies (Frankfurter rates)
+- Uneven splits (by amount / by shares), multiple currencies
 - Mark payments as settled
 - Categories and a spending summary
 
