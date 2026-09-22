@@ -84,3 +84,31 @@ ul.list li:last-child { border-bottom: 0; }
 a.trip { color: inherit; text-decoration: none; display: block; }
 .day { font-weight: 600; margin: 14px 0 4px; }
 .day:first-child { margin-top: 0; }
+
+/* ---------- trip header, notes ---------- */
+.trip-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.note { background: var(--card); border: 1px dashed var(--line); border-radius: 8px; padding: 8px 12px; color: var(--muted); font-size: .9rem; }
+
+/* ---------- flights & itinerary items ---------- */
+.flight, .item { padding: 12px 0; border-bottom: 1px solid var(--line); }
+.flight:last-of-type, .item:last-child { border-bottom: 0; }
+.flight-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.inline { display: flex; align-items: center; gap: 8px; color: var(--text); }
+.inline input { width: auto; }
+.pay { display: flex; align-items: center; gap: 10px; }
+
+/* ---------- buttons & links ---------- */
+button.small { padding: 6px 12px; font-size: .9rem; }
+.btn {
+  display: inline-block; font-size: .9rem; padding: 6px 12px; border-radius: 8px;
+  text-decoration: none; white-space: nowrap;
+}
+.ghost-btn { border: 1px solid var(--line); color: var(--text); background: transparent; }
+.ghost-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ---------- embedded partner sites ---------- */
+.embed-slot { margin-top: 10px; }
+iframe.embed {
+  display: block; width: 100%; border: 1px solid var(--line); border-radius: 10px; background: #fff;
+}

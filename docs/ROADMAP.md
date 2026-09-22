@@ -5,16 +5,18 @@
 - Balances and minimal settle-up payments
 - Saves in the browser only
 
-## v1 — share with the group
+## v1 — share with the group (built; waiting on the Supabase project)
 - Connect Supabase (free tier) using `supabase/schema.sql`
 - Share a trip by link (anyone with the link can view/edit — no accounts yet)
 - Publish `app/` on GitHub Pages
 
 ## v1.5 — embedded connections (see docs/API-RESEARCH.md)
-- Flights: flight number + date → embedded live flight map (adsb.fi) + FlightAware link
-- Restaurants: OpenTable booking embedded in the itinerary item; Resy as a link
-- Map (OpenStreetMap/Google embed), weather (Windy embed), shared Google Calendar embed
-- Pay-back buttons open Venmo / PayPal
+- ✅ Flights tab: arrivals board, embedded live flight map (adsb.fi), FlightAware link
+- ✅ Automatic flight times (AeroDataBox via Edge Function; needs key)
+- ✅ OpenTable booking embedded in itinerary items; other booking sites as links
+- ✅ Embedded maps for the destination and each place
+- ✅ Venmo buttons on Settle up
+- Next: weather (Windy embed), shared Google Calendar embed
 
 ## v2 — nicer splitting
 - Uneven splits (by amount / by shares), multiple currencies

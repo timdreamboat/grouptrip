@@ -1,13 +1,22 @@
 # GroupTrip
 
-Plan a trip with friends and split the costs.
+Plan a trip with friends and split the costs, all in one place.
 
-- **People** — who's on the trip
-- **Itinerary** — what's happening each day
-- **Expenses** — who paid, and who it was for
-- **Settle up** — the fewest payments to square everyone up
+- **People**: who's on the trip
+- **Flights**: everyone's flight, sorted by who lands first, with a live flight map
+- **Itinerary**: plans by day, with maps and OpenTable booking built in
+- **Expenses**: who paid, and who it was for
+- **Settle up**: the fewest payments to square everyone up, with Venmo buttons
+
+Partner sites (OpenTable, maps, flight tracking) show up inside GroupTrip as
+their own pages. GroupTrip doesn't copy their data. See `docs/API-RESEARCH.md`.
 
 ## Try it
 Run `python3 -m http.server 8080 -d app` and open http://localhost:8080.
-Data is saved in that browser for now
-(see `docs/ROADMAP.md` for the plan to share trips between people).
+
+## Turning on sharing (Supabase)
+1. Create a free Supabase project named `grouptrip`.
+2. Run `supabase/schema.sql` in it (Claude does this for you).
+3. Put the project URL and publishable key in `app/config.js`.
+4. Optional, for automatic flight times: deploy `supabase/functions/flight-lookup`
+   and set the `AERODATABOX_KEY` secret (a RapidAPI key subscribed to AeroDataBox).
