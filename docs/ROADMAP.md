@@ -12,7 +12,7 @@
 
 ## v1.5 — embedded connections (see docs/API-RESEARCH.md)
 - ✅ Flights tab: arrivals board, embedded live flight map (adsb.fi), FlightAware link
-- ✅ Automatic flight times (AeroDataBox via Edge Function; needs key)
+- ✅ Automatic flight times (AeroDataBox via Edge Function, key set 2026-09-22)
 - ✅ OpenTable booking embedded in itinerary items; other booking sites as links
 - ✅ Embedded maps for the destination and each place
 - ✅ Venmo buttons on Settle up

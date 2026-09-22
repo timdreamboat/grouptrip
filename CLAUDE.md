@@ -34,8 +34,8 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
   `supabase/schema.sql` (the Supabase advisor warnings about public
   SECURITY DEFINER functions are expected — that IS the access model).
   Keep `supabase/schema.sql` in sync with every migration.
-- Edge Function `flight-lookup` is deployed; it needs the `AERODATABOX_KEY`
-  secret before it returns data.
+- Edge Function `flight-lookup` is deployed and working; its `AERODATABOX_KEY`
+  secret (RapidAPI, AeroDataBox free Basic plan) is set in the Supabase dashboard.
 - Money is stored in integer cents everywhere. Never use floats for totals.
 
 ## Standing conventions

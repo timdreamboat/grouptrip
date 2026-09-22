@@ -161,6 +161,7 @@ function renderTrip(trip, tab) {
             <label>Lands<input type="time" name="arrTime"></label>
           </div>
           <label class="inline"><input type="checkbox" name="nextDay"> Lands the next day</label>
+          <input type="hidden" name="arrDate">
           <div><button>Add flight</button></div>
         </form>
       </div>`;
@@ -294,8 +295,9 @@ function renderTrip(trip, tab) {
   onSubmit('#add-flight', (f) => {
     if (!embed.parseFlight(f.get('flightNumber'))) return alert('Enter a flight number like "UA 1234".');
     const date = f.get('date');
-    let arrDate = '';
-    if (f.get('nextDay')) {
+    // A looked-up landing date wins (some flights land two days later).
+    let arrDate = f.get('arrDate') || '';
+    if (!arrDate && f.get('nextDay')) {
       const d = new Date(date + 'T00:00Z'); d.setUTCDate(d.getUTCDate() + 1);
       arrDate = d.toISOString().slice(0, 10);
     }
@@ -316,9 +318,16 @@ function renderTrip(trip, tab) {
       const r = await store.lookupFlight(p.iata, form.elements.date.value);
       for (const k of ['depAirport', 'depTime', 'arrAirport', 'arrTime']) form.elements[k].value = r[k] || '';
       form.elements.nextDay.checked = Boolean(r.arrDate);
+      form.elements.arrDate.value = r.arrDate || '';
     } catch (err) { alert(err.message); }
     lookup.textContent = 'Fill in times automatically';
   };
+
+  // Typing over looked-up details means the looked-up landing date no longer applies.
+  const flightForm = view.querySelector('#add-flight');
+  if (flightForm) for (const k of ['flightNumber', 'date', 'nextDay']) {
+    flightForm.elements[k].addEventListener('change', () => { flightForm.elements.arrDate.value = ''; });
+  }
 
   onSubmit('#add-item', (f) => {
     const ot = f.get('opentable').trim();
