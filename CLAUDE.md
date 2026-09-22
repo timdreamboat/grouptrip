@@ -17,6 +17,11 @@ into the best view for the whole group. If a site blocks embedding, show a
 button that opens it in a new tab. Never scrape, never re-implement a partner's
 feature. `docs/API-RESEARCH.md` lists which sites embed (tested).
 
+Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
+1. Flight times: look up scheduled departure/arrival from the flight number
+   (AeroDataBox via a Supabase Edge Function; key never in `app/`).
+2. Expense splitting and settle-up math (`app/money.js`).
+
 ## Architecture
 - `app/` — no-build static PWA (plain HTML/CSS/JS, no framework, no npm).
   Open `app/index.html` directly or serve the folder; will be hosted on
