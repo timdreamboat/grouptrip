@@ -11,7 +11,10 @@ Plan a trip with friends and split the costs, all in one place.
 Partner sites (OpenTable, maps, flight tracking) show up inside GroupTrip as
 their own pages. GroupTrip doesn't copy their data. See `docs/API-RESEARCH.md`.
 
-## Try it
+## Live app
+https://timdreamboat.github.io/grouptrip/ (published from `app/` on every push to main)
+
+## Try it locally
 Run `python3 -m http.server 8080 -d app` and open http://localhost:8080.
 
 ## Turning on sharing (Supabase)
