@@ -26,11 +26,16 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
 - `app/` — no-build static PWA (plain HTML/CSS/JS, no framework, no npm).
   Open `app/index.html` directly or serve the folder; will be hosted on
   GitHub Pages.
-- Data: **v0 stores everything in the browser (localStorage)** so it works
-  with zero setup. `app/store.js` is the only file that touches storage —
-  swapping to Supabase later means rewriting that one file.
-- `supabase/schema.sql` — the planned shared database (trips, members,
-  itinerary items, expenses, expense splits). Not connected yet.
+- Data: Supabase project `grouptrip` (ref fnedxcktddvioxseogng, ca-central-1,
+  free tier). `app/store.js` is the only file that touches storage; it falls
+  back to browser-only storage if `app/config.js` is emptied.
+- Access = share link. No accounts. Tables have RLS on with no policies and
+  are revoked from anon; everything goes through share-code functions in
+  `supabase/schema.sql` (the Supabase advisor warnings about public
+  SECURITY DEFINER functions are expected — that IS the access model).
+  Keep `supabase/schema.sql` in sync with every migration.
+- Edge Function `flight-lookup` is deployed; it needs the `AERODATABOX_KEY`
+  secret before it returns data.
 - Money is stored in integer cents everywhere. Never use floats for totals.
 
 ## Standing conventions

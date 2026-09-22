@@ -56,14 +56,14 @@ create table expenses (
   trip_id      uuid not null references trips(id) on delete cascade,
   description  text not null check (length(description) between 1 and 200),
   amount_cents integer not null check (amount_cents > 0),
-  paid_by      uuid not null references members(id),
+  paid_by      uuid not null references members(id) on delete cascade,
   spent_on     date,
   created_at   timestamptz not null default now()
 );
 
 create table expense_splits (
   expense_id  uuid not null references expenses(id) on delete cascade,
-  member_id   uuid not null references members(id),
+  member_id   uuid not null references members(id) on delete cascade,
   share_cents integer not null check (share_cents >= 0),
   primary key (expense_id, member_id)
 );
