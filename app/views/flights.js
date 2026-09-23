@@ -70,8 +70,9 @@ export function render(el, ctx) {
 
   el.onclick = async (e) => {
     if (await handleStayClick(e, ctx)) return;
-    const t = e.target.closest('[data-action],[data-add-for],[data-live],[data-del]');
+    const t = e.target.closest('[data-action],[data-add-for],[data-live],[data-del],[data-edit-flight]');
     if (!t) return;
+    if (t.dataset.editFlight) return openAddFlight(ctx, null, trip.flights.find((x) => x.id === t.dataset.editFlight));
     if (t.dataset.action === 'add') return openAddFlight(ctx);
     if (t.dataset.addFor) return openAddFlight(ctx, t.dataset.addFor);
     if (t.dataset.live) {
@@ -111,15 +112,18 @@ function pass(f, { trip, isOrg }) {
       <button class="btn btn-xs btn-secondary" data-live="${f.id}">${icon('radar')}Live map</button>
       <a class="btn btn-xs btn-ghost" href="${esc(embed.flightAwareLink(p?.callsign ?? f.flightNumber))}" target="_blank" rel="noopener">FlightAware ${icon('external')}</a>
       <span class="spacer"></span>
-      ${mine || isOrg ? `<button class="btn btn-icon btn-xs btn-ghost" style="width:30px" data-del="${f.id}" aria-label="Remove flight">${icon('trash')}</button>` : ''}
+      ${mine || isOrg ? `<button class="btn btn-icon btn-xs btn-ghost" style="width:30px" data-edit-flight="${f.id}" aria-label="Edit flight">${icon('pencil')}</button>
+        <button class="btn btn-icon btn-xs btn-ghost" style="width:30px" data-del="${f.id}" aria-label="Remove flight">${icon('trash')}</button>` : ''}
     </div>
   </article>`;
 }
 
 // Add a flight: number + date → we look up the rest, then confirm.
-export function openAddFlight(ctx, forMemberId) {
+// Add a flight, or edit one (pass the flight).
+export function openAddFlight(ctx, forMemberId, flight = null) {
   const { trip, isOrg } = ctx;
-  const who = forMemberId || trip.me.id;
+  const who = flight?.memberId || forMemberId || trip.me.id;
+  const v = (k) => esc(flight?.[k] ?? '');
   const whoOptions = isOrg
     ? `<div class="field"><span>Whose flight?</span><div class="picks">${going(trip).concat(trip.members.filter((m) => m.rsvp !== 'going' && m.rsvp !== 'declined'))
         .filter((m, i, a) => a.findIndex((x) => x.id === m.id) === i)
@@ -128,28 +132,28 @@ export function openAddFlight(ctx, forMemberId) {
     : `<input type="hidden" name="memberId" value="${who}">`;
 
   sheet({
-    title: who === trip.me.id && !isOrg ? 'Add your flight' : 'Add a flight',
+    title: flight ? 'Edit flight' : who === trip.me.id && !isOrg ? 'Add your flight' : 'Add a flight',
     body: `
       <form class="form" id="flight-form">
         ${whoOptions}
         <div class="grid-2">
-          <label class="field"><span>Flight number</span><input name="flightNumber" required placeholder="UA 1234" autocomplete="off" autocapitalize="characters"></label>
-          <label class="field"><span>Date</span><input type="date" name="date" required value="${esc(trip.startDate || '')}"></label>
+          <label class="field"><span>Flight number</span><input name="flightNumber" required placeholder="UA 1234" autocomplete="off" autocapitalize="characters" value="${v('flightNumber')}"></label>
+          <label class="field"><span>Date</span><input type="date" name="date" required value="${flight ? v('date') : esc(trip.startDate || '')}"></label>
         </div>
         <button type="button" class="btn btn-secondary btn-block" data-lookup>${icon('search')}Find my flight</button>
         <div id="preview"></div>
-        <details class="more" id="manual">
+        <details class="more" id="manual" ${flight ? 'open' : ''}>
           <summary>Enter times myself</summary>
           <div class="grid-4">
-            <label class="field"><span>From</span><input name="depAirport" maxlength="4" placeholder="SFO" autocapitalize="characters"></label>
-            <label class="field"><span>Departs</span><input type="time" name="depTime"></label>
-            <label class="field"><span>To</span><input name="arrAirport" maxlength="4" placeholder="RNO" autocapitalize="characters"></label>
-            <label class="field"><span>Lands</span><input type="time" name="arrTime"></label>
+            <label class="field"><span>From</span><input name="depAirport" maxlength="4" placeholder="SFO" autocapitalize="characters" value="${v('depAirport')}"></label>
+            <label class="field"><span>Departs</span><input type="time" name="depTime" value="${v('depTime')}"></label>
+            <label class="field"><span>To</span><input name="arrAirport" maxlength="4" placeholder="RNO" autocapitalize="characters" value="${v('arrAirport')}"></label>
+            <label class="field"><span>Lands</span><input type="time" name="arrTime" value="${v('arrTime')}"></label>
           </div>
-          <label class="field" style="margin-top:12px"><span>Landing date (if different)</span><input type="date" name="arrDate"></label>
+          <label class="field" style="margin-top:12px"><span>Landing date (if different)</span><input type="date" name="arrDate" value="${v('arrDate')}"></label>
         </details>
       </form>`,
-    foot: `<button class="btn btn-primary btn-lg" form="flight-form">Save flight</button>`,
+    foot: `<button class="btn btn-primary btn-lg" form="flight-form">${flight ? 'Save changes' : 'Save flight'}</button>`,
     onMount(dlg, close) {
       const form = dlg.querySelector('#flight-form');
       const preview = dlg.querySelector('#preview');
@@ -174,12 +178,14 @@ export function openAddFlight(ctx, forMemberId) {
         const p = embed.parseFlight(form.flightNumber.value);
         if (!p) return toast('Enter a flight number like "UA 1234"', { error: true });
         const f = Object.fromEntries(new FormData(form));
-        const ok = await busy(dlg.querySelector('.sheet-foot .btn'), () => store.addFlight(trip.id, {
+        const data = {
           memberId: f.memberId, flightNumber: p.iata, date: f.date,
           depAirport: f.depAirport.trim(), depTime: f.depTime, arrAirport: f.arrAirport.trim(), arrTime: f.arrTime,
           arrDate: f.arrDate && f.arrDate !== f.date ? f.arrDate : '',
-        }));
-        if (ok) { close(); ctx.refresh('Flight added'); }
+        };
+        const ok = await busy(dlg.querySelector('.sheet-foot .btn'),
+          () => (flight ? store.updateFlight(trip.id, flight.id, data) : store.addFlight(trip.id, data)));
+        if (ok) { close(); ctx.refresh(flight ? 'Flight updated' : 'Flight added'); }
       };
       setTimeout(() => form.flightNumber.focus(), 50);
     },

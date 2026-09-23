@@ -69,7 +69,7 @@ export function render(el, ctx) {
 
   el.onclick = async (e) => {
     if (await handleStayClick(e, ctx)) return;
-    const t = e.target.closest('[data-action],[data-jump],[data-ot],[data-map],[data-del]');
+    const t = e.target.closest('[data-action],[data-jump],[data-ot],[data-map],[data-del],[data-edit]');
     if (!t) return;
     if (t.dataset.jump) {
       e.preventDefault();
@@ -81,7 +81,8 @@ export function render(el, ctx) {
     }
     if (t.dataset.action === 'add') return openAddItem(ctx);
     if (t.dataset.action === 'sync') return openSync(ctx);
-    const it = trip.itinerary.find((x) => x.id === (t.dataset.ot || t.dataset.map || t.dataset.del));
+    const it = trip.itinerary.find((x) => x.id === (t.dataset.ot || t.dataset.map || t.dataset.del || t.dataset.edit));
+    if (t.dataset.edit) return openAddItem(ctx, null, { item: it });
     if (t.dataset.ot) {
       return embedSheet(`Reserve · ${it.title}`, embed.openTableEmbed(it.opentableRid,
         { covers: Math.max(going(trip).length, 1), day: it.day, time: it.time }));
@@ -164,7 +165,8 @@ function item(it, { isOrg }, pinNo = 0) {
           ${it.place ? `<div class="place">${icon('pin')}${esc(it.place)}</div>` : ''}
           ${it.notes ? `<div class="small muted" style="margin-top:4px">${esc(it.notes)}</div>` : ''}
         </div>
-        ${isOrg ? `<button class="btn btn-icon btn-xs btn-ghost" style="width:30px" data-del="${it.id}" aria-label="Remove">${icon('trash')}</button>` : ''}
+        ${isOrg ? `<button class="btn btn-icon btn-xs btn-ghost" style="width:30px" data-edit="${it.id}" aria-label="Edit">${icon('pencil')}</button>
+          <button class="btn btn-icon btn-xs btn-ghost" style="width:30px" data-del="${it.id}" aria-label="Remove">${icon('trash')}</button>` : ''}
       </div>
       ${it.opentableRid || it.place || it.bookingUrl ? `<div class="tl-actions">
         ${it.opentableRid ? `<button class="btn btn-sm btn-primary" data-ot="${it.id}">${icon('utensils')}Reserve a table</button>` : ''}
@@ -175,37 +177,41 @@ function item(it, { isOrg }, pinNo = 0) {
   </div>`;
 }
 
+// Add a plan, or edit one (preset.item). preset.title pre-fills a new plan.
 export function openAddItem(ctx, day, preset = {}) {
   const { trip } = ctx;
+  const it = preset.item;
+  const v = (k) => esc(it?.[k] ?? '');
   sheet({
-    title: 'Add a plan',
+    title: it ? 'Edit plan' : 'Add a plan',
     body: `
       <form class="form" id="item-form">
-        <label class="field"><span>What's the plan?</span><input name="title" required maxlength="200" placeholder="Dinner at the lake house" value="${esc(preset.title || '')}"></label>
+        <label class="field"><span>What's the plan?</span><input name="title" required maxlength="200" placeholder="Dinner at the lake house" value="${esc(it?.title ?? preset.title ?? '')}"></label>
         <div class="grid-2">
-          <label class="field"><span>Day</span><input type="date" name="day" value="${esc(day || trip.startDate || '')}"></label>
-          <label class="field"><span>Time</span><input type="time" name="time"></label>
+          <label class="field"><span>Day</span><input type="date" name="day" value="${it ? v('day') : esc(day || trip.startDate || '')}"></label>
+          <label class="field"><span>Time</span><input type="time" name="time" value="${v('time')}"></label>
         </div>
-        <label class="field"><span>Place</span><input name="place" placeholder="Restaurant, park, or an address" autocomplete="off"></label>
+        <label class="field"><span>Place</span><input name="place" placeholder="Restaurant, park, or an address" autocomplete="off" value="${v('place')}"></label>
         <div class="place-status" id="place-status" aria-live="polite"></div>
-        <label class="field"><span>Notes</span><input name="notes" placeholder="Reservation under Tim, dress code…"></label>
-        <details class="more">
+        <label class="field"><span>Notes</span><input name="notes" placeholder="Reservation under Tim, dress code…" value="${v('notes')}"></label>
+        <details class="more" ${it?.opentableRid || it?.bookingUrl ? 'open' : ''}>
           <summary>${icon('utensils')} Booking — OpenTable or a link</summary>
           <div class="form">
             <label class="field"><span>OpenTable link or restaurant ID</span>
-              <input name="opentable" placeholder="https://www.opentable.com/restref/client/?rid=1779"></label>
+              <input name="opentable" placeholder="https://www.opentable.com/restref/client/?rid=1779" value="${esc(it?.opentableRid ?? '')}"></label>
             <p class="hint">With an OpenTable ID, everyone can book right inside the trip.
               <a href="${esc(embed.openTableSearch(trip.destination))}" target="_blank" rel="noopener">Search OpenTable ↗</a></p>
-            <label class="field"><span>Other booking link</span><input name="bookingUrl" type="url" placeholder="Resy, tour, hotel…"></label>
+            <label class="field"><span>Other booking link</span><input name="bookingUrl" type="url" placeholder="Resy, tour, hotel…" value="${v('bookingUrl')}"></label>
           </div>
         </details>
       </form>`,
-    foot: `<button class="btn btn-primary btn-lg" form="item-form">Add to plan</button>`,
+    foot: `<button class="btn btn-primary btn-lg" form="item-form">${it ? 'Save changes' : 'Add to plan'}</button>`,
     onMount(dlg, close) {
       const form = dlg.querySelector('#item-form');
       const status = dlg.querySelector('#place-status');
       // Look the place up as they type, so they know whether it gets a pin.
-      let found = { q: '', hit: null };
+      // Editing without changing the place keeps its existing pin.
+      let found = it?.place ? { q: it.place, hit: it.lat != null ? { lat: it.lat, lon: it.lon } : null } : { q: '', hit: null };
       let timer;
       const lookup = async (q) => {
         if (!q) { found = { q, hit: null }; status.className = 'place-status'; status.textContent = ''; return found; }
@@ -244,12 +250,16 @@ export function openAddItem(ctx, day, preset = {}) {
         const ok = await busy(dlg.querySelector('.sheet-foot .btn'), async () => {
           const place = f.place.trim();
           const { hit } = place && found.q !== place ? await lookup(place) : found;
-          return store.addItem(trip.id, {
+          const item = {
             title: f.title.trim(), day: f.day, time: f.time, place, notes: f.notes.trim(),
-            opentableRid: rid ?? '', bookingUrl, lat: hit?.lat ?? '', lon: hit?.lon ?? '',
-          });
+            opentableRid: rid ?? '', bookingUrl, lat: place ? hit?.lat ?? '' : '', lon: place ? hit?.lon ?? '' : '',
+          };
+          return it ? store.updateItem(trip.id, it.id, item) : store.addItem(trip.id, item);
         });
-        if (ok) { close(); ctx.refresh(found.hit || (!hasGoogleKey && f.place.trim()) ? 'Added to the plan and the map' : 'Added to the plan'); }
+        if (ok) {
+          close();
+          ctx.refresh(it ? 'Plan updated' : found.hit || (!hasGoogleKey && f.place.trim()) ? 'Added to the plan and the map' : 'Added to the plan');
+        }
       };
       setTimeout(() => form.elements.title.focus(), 50);
     },

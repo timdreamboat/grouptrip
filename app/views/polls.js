@@ -84,7 +84,8 @@ export function pollCard(p, ctx) {
     ${canAdd || canManage ? `<div class="tl-actions">
       ${canAdd ? `<button class="btn btn-xs btn-secondary" data-add-option="${p.id}">${icon('plus')}Add option</button>` : ''}
       <span style="flex:1"></span>
-      ${canManage ? `<button class="btn btn-xs btn-ghost" data-close="${p.id}" data-closed="${!p.closed}">${p.closed ? 'Reopen' : 'Close poll'}</button>
+      ${canManage ? `<button class="btn btn-icon btn-xs btn-ghost" style="width:30px" data-edit-poll="${p.id}" aria-label="Edit poll">${icon('pencil')}</button>
+        <button class="btn btn-xs btn-ghost" data-close="${p.id}" data-closed="${!p.closed}">${p.closed ? 'Reopen' : 'Close poll'}</button>
         <button class="btn btn-icon btn-xs btn-ghost" style="width:30px" data-del-poll="${p.id}" aria-label="Delete poll">${icon('trash')}</button>` : ''}
     </div>` : ''}
   </article>`;
@@ -99,13 +100,14 @@ function lockIn(p, o) {
 }
 
 export async function handlePollClick(e, ctx) {
-  const t = e.target.closest('[data-action],[data-template],[data-vote],[data-add-option],[data-close],[data-del-poll],[data-lock-dates],[data-lock-plan]');
+  const t = e.target.closest('[data-action],[data-template],[data-vote],[data-add-option],[data-close],[data-del-poll],[data-lock-dates],[data-lock-plan],[data-edit-poll]');
   if (!t) return false;
   const { trip } = ctx;
   const pollOf = (optId) => trip.polls.find((p) => p.options.some((o) => o.id === optId));
   const optOf = (optId) => pollOf(optId)?.options.find((o) => o.id === optId);
 
   if (t.dataset.action === 'new') openNewPoll(ctx);
+  else if (t.dataset.editPoll) openEditPoll(ctx, trip.polls.find((p) => p.id === t.dataset.editPoll));
   else if (t.dataset.template) openNewPoll(ctx, TEMPLATES[Number(t.dataset.template)]);
   else if (t.dataset.vote) {
     t.classList.toggle('on', t.dataset.on === 'true'); // feel instant
@@ -211,6 +213,44 @@ function openAddOption(ctx, poll) {
         if (ok) { close(); ctx.refresh('Option added'); }
       };
       setTimeout(() => form.querySelector('input').focus(), 50);
+    },
+  });
+}
+
+// Reword the question or remove options (votes on a removed option go with it).
+function openEditPoll(ctx, poll) {
+  const { trip } = ctx;
+  sheet({
+    title: 'Edit poll',
+    body: `
+      <form class="form" id="edit-poll">
+        <label class="field"><span>Question</span><input name="question" required maxlength="200" value="${esc(poll.question)}"></label>
+        <div class="field"><span>Options</span>
+          <div class="rows">${poll.options.map((o) => `
+            <div class="row" style="min-height:48px">
+              <div class="grow"><div class="title">${esc(o.label)}</div>
+                <div class="sub">${o.votes.length} vote${o.votes.length === 1 ? '' : 's'}</div></div>
+              ${poll.options.length > 2 ? `<button type="button" class="btn btn-xs btn-ghost" data-remove-opt="${o.id}">${icon('x')}Remove</button>` : ''}
+            </div>`).join('')}</div>
+          ${poll.options.length <= 2 ? '<p class="hint">A poll needs at least two options.</p>' : ''}
+        </div>
+        <button class="btn btn-primary btn-lg">Save question</button>
+      </form>`,
+    onMount(dlg, close) {
+      const form = dlg.querySelector('#edit-poll');
+      form.onsubmit = async (e) => {
+        e.preventDefault();
+        const ok = await busy(form.querySelector('.btn-primary'), () => store.updatePoll(trip.id, poll.id, form.elements.question.value.trim()));
+        if (ok) { close(); ctx.refresh('Poll updated'); }
+      };
+      dlg.querySelectorAll('[data-remove-opt]').forEach((b) => b.onclick = async () => {
+        const opt = poll.options.find((o) => o.id === b.dataset.removeOpt);
+        close();
+        const ok = await confirmSheet({ title: `Remove "${opt.label}"?`,
+          message: opt.votes.length ? `Its ${opt.votes.length} vote${opt.votes.length === 1 ? '' : 's'} will be removed too.` : 'Nobody has voted for it yet.',
+          confirm: 'Remove', danger: true });
+        if (ok) ctx.run(() => store.removePollOption(trip.id, opt.id), 'Option removed');
+      });
     },
   });
 }

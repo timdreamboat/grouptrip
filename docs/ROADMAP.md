@@ -42,6 +42,10 @@
 - ✅ Phone/desktop notifications: polls, plans, joins, expenses, dates, flights, 8am reminders
 - Email (link recovery, email updates) built but switched off — owner chose browser/app only
 
+## v2.1 — fix things (2026-09-22)
+- ✅ Edit plans, flights, stays, expenses and polls (same forms, pre-filled)
+- ✅ Organizer "Let back in": resets a person's spot so they can tap their name again
+
 ## Ideas next
 - Pins for where we're staying
 - Local time + currency on Home; photo reactions; notifications when a poll opens

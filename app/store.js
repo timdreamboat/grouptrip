@@ -120,6 +120,15 @@ export const removeMember = (code, id) => act('remove_member', code, { p_id: id 
 export const addItem = (code, item) => act('add_item', code, { p_item: item });
 export const removeItem = (code, id) => act('remove_item', code, { p_id: id });
 export const setItemLocation = (code, id, lat, lon) => act('set_item_location', code, { p_id: id, p_lat: lat, p_lon: lon });
+export const updateItem = (code, id, item) => act('update_item', code, { p_id: id, p_item: item });
+export const updateFlight = (code, id, flight) => act('update_flight', code, { p_id: id, p_flight: flight });
+export const updateStay = (code, id, stay) => act('update_stay', code, { p_id: id, p_stay: stay });
+export const updateExpense = (code, id, e) => act('update_expense', code, {
+  p_id: id, p_description: e.description, p_amount: e.amount, p_paid_by: e.paidBy, p_splits: e.splits,
+});
+export const updatePoll = (code, id, question) => act('update_poll', code, { p_poll: id, p_question: question });
+export const removePollOption = (code, optionId) => act('remove_poll_option', code, { p_option: optionId });
+export const resetMember = (code, id) => act('reset_member', code, { p_id: id });
 export const addFlight = (code, flight) => act('add_flight', code, { p_flight: flight });
 export const removeFlight = (code, id) => act('remove_flight', code, { p_id: id });
 export const addExpense = (code, e) => act('add_expense', code, {

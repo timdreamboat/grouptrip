@@ -1088,3 +1088,137 @@ begin
     email_notify = case when p_me ? 'emailNotify' then coalesce((p_me->>'emailNotify')::boolean, false) else email_notify end
   where id = a.id;
 end $$;
+
+-- ======================================================================
+-- v7 (2026-09-22): editing, and "let them back in".
+-- ======================================================================
+create function update_item(p_code text, p_token text, p_id uuid, p_item jsonb) returns void
+language plpgsql security definer set search_path = public as $$
+declare o members := _organizer(p_code, p_token);
+begin
+  update itinerary_items set
+    day = nullif(p_item->>'day', '')::date, time = nullif(p_item->>'time', ''), title = trim(p_item->>'title'),
+    notes = nullif(p_item->>'notes', ''), place = nullif(p_item->>'place', ''),
+    opentable_rid = nullif(p_item->>'opentableRid', '')::integer, booking_url = nullif(p_item->>'bookingUrl', ''),
+    lat = nullif(p_item->>'lat', '')::double precision, lon = nullif(p_item->>'lon', '')::double precision
+  where id = p_id and trip_id = o.trip_id;
+  if not found then raise exception 'Plan not found'; end if;
+end $$;
+
+create function update_flight(p_code text, p_token text, p_id uuid, p_flight jsonb) returns void
+language plpgsql security definer set search_path = public as $$
+declare a members := _actor(p_code, p_token); f flights; who uuid;
+begin
+  select * into f from flights where id = p_id and trip_id = a.trip_id;
+  if f.id is null or (f.member_id <> a.id and not a.is_organizer) then raise exception 'You can only edit your own flight'; end if;
+  who := coalesce(nullif(p_flight->>'memberId', '')::uuid, f.member_id);
+  if who <> f.member_id and not a.is_organizer then raise exception 'You can only edit your own flight'; end if;
+  if not exists (select 1 from members where id = who and trip_id = a.trip_id) then raise exception 'Unknown person'; end if;
+  update flights set
+    member_id = who, flight_number = upper(trim(p_flight->>'flightNumber')), flight_date = (p_flight->>'date')::date,
+    dep_airport = nullif(upper(p_flight->>'depAirport'), ''), dep_time = nullif(p_flight->>'depTime', ''),
+    arr_airport = nullif(upper(p_flight->>'arrAirport'), ''), arr_time = nullif(p_flight->>'arrTime', ''),
+    arr_date = nullif(p_flight->>'arrDate', '')::date
+  where id = f.id;
+end $$;
+
+create function update_stay(p_code text, p_token text, p_id uuid, p_stay jsonb) returns void
+language plpgsql security definer set search_path = public as $$
+declare o members := _organizer(p_code, p_token);
+begin
+  update stays set
+    name = trim(p_stay->>'name'), address = nullif(trim(p_stay->>'address'), ''),
+    check_in = nullif(p_stay->>'checkIn', '')::date, check_in_time = nullif(p_stay->>'checkInTime', ''),
+    check_out = nullif(p_stay->>'checkOut', '')::date, check_out_time = nullif(p_stay->>'checkOutTime', ''),
+    booking_url = nullif(trim(p_stay->>'bookingUrl'), ''), confirmation = nullif(trim(p_stay->>'confirmation'), ''),
+    notes = nullif(trim(p_stay->>'notes'), '')
+  where id = p_id and trip_id = o.trip_id;
+  if not found then raise exception 'Place not found'; end if;
+end $$;
+
+-- Editing an expense replaces its splits without re-announcing it.
+create or replace function _on_split() returns trigger language plpgsql security definer set search_path = public as $$
+declare e expenses; payer text; cur text;
+begin
+  if current_setting('grouptrip.quiet', true) = 'on' then return null; end if;
+  select * into e from expenses where id = new.expense_id;
+  if new.member_id = e.paid_by or new.share_cents = 0 then return null; end if;
+  select name into payer from members where id = e.paid_by;
+  select currency into cur from trips where id = e.trip_id;
+  perform _notify(e.trip_id, array[new.member_id],
+    payer || ' added ' || e.description, 'Your share: ' || _money(new.share_cents, cur), 'money');
+  return null;
+end $$;
+
+create function update_expense(p_code text, p_token text, p_id uuid, p_description text, p_amount integer, p_paid_by uuid, p_splits jsonb)
+returns void language plpgsql security definer set search_path = public as $$
+declare a members := _actor(p_code, p_token); e expenses;
+begin
+  select * into e from expenses where id = p_id and trip_id = a.trip_id;
+  if e.id is null or not (e.created_by = a.id or e.paid_by = a.id or a.is_organizer) then
+    raise exception 'Only the person who added or paid this expense can edit it';
+  end if;
+  if p_amount is null or p_amount <= 0 then raise exception 'Enter an amount'; end if;
+  if (select coalesce(sum((s->>'share')::integer), -1) from jsonb_array_elements(p_splits) s) <> p_amount then
+    raise exception 'Split shares must add up to the total';
+  end if;
+  if exists (
+    select 1 from (select p_paid_by as mid union select (s->>'memberId')::uuid from jsonb_array_elements(p_splits) s) u
+    where not exists (select 1 from members m where m.id = u.mid and m.trip_id = a.trip_id)
+  ) then raise exception 'Unknown person in expense'; end if;
+  update expenses set description = trim(p_description), amount_cents = p_amount, paid_by = p_paid_by where id = e.id;
+  perform set_config('grouptrip.quiet', 'on', true);
+  delete from expense_splits where expense_id = e.id;
+  insert into expense_splits (expense_id, member_id, share_cents)
+  select e.id, (s->>'memberId')::uuid, (s->>'share')::integer from jsonb_array_elements(p_splits) s;
+  perform set_config('grouptrip.quiet', 'off', true);
+end $$;
+
+create function update_poll(p_code text, p_token text, p_poll uuid, p_question text) returns void
+language plpgsql security definer set search_path = public as $$
+declare a members := _actor(p_code, p_token);
+begin
+  update polls set question = trim(p_question)
+  where id = p_poll and trip_id = a.trip_id and (created_by = a.id or a.is_organizer);
+  if not found then raise exception 'Only the person who made this poll can edit it'; end if;
+end $$;
+
+create function remove_poll_option(p_code text, p_token text, p_option uuid) returns void
+language plpgsql security definer set search_path = public as $$
+declare a members := _actor(p_code, p_token); p polls; o poll_options;
+begin
+  select * into o from poll_options where id = p_option;
+  select * into p from polls where id = o.poll_id and trip_id = a.trip_id;
+  if p.id is null then raise exception 'Option not found'; end if;
+  if not (p.created_by = a.id or a.is_organizer or o.created_by = a.id) then
+    raise exception 'Only the person who made this poll can remove options';
+  end if;
+  if (select count(*) from poll_options where poll_id = p.id) <= 2 then raise exception 'A poll needs at least two options'; end if;
+  delete from poll_options where id = o.id;
+end $$;
+
+-- Organizer resets a person's spot: old link stops working, old device stops
+-- getting notifications, and their name waits on the invite page. Their
+-- flights, expenses and votes stay.
+create function reset_member(p_code text, p_token text, p_id uuid) returns void
+language plpgsql security definer set search_path = public as $$
+declare o members := _organizer(p_code, p_token);
+begin
+  if p_id = o.id then raise exception 'Use your private link to move to a new device'; end if;
+  update members set token = replace(gen_random_uuid()::text, '-', ''), joined_at = null
+  where id = p_id and trip_id = o.trip_id and joined_at is not null;
+  if not found then raise exception 'They haven''t joined yet — just send them the invite link'; end if;
+  delete from push_subscriptions where member_id = p_id;
+end $$;
+
+-- Coming back keeps their RSVP (only first-timers default to going).
+create or replace function claim_member(p_code text, p_member uuid) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare m members;
+begin
+  update members set joined_at = now(), rsvp = case when rsvp = 'invited' then 'going' else rsvp end
+  where id = p_member and trip_id = _trip(p_code) and joined_at is null
+  returning * into m;
+  if m.id is null then raise exception 'That name has already been claimed. Ask the organizer for help.'; end if;
+  return jsonb_build_object('memberId', m.id, 'token', m.token);
+end $$;

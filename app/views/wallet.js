@@ -71,7 +71,9 @@ export function render(el, ctx) {
                 <div class="amt ${effect > 0 ? 'pos' : effect < 0 ? 'neg' : ''}">${effect === 0 ? '—' : money(Math.abs(effect))}</div>
                 <div class="small muted">${effect > 0 ? 'you lent' : effect < 0 ? 'you owe' : 'not involved'}</div>
               </div>
-              ${canRemove ? `<button class="btn btn-icon btn-xs btn-ghost" style="width:30px" data-del="${e.id}" aria-label="Remove expense">${icon('trash')}</button>` : ''}
+              ${canRemove ? `<div style="display:flex;flex-direction:column">
+                <button class="btn btn-icon btn-xs btn-ghost" style="width:30px" data-edit="${e.id}" aria-label="Edit expense">${icon('pencil')}</button>
+                <button class="btn btn-icon btn-xs btn-ghost" style="width:30px" data-del="${e.id}" aria-label="Remove expense">${icon('trash')}</button></div>` : ''}
             </div>`;
           }).join('')}
         </div>` : `<div class="card">${emptyState('wallet', 'No expenses yet', 'Log what you paid for the group — GroupTrip works out who owes whom.',
@@ -80,9 +82,10 @@ export function render(el, ctx) {
     </div>`;
 
   el.onclick = async (e) => {
-    const t = e.target.closest('[data-action],[data-del]');
+    const t = e.target.closest('[data-action],[data-del],[data-edit]');
     if (!t) return;
     if (t.dataset.action === 'add') return openAddExpense(ctx);
+    if (t.dataset.edit) return openAddExpense(ctx, trip.expenses.find((x) => x.id === t.dataset.edit));
     if (t.dataset.del) {
       const ok = await confirmSheet({ title: 'Remove this expense?', message: 'Balances will update for everyone.', confirm: 'Remove', danger: true });
       if (ok) ctx.run(() => store.removeExpense(trip.id, t.dataset.del), 'Expense removed');
@@ -90,29 +93,33 @@ export function render(el, ctx) {
   };
 }
 
-function openAddExpense(ctx) {
+// Add an expense, or edit one (pass the expense). Splits are equal.
+function openAddExpense(ctx, exp = null) {
   const { trip } = ctx;
-  const people = trip.members.filter((m) => m.rsvp !== 'declined');
+  const inIt = (id) => exp && (exp.paidBy === id || exp.splits.some((x) => x.memberId === id));
+  const people = trip.members.filter((m) => m.rsvp !== 'declined' || inIt(m.id));
+  const payer = exp?.paidBy ?? trip.me.id;
+  const splitWith = (id) => (exp ? exp.splits.some((x) => x.memberId === id) : true);
   const symbol = new Intl.NumberFormat(undefined, { style: 'currency', currency: trip.currency }).formatToParts(0)
     .find((p) => p.type === 'currency')?.value ?? '$';
   const label = (m) => (m.id === trip.me.id ? 'Me' : firstName(m.name));
 
   sheet({
-    title: 'Add an expense',
+    title: exp ? 'Edit expense' : 'Add an expense',
     body: `
       <form class="form" id="expense-form">
         <label class="amount-input"><span>${esc(symbol)}</span>
-          <input name="amount" inputmode="decimal" placeholder="0" required autocomplete="off" aria-label="Amount"></label>
-        <label class="field"><span>What was it for?</span><input name="description" required maxlength="200" placeholder="Groceries, gas, cabin…"></label>
+          <input name="amount" inputmode="decimal" placeholder="0" required autocomplete="off" aria-label="Amount" value="${exp ? (exp.amount / 100).toFixed(2) : ''}"></label>
+        <label class="field"><span>What was it for?</span><input name="description" required maxlength="200" placeholder="Groceries, gas, cabin…" value="${esc(exp?.description ?? '')}"></label>
         <div class="field"><span>Paid by</span><div class="picks">
-          ${people.map((m) => `<label><input type="radio" name="paidBy" value="${m.id}" ${m.id === trip.me.id ? 'checked' : ''}>
+          ${people.map((m) => `<label><input type="radio" name="paidBy" value="${m.id}" ${m.id === payer ? 'checked' : ''}>
             <span class="pick">${avatar(m, 30)}${esc(label(m))}</span></label>`).join('')}</div></div>
         <div class="field"><span>Split equally between</span><div class="picks">
-          ${people.map((m) => `<label><input type="checkbox" name="split" value="${m.id}" checked>
+          ${people.map((m) => `<label><input type="checkbox" name="split" value="${m.id}" ${splitWith(m.id) ? 'checked' : ''}>
             <span class="pick">${avatar(m, 30)}${esc(label(m))}</span></label>`).join('')}</div></div>
         <p class="hint" id="each"></p>
       </form>`,
-    foot: `<button class="btn btn-primary btn-lg" form="expense-form">Add expense</button>`,
+    foot: `<button class="btn btn-primary btn-lg" form="expense-form">${exp ? 'Save changes' : 'Add expense'}</button>`,
     onMount(dlg, close) {
       const form = dlg.querySelector('#expense-form');
       const each = dlg.querySelector('#each');
@@ -129,12 +136,15 @@ function openAddExpense(ctx) {
         const splitIds = [...form.querySelectorAll('[name=split]:checked')].map((c) => c.value);
         if (amount <= 0) return toast('Enter an amount', { error: true });
         if (!splitIds.length) return toast('Pick who to split with', { error: true });
-        const ok = await busy(dlg.querySelector('.sheet-foot .btn'), () => store.addExpense(trip.id, {
+        const data = {
           description: form.elements.description.value.trim(), amount,
           paidBy: form.querySelector('[name=paidBy]:checked').value, splits: equalShares(amount, splitIds),
-        }));
-        if (ok) { close(); ctx.refresh('Expense added'); }
+        };
+        const ok = await busy(dlg.querySelector('.sheet-foot .btn'),
+          () => (exp ? store.updateExpense(trip.id, exp.id, data) : store.addExpense(trip.id, data)));
+        if (ok) { close(); ctx.refresh(exp ? 'Expense updated' : 'Expense added'); }
       };
+      update();
       setTimeout(() => form.elements.amount.focus(), 50);
     },
   });

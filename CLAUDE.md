@@ -100,6 +100,12 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
   install/push on a real phone.
 - Edge Function `flight-lookup` is deployed and working; its `AERODATABOX_KEY`
   secret (RapidAPI, AeroDataBox free Basic plan) is set in the Supabase dashboard.
+- Editing: every add form doubles as its edit form (pass the existing item).
+  Same permissions as delete. `update_expense` replaces splits with
+  `grouptrip.quiet` set so the split trigger doesn't re-notify.
+- Lost device without email: organizer's "Let back in" (`reset_member`) gives
+  the person a new token and un-joins them; they tap their name on the invite
+  link again. Their data and RSVP stay.
 - Money is stored in integer cents everywhere. Never use floats for totals.
 
 ## Design direction

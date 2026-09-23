@@ -16,7 +16,8 @@ export function stayCard(s, { isOrg }) {
         <div style="font-weight:600;font-size:17px">${esc(s.name)}</div>
         ${s.address ? `<div class="place small muted" style="display:flex;gap:6px;align-items:center;margin-top:2px">${icon('pin', 'tiny')}${esc(s.address)}</div>` : ''}
       </div>
-      ${isOrg ? `<button class="btn btn-icon btn-xs btn-ghost" style="width:30px" data-stay-del="${s.id}" aria-label="Remove stay">${icon('trash')}</button>` : ''}
+      ${isOrg ? `<button class="btn btn-icon btn-xs btn-ghost" style="width:30px" data-stay-edit="${s.id}" aria-label="Edit stay">${icon('pencil')}</button>
+        <button class="btn btn-icon btn-xs btn-ghost" style="width:30px" data-stay-del="${s.id}" aria-label="Remove stay">${icon('trash')}</button>` : ''}
     </div>
     ${s.checkIn || s.checkOut ? `
     <div class="stay-dates">
@@ -49,11 +50,12 @@ export function staysSection(ctx, { heading = true } = {}) {
 
 // Handles stay buttons anywhere inside `el`. Returns true if it handled the click.
 export async function handleStayClick(e, ctx) {
-  const t = e.target.closest('[data-stay-add],[data-stay-del],[data-stay-map],[data-stay-conf]');
+  const t = e.target.closest('[data-stay-add],[data-stay-del],[data-stay-map],[data-stay-conf],[data-stay-edit]');
   if (!t) return false;
   const { trip } = ctx;
-  const s = trip.stays.find((x) => x.id === (t.dataset.stayDel || t.dataset.stayMap || t.dataset.stayConf));
+  const s = trip.stays.find((x) => x.id === (t.dataset.stayDel || t.dataset.stayMap || t.dataset.stayConf || t.dataset.stayEdit));
   if (t.hasAttribute('data-stay-add')) openAddStay(ctx);
+  else if (t.dataset.stayEdit) openAddStay(ctx, s);
   else if (t.dataset.stayMap) embedSheet(s.name, embed.mapEmbed(s.address));
   else if (t.dataset.stayConf) copy(s.confirmation, 'Confirmation copied');
   else if (t.dataset.stayDel) {
@@ -63,33 +65,36 @@ export async function handleStayClick(e, ctx) {
   return true;
 }
 
-export function openAddStay(ctx) {
+// Add a place to stay, or edit one (pass the stay).
+export function openAddStay(ctx, stay = null) {
   const { trip } = ctx;
+  const v = (k, fallback = '') => esc(stay ? stay[k] ?? '' : fallback);
   sheet({
-    title: 'Where are you staying?',
+    title: stay ? 'Edit place' : 'Where are you staying?',
     body: `
       <form class="form" id="stay-form">
-        <label class="field"><span>Name</span><input name="name" required maxlength="200" placeholder="Aria, Airbnb on Lakeshore…"></label>
-        <label class="field"><span>Address</span><input name="address" placeholder="Street, city"></label>
+        <label class="field"><span>Name</span><input name="name" required maxlength="200" placeholder="Aria, Airbnb on Lakeshore…" value="${v('name')}"></label>
+        <label class="field"><span>Address</span><input name="address" placeholder="Street, city" value="${v('address')}"></label>
         <div class="grid-2">
-          <label class="field"><span>Check in</span><input type="date" name="checkIn" value="${esc(trip.startDate || '')}"></label>
-          <label class="field"><span>Time</span><input type="time" name="checkInTime" value="15:00"></label>
-          <label class="field"><span>Check out</span><input type="date" name="checkOut" value="${esc(trip.endDate || '')}"></label>
-          <label class="field"><span>Time</span><input type="time" name="checkOutTime" value="11:00"></label>
+          <label class="field"><span>Check in</span><input type="date" name="checkIn" value="${v('checkIn', trip.startDate || '')}"></label>
+          <label class="field"><span>Time</span><input type="time" name="checkInTime" value="${v('checkInTime', '15:00')}"></label>
+          <label class="field"><span>Check out</span><input type="date" name="checkOut" value="${v('checkOut', trip.endDate || '')}"></label>
+          <label class="field"><span>Time</span><input type="time" name="checkOutTime" value="${v('checkOutTime', '11:00')}"></label>
         </div>
-        <label class="field"><span>Confirmation number</span><input name="confirmation" autocomplete="off"></label>
-        <label class="field"><span>Booking link</span><input name="bookingUrl" type="url" placeholder="Airbnb, hotel or VRBO page"></label>
-        <label class="field"><span>Notes</span><textarea name="notes" rows="3" placeholder="Parking, which rooms, how to get the key…"></textarea></label>
+        <label class="field"><span>Confirmation number</span><input name="confirmation" autocomplete="off" value="${v('confirmation')}"></label>
+        <label class="field"><span>Booking link</span><input name="bookingUrl" type="url" placeholder="Airbnb, hotel or VRBO page" value="${v('bookingUrl')}"></label>
+        <label class="field"><span>Notes</span><textarea name="notes" rows="3" placeholder="Parking, which rooms, how to get the key…">${v('notes')}</textarea></label>
       </form>`,
-    foot: '<button class="btn btn-primary btn-lg" form="stay-form">Save place</button>',
+    foot: `<button class="btn btn-primary btn-lg" form="stay-form">${stay ? 'Save changes' : 'Save place'}</button>`,
     onMount(dlg, close) {
       const form = dlg.querySelector('#stay-form');
       form.onsubmit = async (e) => {
         e.preventDefault();
         const f = Object.fromEntries(new FormData(form));
         if (f.checkIn && f.checkOut && f.checkOut < f.checkIn) return toast('Check-out is before check-in', { error: true });
-        const ok = await busy(dlg.querySelector('.sheet-foot .btn'), () => store.addStay(trip.id, f));
-        if (ok) { close(); ctx.refresh('Place added'); }
+        const ok = await busy(dlg.querySelector('.sheet-foot .btn'),
+          () => (stay ? store.updateStay(trip.id, stay.id, f) : store.addStay(trip.id, f)));
+        if (ok) { close(); ctx.refresh(stay ? 'Place updated' : 'Place added'); }
       };
       setTimeout(() => form.elements.name.focus(), 50);
     },
