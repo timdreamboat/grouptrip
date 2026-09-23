@@ -643,3 +643,18 @@ dialog.viewer::backdrop { background: #000; }
 }
 .setting { display: flex; align-items: center; gap: 12px; padding: 12px 0; }
 .setting .grow { flex: 1; min-width: 0; }
+.map-pin.stay .shape { background: var(--text); }
+.map-pin.stay .n svg.i { width: 15px; height: 15px; color: #fff; stroke: #fff; vertical-align: 0; }
+.pin-num.stay { background: var(--text); color: var(--bg); }
+.pin-num.stay svg.i { width: 13px; height: 13px; vertical-align: 0; }
+.pin-chip.stay { display: inline-grid; place-items: center; }
+.pin-chip.stay svg.i { width: 16px; height: 16px; vertical-align: 0; }
+.pin-chip.stay.on { background: var(--text); border-color: var(--text); color: var(--bg); }
+
+/* ---------- Today ---------- */
+.today { gap: 12px; }
+.today-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 0 2px; }
+.today-head .display { font-size: 34px; }
+.today-next { background: linear-gradient(135deg, var(--accent-soft), var(--surface) 70%); border-color: color-mix(in srgb, var(--accent) 25%, var(--line)); }
+.today-title { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; margin: 4px 0 2px; }
+.today-actions { display: flex; gap: 8px; flex-wrap: wrap; }

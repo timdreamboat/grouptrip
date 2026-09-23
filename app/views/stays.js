@@ -2,6 +2,7 @@
 import { esc, icon, fmtDay, fmtTime, sheet, embedSheet, confirmSheet, busy, copy, toast, emptyState } from '../ui.js';
 import * as store from '../store.js';
 import * as embed from '../embeds.js';
+import { hasGoogleKey, googleFindPlace, stayQuery } from './tripmap.js';
 
 const nights = (a, b) => (a && b ? Math.round((new Date(`${b}T00:00`) - new Date(`${a}T00:00`)) / 86400000) : 0);
 const when = (d, t) => `<div style="font-weight:600">${esc(fmtDay(d))}</div>${t ? `<div class="small muted">${esc(fmtTime(t))}</div>` : ''}`;
@@ -92,8 +93,14 @@ export function openAddStay(ctx, stay = null) {
         e.preventDefault();
         const f = Object.fromEntries(new FormData(form));
         if (f.checkIn && f.checkOut && f.checkOut < f.checkIn) return toast('Check-out is before check-in', { error: true });
-        const ok = await busy(dlg.querySelector('.sheet-foot .btn'),
-          () => (stay ? store.updateStay(trip.id, stay.id, f) : store.addStay(trip.id, f)));
+        const ok = await busy(dlg.querySelector('.sheet-foot .btn'), async () => {
+          // Pin it on the map (with a Google key); keep the old pin if the place didn't change.
+          const same = stay && stay.name === f.name.trim() && (stay.address || '') === f.address.trim();
+          let at = same && stay.lat != null ? { lat: stay.lat, lon: stay.lon } : null;
+          if (!same && hasGoogleKey) at = await googleFindPlace(stayQuery({ name: f.name.trim(), address: f.address.trim() }, trip), trip).catch(() => null);
+          const data = { ...f, lat: at?.lat ?? '', lon: at?.lon ?? '' };
+          return stay ? store.updateStay(trip.id, stay.id, data) : store.addStay(trip.id, data);
+        });
         if (ok) { close(); ctx.refresh(stay ? 'Place updated' : 'Place added'); }
       };
       setTimeout(() => form.elements.name.focus(), 50);

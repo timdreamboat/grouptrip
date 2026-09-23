@@ -17,6 +17,24 @@ export const placeQuery = (it, trip) =>
 export const pinned = (trip) =>
   trip.itinerary.filter((i) => (hasGoogleKey ? i.lat != null && i.lon != null : Boolean(i.place)));
 
+// Where we're staying, on the map too (bed pin instead of a number).
+export const stayQuery = (st, trip) => [st.name, st.address].filter(Boolean).join(', ') || trip.destination;
+export const staysOnMap = (trip) =>
+  trip.stays.filter((st) => (hasGoogleKey ? st.lat != null && st.lon != null : Boolean(st.address || st.name)));
+
+export function stayCardHTML(st, trip) {
+  const when = (d, t) => [d && fmtDay(d), t && fmtTime(t)].filter(Boolean).join(' · ');
+  const dest = st.lat != null ? `${st.lat},${st.lon}` : encodeURIComponent(stayQuery(st, trip));
+  return `
+    <div class="pin-card">
+      <div class="pin-card-head"><span class="pin-num stay">${icon('bed', 'tiny')}</span><b>${esc(st.name)}</b></div>
+      ${st.address ? `<div class="pin-row">${icon('pin', 'tiny')}${esc(st.address)}</div>` : ''}
+      ${st.checkIn ? `<div class="pin-row">${icon('calendar', 'tiny')}In ${esc(when(st.checkIn, st.checkInTime))}${st.checkOut ? ` · Out ${esc(when(st.checkOut, st.checkOutTime))}` : ''}</div>` : ''}
+      ${st.confirmation ? `<div class="pin-notes">Confirmation: ${esc(st.confirmation)}</div>` : ''}
+      <a class="pin-link" href="https://www.google.com/maps/dir/?api=1&destination=${dest}" target="_blank" rel="noopener">Directions ${icon('external', 'tiny')}</a>
+    </div>`;
+}
+
 const embedUrl = (q, zoom = 15) => `https://maps.google.com/maps?q=${encodeURIComponent(q)}&z=${zoom}&output=embed`;
 const directions = (it, trip) => it.lat != null
   ? `https://www.google.com/maps/dir/?api=1&destination=${it.lat},${it.lon}`
@@ -64,12 +82,13 @@ let current = null; // { focus(id) }
 export async function mountTripMap(el, detailEl, trip) {
   current = null;
   const pins = pinned(trip);
-  current = hasGoogleKey ? await mountGoogle(el, trip, pins).catch(() => null) : null;
-  current ??= mountEmbed(el, detailEl, trip, pins);
+  const stays = staysOnMap(trip);
+  current = hasGoogleKey ? await mountGoogle(el, trip, pins, stays).catch(() => null) : null;
+  current ??= mountEmbed(el, detailEl, trip, pins, stays);
   return current;
 }
 
-async function mountGoogle(el, trip, pins) {
+async function mountGoogle(el, trip, pins, stays) {
   const maps = await loadGoogle();
   const { AdvancedMarkerElement } = await maps.importLibrary('marker');
   if (!el.isConnected) return null;
@@ -89,11 +108,20 @@ async function mountGoogle(el, trip, pins) {
     marker.addListener('click', () => { info.setContent(cardHTML(it, i + 1, trip)); info.open({ anchor: marker, map }); });
     markers.set(it.id, marker);
   });
-  if (pins.length > 1) {
+  stays.forEach((st) => {
+    const pin = document.createElement('div');
+    pin.className = 'map-pin stay';
+    pin.innerHTML = `<span class="shape"></span><span class="n">${icon('bed', 'tiny')}</span>`;
+    const marker = new AdvancedMarkerElement({ map, position: { lat: st.lat, lng: st.lon }, content: pin, title: st.name, zIndex: 10 });
+    marker.addListener('click', () => { info.setContent(stayCardHTML(st, trip)); info.open({ anchor: marker, map }); });
+    markers.set(st.id, marker);
+  });
+  const all = [...pins, ...stays];
+  if (all.length > 1) {
     const b = new maps.LatLngBounds();
-    pins.forEach((p) => b.extend({ lat: p.lat, lng: p.lon }));
+    all.forEach((p) => b.extend({ lat: p.lat, lng: p.lon }));
     map.fitBounds(b, 48);
-  } else if (pins.length === 1) { map.setCenter({ lat: pins[0].lat, lng: pins[0].lon }); map.setZoom(14); }
+  } else if (all.length === 1) { map.setCenter({ lat: all[0].lat, lng: all[0].lon }); map.setZoom(14); }
 
   return {
     focus(id) {
@@ -107,24 +135,28 @@ async function mountGoogle(el, trip, pins) {
   };
 }
 
-// Keyless: Google's embedded map, one place at a time.
-function mountEmbed(el, detailEl, trip, pins) {
-  const show = (it) => {
-    const n = pins.indexOf(it) + 1;
+// Keyless: Google's embedded map, one place at a time. Buttons under it
+// switch between the hotel (bed) and the plans (numbers).
+function mountEmbed(el, detailEl, trip, pins, stays) {
+  const spots = [
+    ...stays.map((st) => ({ id: st.id, stay: true, label: icon('bed', 'tiny'), title: st.name, q: stayQuery(st, trip), card: () => stayCardHTML(st, trip) })),
+    ...pins.map((it, i) => ({ id: it.id, label: String(i + 1), title: it.title, q: placeQuery(it, trip), card: () => cardHTML(it, i + 1, trip) })),
+  ];
+  const show = (spot) => {
     // Google's keyless map centers on the place but draws no marker, so we
-    // draw the plan's numbered pin at the center — and hide it once they
-    // start moving the map (it would no longer point at the place).
+    // draw ours at the center — and hide it once they start moving the map.
     el.innerHTML = `<iframe class="gmap-embed" title="Map" referrerpolicy="no-referrer-when-downgrade"
-      src="${esc(it ? embedUrl(placeQuery(it, trip)) : embedUrl(trip.destination, 11))}"></iframe>
-      ${it ? `<div class="map-pin center-pin" aria-hidden="true"><span class="shape"></span><span class="n">${n}</span></div>` : ''}`;
+      src="${esc(spot ? embedUrl(spot.q) : embedUrl(trip.destination, 11))}"></iframe>
+      ${spot ? `<div class="map-pin center-pin ${spot.stay ? 'stay' : ''}" aria-hidden="true"><span class="shape"></span><span class="n">${spot.label}</span></div>` : ''}`;
     if (!detailEl) return;
-    detailEl.innerHTML = pins.length ? `
-      <div class="pin-chips">${pins.map((p, i) => `<button class="pin-chip ${p === it ? 'on' : ''}" data-pin="${p.id}" title="${esc(p.title)}">${i + 1}</button>`).join('')}</div>
-      ${it ? `<div class="pin-detail">${cardHTML(it, n, trip)}</div>` : ''}` : '';
+    detailEl.innerHTML = spots.length ? `
+      <div class="pin-chips">${spots.map((p) => `<button class="pin-chip ${p.stay ? 'stay' : ''} ${p === spot ? 'on' : ''}" data-pin="${p.id}" title="${esc(p.title)}" aria-label="${esc(p.title)}">${p.label}</button>`).join('')}</div>
+      ${spot ? `<div class="pin-detail">${spot.card()}</div>` : ''}` : '';
   };
-  // Start on the next plan that hasn't happened yet.
+  // Start on the next plan that hasn't happened yet, else the hotel.
   const today = new Date().toISOString().slice(0, 10);
-  show(pins.find((p) => !p.day || p.day >= today) ?? pins[0] ?? null);
+  const next = pins.find((p) => !p.day || p.day >= today);
+  show(spots.find((sp) => sp.id === next?.id) ?? spots[0] ?? null);
   // Focus moving into the map means they're panning/zooming it.
   const onBlur = () => {
     if (!el.isConnected) return window.removeEventListener('blur', onBlur);
@@ -133,9 +165,9 @@ function mountEmbed(el, detailEl, trip, pins) {
   window.addEventListener('blur', onBlur);
   detailEl?.addEventListener('click', (e) => {
     const b = e.target.closest('[data-pin]');
-    if (b) show(pins.find((p) => p.id === b.dataset.pin));
+    if (b) show(spots.find((p) => p.id === b.dataset.pin));
   });
-  return { focus(id) { const it = pins.find((p) => p.id === id); if (!it) return false; show(it); return true; } };
+  return { focus(id) { const sp = spots.find((p) => p.id === id); if (!sp) return false; show(sp); return true; } };
 }
 
 export const focusPin = (id) => current?.focus(id) ?? false;

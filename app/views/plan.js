@@ -6,7 +6,7 @@ import * as store from '../store.js';
 import * as embed from '../embeds.js';
 import { going, organizer, firstName, nameOf } from './common.js';
 import { handleStayClick } from './stays.js';
-import { mountTripMap, focusPin, pinned, hasGoogleKey, googleFindPlace, placeQuery } from './tripmap.js';
+import { mountTripMap, focusPin, pinned, staysOnMap, stayQuery, hasGoogleKey, googleFindPlace, placeQuery } from './tripmap.js';
 
 export function render(el, ctx) {
   const { trip, isOrg } = ctx;
@@ -68,6 +68,11 @@ export function render(el, ctx) {
   if (isOrg && hasGoogleKey) pinOlderPlans(ctx);
 
   el.onclick = async (e) => {
+    // Check-in/out "Map" jumps to the hotel's pin on the map above.
+    const stayMap = e.target.closest('[data-stay-map]');
+    if (stayMap && focusPin(stayMap.dataset.stayMap)) {
+      return el.querySelector('#trip-map')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
     if (await handleStayClick(e, ctx)) return;
     const t = e.target.closest('[data-action],[data-jump],[data-ot],[data-map],[data-del],[data-edit]');
     if (!t) return;
@@ -268,15 +273,17 @@ export function openAddItem(ctx, day, preset = {}) {
 
 function mapCard(trip) {
   const pins = pinned(trip);
-  if (!trip.destination && !pins.length) return '';
+  const stays = staysOnMap(trip);
+  if (!trip.destination && !pins.length && !stays.length) return '';
   const unpinned = hasGoogleKey ? trip.itinerary.filter((i) => i.place && i.lat == null).length : 0;
   return `
     <div class="card trip-map-card">
       <div id="trip-map" class="trip-map" role="region" aria-label="Map of the plans"></div>
       <div id="map-detail"></div>
       <div class="map-foot">${icon('pin', 'tiny')}
-        ${pins.length
-          ? (hasGoogleKey ? `${pins.length} plan${pins.length === 1 ? '' : 's'} on the map · tap a pin for details` : 'Tap a number to see that plan on the map')
+        ${pins.length || stays.length
+          ? (hasGoogleKey ? `${pins.length} plan${pins.length === 1 ? '' : 's'}${stays.length ? ' + where you\'re staying' : ''} · tap a pin for details`
+            : 'Tap a button to see that place on the map')
           : 'Plans with a place show up on the map'}
         ${unpinned ? ` · ${unpinned} not found` : ''}</div>
     </div>`;
@@ -287,8 +294,14 @@ function mapCard(trip) {
 const tried = new Set();
 async function pinOlderPlans(ctx) {
   const todo = ctx.trip.itinerary.filter((i) => i.place && i.lat == null && !tried.has(i.id));
-  if (!todo.length) return;
+  const stays = ctx.trip.stays.filter((st) => (st.address || st.name) && st.lat == null && !tried.has(st.id));
+  if (!todo.length && !stays.length) return;
   let added = 0;
+  for (const st of stays) {
+    tried.add(st.id);
+    const hit = await googleFindPlace(stayQuery(st, ctx.trip), ctx.trip).catch(() => null);
+    if (hit) { await store.setStayLocation(ctx.trip.id, st.id, hit.lat, hit.lon).catch(() => {}); added++; }
+  }
   for (const it of todo) {
     tried.add(it.id);
     const hit = await googleFindPlace(placeQuery(it, ctx.trip), ctx.trip).catch(() => null);

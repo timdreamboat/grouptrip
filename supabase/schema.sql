@@ -623,7 +623,8 @@ begin
                          'id', s.id, 'name', s.name, 'address', s.address,
                          'checkIn', s.check_in, 'checkInTime', s.check_in_time,
                          'checkOut', s.check_out, 'checkOutTime', s.check_out_time,
-                         'bookingUrl', s.booking_url, 'confirmation', s.confirmation, 'notes', s.notes)
+                         'bookingUrl', s.booking_url, 'confirmation', s.confirmation, 'notes', s.notes,
+                         'lat', s.lat, 'lon', s.lon)
                        order by s.check_in nulls last, s.created_at)
                        from stays s where s.trip_id = tid), '[]'),
     'lists', coalesce((select jsonb_agg(jsonb_build_object(
@@ -1221,4 +1222,46 @@ begin
   returning * into m;
   if m.id is null then raise exception 'That name has already been claimed. Ask the organizer for help.'; end if;
   return jsonb_build_object('memberId', m.id, 'token', m.token);
+end $$;
+
+-- ======================================================================
+-- v8 (2026-09-22): where we're staying goes on the map.
+-- (get_trip in the v4 section includes each stay's lat/lon — run this file top to bottom.)
+-- ======================================================================
+alter table stays add column lat double precision, add column lon double precision;
+
+create or replace function add_stay(p_code text, p_token text, p_stay jsonb) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare o members := _organizer(p_code, p_token); new_id uuid;
+begin
+  insert into stays (trip_id, name, address, check_in, check_in_time, check_out, check_out_time, booking_url, confirmation, notes, lat, lon)
+  values (o.trip_id, trim(p_stay->>'name'), nullif(trim(p_stay->>'address'), ''),
+          nullif(p_stay->>'checkIn', '')::date, nullif(p_stay->>'checkInTime', ''),
+          nullif(p_stay->>'checkOut', '')::date, nullif(p_stay->>'checkOutTime', ''),
+          nullif(trim(p_stay->>'bookingUrl'), ''), nullif(trim(p_stay->>'confirmation'), ''), nullif(trim(p_stay->>'notes'), ''),
+          nullif(p_stay->>'lat', '')::double precision, nullif(p_stay->>'lon', '')::double precision)
+  returning id into new_id;
+  return new_id;
+end $$;
+
+create or replace function update_stay(p_code text, p_token text, p_id uuid, p_stay jsonb) returns void
+language plpgsql security definer set search_path = public as $$
+declare o members := _organizer(p_code, p_token);
+begin
+  update stays set
+    name = trim(p_stay->>'name'), address = nullif(trim(p_stay->>'address'), ''),
+    check_in = nullif(p_stay->>'checkIn', '')::date, check_in_time = nullif(p_stay->>'checkInTime', ''),
+    check_out = nullif(p_stay->>'checkOut', '')::date, check_out_time = nullif(p_stay->>'checkOutTime', ''),
+    booking_url = nullif(trim(p_stay->>'bookingUrl'), ''), confirmation = nullif(trim(p_stay->>'confirmation'), ''),
+    notes = nullif(trim(p_stay->>'notes'), ''),
+    lat = nullif(p_stay->>'lat', '')::double precision, lon = nullif(p_stay->>'lon', '')::double precision
+  where id = p_id and trip_id = o.trip_id;
+  if not found then raise exception 'Place not found'; end if;
+end $$;
+
+create function set_stay_location(p_code text, p_token text, p_id uuid, p_lat double precision, p_lon double precision)
+returns void language plpgsql security definer set search_path = public as $$
+declare o members := _organizer(p_code, p_token);
+begin
+  update stays set lat = p_lat, lon = p_lon where id = p_id and trip_id = o.trip_id;
 end $$;

@@ -100,6 +100,9 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
   install/push on a real phone.
 - Edge Function `flight-lookup` is deployed and working; its `AERODATABOX_KEY`
   secret (RapidAPI, AeroDataBox free Basic plan) is set in the Supabase dashboard.
+- Today (`views/today.js`) shows at the top of Home while the phone's local
+  date is within the trip. Times are compared to the phone's clock (you're at
+  the destination); flight status is estimated from scheduled times.
 - Editing: every add form doubles as its edit form (pass the existing item).
   Same permissions as delete. `update_expense` replaces splits with
   `grouptrip.quiet` set so the split trigger doesn't re-notify.

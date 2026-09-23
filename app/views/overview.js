@@ -11,10 +11,12 @@ import { weatherEmbed } from '../places.js';
 import { pollCard, openPolls, needsMyVote, handlePollClick } from './polls.js';
 import { photoStrip } from './photos.js';
 import { appCard, handleAppCardClick } from './getapp.js';
+import { todayCard, handleTodayClick, startTodayTicker } from './today.js';
 
 export function render(el, ctx) {
   el.innerHTML = ctx.isOrg ? organizerHome(ctx) : guestHome(ctx);
   bind(el, ctx);
+  startTodayTicker(el);
 }
 
 function nextUpCard({ trip }) {
@@ -59,6 +61,7 @@ function organizerHome(ctx) {
     ${heroHTML(trip, { top: `
       <span class="chip glass">${icon('crown')}You're organizing</span>
       <button class="btn btn-icon btn-sm chip glass" style="width:36px;height:36px;padding:0" data-action="edit-trip" aria-label="Edit trip">${icon('pencil')}</button>` })}
+    ${todayCard(ctx)}
 
     <section class="card invite-card-org stack">
       <div>
@@ -185,6 +188,7 @@ function guestHome(ctx) {
   return `
   <div class="stack-lg">
     ${heroHTML(trip, { top: org ? `<span class="chip glass">${avatar(org, 20)}Organized by ${esc(firstName(org.name))}</span>` : '' })}
+    ${todayCard(ctx)}
 
     <section class="card stack">
       <div><h2>Are you going?</h2></div>
@@ -238,6 +242,7 @@ function bind(el, ctx) {
   const { trip } = ctx;
   el.onclick = async (e) => {
     if (await handleStayClick(e, ctx)) return;
+    if (handleTodayClick(e, ctx)) return;
     if (await handleAppCardClick(e, ctx)) return;
     if (e.target.closest('.poll') && await handlePollClick(e, ctx)) return;
     const t = e.target.closest('[data-action],[data-rsvp],[data-nudge]');

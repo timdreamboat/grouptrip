@@ -46,8 +46,11 @@
 - ✅ Edit plans, flights, stays, expenses and polls (same forms, pre-filled)
 - ✅ Organizer "Let back in": resets a person's spot so they can tap their name again
 
+## v2.2 — during the trip (2026-09-22)
+- ✅ Where we're staying on the Calendar map (bed pin + card)
+- ✅ Today at the top of Home: next up with countdown, rest of today, flights today, the hotel, quick actions
+
 ## Ideas next
-- Pins for where we're staying
 - Local time + currency on Home; photo reactions; notifications when a poll opens
 
 ## v2 — nicer splitting
