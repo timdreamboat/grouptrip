@@ -3,11 +3,42 @@
 //  - Location: OpenStreetMap Nominatim (low volume; once per destination)
 //  - Photos: Wikipedia's lead image + Openverse (openly licensed photos)
 
-export async function locate(destination) {
-  const res = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(destination)}`,
+// Nominatim asks for at most one request per second — queue them.
+let nextSlot = 0;
+async function nominatim(params) {
+  const wait = Math.max(0, nextSlot - Date.now());
+  nextSlot = Date.now() + wait + 1100;
+  if (wait) await new Promise((r) => setTimeout(r, wait));
+  const res = await fetch(`https://nominatim.openstreetmap.org/search?${new URLSearchParams({ format: 'jsonv2', limit: '1', ...params })}`,
     { headers: { 'Accept-Language': 'en' } });
   const [hit] = res.ok ? await res.json() : [];
+  return hit ?? null;
+}
+
+export async function locate(destination) {
+  const hit = await nominatim({ q: destination });
   return hit ? { lat: Number(hit.lat), lon: Number(hit.lon) } : null;
+}
+
+// A plan's place ("Carbone", "Emerald Bay State Park", an address), preferring
+// matches near the trip so "Carbone" finds the one in Miami, not New York.
+export async function findPlace(place, trip) {
+  const q = place?.trim();
+  if (!q) return null;
+  const tries = [];
+  if (trip?.lat != null) {
+    const d = 0.6; // about 40 miles around the destination
+    tries.push({ q, viewbox: `${trip.lon - d},${trip.lat + d},${trip.lon + d},${trip.lat - d}`, bounded: '1' });
+  }
+  if (trip?.destination && !q.toLowerCase().includes(trip.destination.toLowerCase())) tries.push({ q: `${q}, ${trip.destination}` });
+  tries.push({ q });
+  for (const params of tries) {
+    const hit = await nominatim(params).catch(() => null);
+    if (hit) {
+      return { lat: Number(hit.lat), lon: Number(hit.lon), label: hit.display_name.split(', ').slice(0, 3).join(', ') };
+    }
+  }
+  return null;
 }
 
 const NOT_A_PHOTO = /\b(map|flag|seal|coat of arms|logo|locator|diagram|chart|emblem|svg)\b/i;

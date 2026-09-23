@@ -27,6 +27,10 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
    lead image + Openverse (openly licensed). The organizer picks from a grid;
    the choice and its credit are stored on the trip. Wikimedia only serves
    standard widths (500, 960, 1280…) — other sizes return 400.
+   Plans' places are geocoded too (`findPlace`, biased to ~40 miles around the
+   trip) when they're added, and pinned on the Calendar map (`views/tripmap.js`:
+   Leaflet + standard OpenStreetMap tiles — CARTO tiles now need a key).
+   Nominatim allows 1 request/second; `places.js` queues requests.
 
 ## Architecture
 - `app/` — no-build static web app (plain HTML/CSS/JS modules, no npm),

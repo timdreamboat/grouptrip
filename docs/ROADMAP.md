@@ -32,7 +32,12 @@
 - ✅ Polls (dates or anything); organizer locks in the winner as trip dates or a plan
 - ✅ Shared photo album with full-screen viewer; photos shrunk on-device before upload
 
+## v1.9 — plan map (2026-09-22)
+- ✅ Calendar map always open; each plan with a found place gets a numbered pin
+- ✅ Pin card: plan, place, date, time, notes, directions
+
 ## Ideas next
+- Pins for where we're staying
 - Local time + currency on Home; photo reactions; notifications when a poll opens
 
 ## v2 — nicer splitting

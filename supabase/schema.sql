@@ -609,7 +609,8 @@ begin
                          from members m where m.trip_id = tid), '[]'),
     'itinerary', coalesce((select jsonb_agg(jsonb_build_object(
                              'id', i.id, 'day', i.day, 'time', i.time, 'title', i.title, 'notes', i.notes,
-                             'place', i.place, 'opentableRid', i.opentable_rid, 'bookingUrl', i.booking_url)
+                             'place', i.place, 'opentableRid', i.opentable_rid, 'bookingUrl', i.booking_url,
+                             'lat', i.lat, 'lon', i.lon)
                            order by i.day nulls last, i.time nulls first, i.created_at)
                            from itinerary_items i where i.trip_id = tid), '[]'),
     'flights', coalesce((select jsonb_agg(jsonb_build_object(
@@ -769,3 +770,34 @@ begin
   if ph.id is null then raise exception 'Only the person who added this photo can remove it'; end if;
   return jsonb_build_object('path', ph.path, 'thumbPath', ph.thumb_path);
 end $$;
+
+-- ======================================================================
+-- v5 (2026-09-22): map pins for plans. get_trip's itinerary now also
+-- returns 'lat' and 'lon' for each plan (same function as v4 otherwise).
+-- ======================================================================
+alter table itinerary_items
+  add column lat double precision,
+  add column lon double precision;
+
+-- add_item now also takes the place's map position (found when the plan is added).
+create or replace function add_item(p_code text, p_token text, p_item jsonb) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare o members := _organizer(p_code, p_token); new_id uuid;
+begin
+  insert into itinerary_items (trip_id, day, time, title, notes, place, opentable_rid, booking_url, lat, lon)
+  values (o.trip_id, nullif(p_item->>'day', '')::date, nullif(p_item->>'time', ''), trim(p_item->>'title'),
+          nullif(p_item->>'notes', ''), nullif(p_item->>'place', ''),
+          nullif(p_item->>'opentableRid', '')::integer, nullif(p_item->>'bookingUrl', ''),
+          nullif(p_item->>'lat', '')::double precision, nullif(p_item->>'lon', '')::double precision)
+  returning id into new_id;
+  return new_id;
+end $$;
+
+-- Organizer's device pins older plans that were added before maps existed.
+create function set_item_location(p_code text, p_token text, p_id uuid, p_lat double precision, p_lon double precision)
+returns void language plpgsql security definer set search_path = public as $$
+declare o members := _organizer(p_code, p_token);
+begin
+  update itinerary_items set lat = p_lat, lon = p_lon where id = p_id and trip_id = o.trip_id;
+end $$;
+-- (get_trip in the v4 section above includes each plan's lat/lon — run this file top to bottom.)

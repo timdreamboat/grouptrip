@@ -585,3 +585,42 @@ dialog.viewer::backdrop { background: #000; }
 @media (min-width: 960px) { .seg-nav { display: none; } }
 .tab-icon { position: relative; display: grid; }
 .dot-badge { position: absolute; top: -2px; right: -4px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px var(--glass); }
+
+/* ---------- trip map (Calendar) ---------- */
+.trip-map-card { padding: 0; overflow: hidden; margin-bottom: 24px; }
+.trip-map { height: 320px; background: var(--surface-2); z-index: 0; }
+@media (min-width: 960px) { .trip-map { height: 400px; } }
+.map-foot { display: flex; align-items: center; gap: 8px; padding: 10px 14px; font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); }
+.map-pin { background: none; border: 0; }
+.map-pin .shape {
+  position: absolute; left: 0; top: 0; width: 32px; height: 32px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
+  background: var(--accent); border: 2px solid #fff; box-shadow: 0 4px 12px rgba(0, 0, 0, .3);
+}
+.map-pin .n { position: absolute; left: 0; top: 0; width: 32px; height: 32px; display: grid; place-items: center; color: #fff; font: 700 13px var(--font-ui); }
+.pin-popup .leaflet-popup-content-wrapper { border-radius: 16px; padding: 0; background: var(--surface); color: var(--text); box-shadow: var(--shadow-lg); }
+.pin-popup .leaflet-popup-content { margin: 14px 16px; font: 14px/1.45 var(--font-ui); }
+.pin-popup .leaflet-popup-tip { background: var(--surface); }
+.pin-popup a.leaflet-popup-close-button { color: var(--muted); top: 6px; right: 6px; }
+.pin-card { display: grid; gap: 6px; }
+.pin-card-head { display: flex; align-items: center; gap: 8px; padding-right: 14px; font-size: 15px; }
+.pin-row { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; }
+.pin-notes { font-size: 13px; padding: 8px 10px; border-radius: 10px; background: var(--surface-2); white-space: pre-wrap; }
+.pin-link { font-size: 13px; font-weight: 600; color: var(--accent-ink) !important; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
+.pin-num {
+  display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 99px;
+  background: var(--accent); color: #fff; font-size: 12px; font-weight: 700; flex: none;
+}
+.tl-icon.numbered { background: var(--accent); color: #fff; font-weight: 700; font-size: 15px; }
+.place-status { font-size: 13px; display: flex; align-items: center; gap: 6px; min-height: 18px; }
+.place-status.found { color: var(--good); }
+.place-status.missing { color: var(--warn); }
+.leaflet-container { font-family: var(--font-ui); }
+.leaflet-control-attribution { font-size: 10px; }
+/* OpenStreetMap only has light tiles — soften them in dark mode (tiles only, not pins). */
+@media (prefers-color-scheme: dark) {
+  .trip-map .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.92) contrast(.88) saturate(.7); }
+  .trip-map.leaflet-container { background: #1b1c20; }
+}
+.trip-map .leaflet-control-zoom a { background: var(--surface); color: var(--text); border-color: var(--line); }
+.trip-map .leaflet-control-attribution { background: color-mix(in srgb, var(--surface) 85%, transparent); color: var(--muted); }
+.trip-map .leaflet-control-attribution a { color: var(--muted); }

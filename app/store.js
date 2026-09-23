@@ -88,6 +88,7 @@ export const inviteMember = (code, name) => act('invite_member', code, { p_name:
 export const removeMember = (code, id) => act('remove_member', code, { p_id: id });
 export const addItem = (code, item) => act('add_item', code, { p_item: item });
 export const removeItem = (code, id) => act('remove_item', code, { p_id: id });
+export const setItemLocation = (code, id, lat, lon) => act('set_item_location', code, { p_id: id, p_lat: lat, p_lon: lon });
 export const addFlight = (code, flight) => act('add_flight', code, { p_flight: flight });
 export const removeFlight = (code, id) => act('remove_flight', code, { p_id: id });
 export const addExpense = (code, e) => act('add_expense', code, {

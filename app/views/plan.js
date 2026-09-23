@@ -6,6 +6,8 @@ import * as store from '../store.js';
 import * as embed from '../embeds.js';
 import { going, organizer, firstName, nameOf } from './common.js';
 import { handleStayClick } from './stays.js';
+import { mountTripMap, focusPin, pinned } from './tripmap.js';
+import { findPlace } from '../places.js';
 
 export function render(el, ctx) {
   const { trip, isOrg } = ctx;
@@ -44,13 +46,7 @@ export function render(el, ctx) {
       <a class="day-chip ${byDay.has(d) ? 'has' : ''}" href="#" data-jump="${d}">
         <small>${esc(fmtDay(d, { weekday: 'short' }))}</small><b>${new Date(`${d}T00:00`).getDate()}</b><span class="dot"></span></a>`).join('')}</nav>` : ''}
 
-    ${trip.destination ? `
-      <details class="card" style="padding:0;overflow:hidden;margin-bottom:24px">
-        <summary style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;list-style:none">
-          <div class="tl-icon">${icon('map')}</div><div style="flex:1;font-weight:600">Map of ${esc(trip.destination)}</div>${icon('chevron')}
-        </summary>
-        <iframe class="map-frame" style="border-radius:0;height:280px" loading="lazy" title="Map of ${esc(trip.destination)}" src="${esc(embed.mapEmbed(trip.destination))}"></iframe>
-      </details>` : ''}
+    ${mapCard(trip)}
 
     ${entries.length ? '' : `<div class="card">${isOrg
       ? emptyState('sparkle', 'Start the plan', 'Add dinners, activities, anything. Flights and check-ins show up here automatically.',
@@ -67,6 +63,10 @@ export function render(el, ctx) {
     ${undated.length ? `
       <section class="day"><div class="day-head"><h3>Anytime</h3></div>
         <div class="tl">${undated.map((e) => entry(e, ctx)).join('')}</div></section>` : ''}`;
+
+  const mapEl = el.querySelector('#trip-map');
+  if (mapEl) mountTripMap(mapEl, trip);
+  if (isOrg) pinOlderPlans(ctx);
 
   el.onclick = async (e) => {
     if (await handleStayClick(e, ctx)) return;
@@ -87,7 +87,13 @@ export function render(el, ctx) {
       return embedSheet(`Reserve · ${it.title}`, embed.openTableEmbed(it.opentableRid,
         { covers: Math.max(going(trip).length, 1), day: it.day, time: it.time }));
     }
-    if (t.dataset.map) return embedSheet(it.place, embed.mapEmbed(it.place));
+    if (t.dataset.map) {
+      if (it.lat != null) {
+        el.querySelector('#trip-map')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return focusPin(it.id);
+      }
+      return embedSheet(it.place, embed.mapEmbed(it.place));
+    }
     if (t.dataset.del) {
       const ok = await confirmSheet({ title: `Remove "${it.title}"?`, message: 'It will be removed from everyone\'s plan.', confirm: 'Remove', danger: true });
       if (ok) ctx.run(() => store.removeItem(trip.id, it.id), 'Plan removed');
@@ -97,7 +103,7 @@ export function render(el, ctx) {
 
 function entry(e, ctx) {
   const { trip } = ctx;
-  if (e.kind === 'plan') return item(e.it, ctx);
+  if (e.kind === 'plan') return item(e.it, ctx, pinned(trip).findIndex((p) => p.id === e.it.id) + 1);
   const time = `<div class="tl-time">${e.time ? esc(fmtTime(e.time)) : ''}</div>`;
   if (e.kind === 'flight') {
     const f = e.f;
@@ -149,14 +155,14 @@ function openSync({ trip }) {
   });
 }
 
-function item(it, { isOrg }) {
-  const kind = it.opentableRid ? 'ot' : '';
+function item(it, { isOrg }, pinNo = 0) {
+  const kind = pinNo ? 'numbered' : it.opentableRid ? 'ot' : '';
   return `
   <div class="tl-item">
     <div class="tl-time">${it.time ? esc(fmtTime(it.time)) : ''}</div>
     <article class="card tl-card">
       <div class="title-row">
-        <div class="tl-icon ${kind}">${icon(it.opentableRid ? 'utensils' : 'calendar')}</div>
+        <div class="tl-icon ${kind}" ${pinNo ? `title="Pin ${pinNo} on the map"` : ''}>${pinNo || icon(it.opentableRid ? 'utensils' : 'calendar')}</div>
         <div class="grow">
           <div style="font-weight:600;font-size:16px">${esc(it.title)}</div>
           ${it.place ? `<div class="place">${icon('pin')}${esc(it.place)}</div>` : ''}
@@ -184,7 +190,8 @@ export function openAddItem(ctx, day, preset = {}) {
           <label class="field"><span>Day</span><input type="date" name="day" value="${esc(day || trip.startDate || '')}"></label>
           <label class="field"><span>Time</span><input type="time" name="time"></label>
         </div>
-        <label class="field"><span>Place</span><input name="place" placeholder="Name and town, or an address"></label>
+        <label class="field"><span>Place</span><input name="place" placeholder="Restaurant, park, or an address" autocomplete="off"></label>
+        <div class="place-status" id="place-status" aria-live="polite"></div>
         <label class="field"><span>Notes</span><input name="notes" placeholder="Reservation under Tim, dress code…"></label>
         <details class="more">
           <summary>${icon('utensils')} Booking — OpenTable or a link</summary>
@@ -200,6 +207,28 @@ export function openAddItem(ctx, day, preset = {}) {
     foot: `<button class="btn btn-primary btn-lg" form="item-form">Add to plan</button>`,
     onMount(dlg, close) {
       const form = dlg.querySelector('#item-form');
+      const status = dlg.querySelector('#place-status');
+      // Look the place up as they type, so they know whether it gets a pin.
+      let found = { q: '', hit: null };
+      let timer;
+      const lookup = async (q) => {
+        if (!q) { found = { q, hit: null }; status.className = 'place-status'; status.textContent = ''; return found; }
+        status.className = 'place-status';
+        status.textContent = 'Looking it up on the map…';
+        const hit = await findPlace(q, trip).catch(() => null);
+        if (form.elements.place.value.trim() !== q) return found; // they kept typing
+        found = { q, hit };
+        status.className = `place-status ${hit ? 'found' : 'missing'}`;
+        status.innerHTML = hit
+          ? `${icon('pin', 'tiny')}On the map: ${esc(hit.label)}`
+          : `${icon('info', 'tiny')}Couldn't find that on the map — add a street or town to pin it`;
+        return found;
+      };
+      form.elements.place.addEventListener('input', () => {
+        clearTimeout(timer);
+        timer = setTimeout(() => lookup(form.elements.place.value.trim()), 700);
+      });
+
       form.onsubmit = async (e) => {
         e.preventDefault();
         const f = Object.fromEntries(new FormData(form));
@@ -208,13 +237,50 @@ export function openAddItem(ctx, day, preset = {}) {
         if (ot && !rid && !/^https?:/.test(ot)) return toast("That doesn't look like an OpenTable link or ID", { error: true });
         // An OpenTable link without an ID can't be embedded — keep it as a plain link.
         const bookingUrl = f.bookingUrl.trim() || (ot && !rid ? ot : '');
-        const ok = await busy(dlg.querySelector('.sheet-foot .btn'), () => store.addItem(trip.id, {
-          title: f.title.trim(), day: f.day, time: f.time, place: f.place.trim(), notes: f.notes.trim(),
-          opentableRid: rid ?? '', bookingUrl,
-        }));
-        if (ok) { close(); ctx.refresh('Added to the plan'); }
+        const ok = await busy(dlg.querySelector('.sheet-foot .btn'), async () => {
+          const place = f.place.trim();
+          const { hit } = place && found.q !== place ? await lookup(place) : found;
+          return store.addItem(trip.id, {
+            title: f.title.trim(), day: f.day, time: f.time, place, notes: f.notes.trim(),
+            opentableRid: rid ?? '', bookingUrl, lat: hit?.lat ?? '', lon: hit?.lon ?? '',
+          });
+        });
+        if (ok) { close(); ctx.refresh(found.hit ? 'Added to the plan and the map' : 'Added to the plan'); }
       };
       setTimeout(() => form.elements.title.focus(), 50);
     },
   });
+}
+
+function mapCard(trip) {
+  const pins = pinned(trip);
+  const unpinned = trip.itinerary.filter((i) => i.place && i.lat == null).length;
+  if (trip.lat == null && !pins.length) {
+    // No coordinates yet — fall back to the embedded map of the destination.
+    return trip.destination ? `<div class="card trip-map-card">
+      <iframe class="map-frame" style="border-radius:0;height:300px" loading="lazy" title="Map of ${esc(trip.destination)}"
+        src="${esc(embed.mapEmbed(trip.destination))}"></iframe></div>` : '';
+  }
+  return `
+    <div class="card trip-map-card">
+      <div id="trip-map" class="trip-map" role="region" aria-label="Map of the plans"></div>
+      <div class="map-foot">${icon('pin', 'tiny')}
+        ${pins.length ? `${pins.length} plan${pins.length === 1 ? '' : 's'} on the map · tap a pin for details` : 'Plans with a place show up here as pins'}
+        ${unpinned ? ` · ${unpinned} not found` : ''}</div>
+    </div>`;
+}
+
+// Plans added before maps existed: the organizer's device finds and saves
+// their pins once per session, then redraws.
+const tried = new Set();
+async function pinOlderPlans(ctx) {
+  const todo = ctx.trip.itinerary.filter((i) => i.place && i.lat == null && !tried.has(i.id));
+  if (!todo.length) return;
+  let added = 0;
+  for (const it of todo) {
+    tried.add(it.id);
+    const hit = await findPlace(it.place, ctx.trip).catch(() => null);
+    if (hit) { await store.setItemLocation(ctx.trip.id, it.id, hit.lat, hit.lon).catch(() => {}); added++; }
+  }
+  if (added && !document.querySelector('dialog[open]')) ctx.refresh();
 }
