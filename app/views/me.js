@@ -6,6 +6,7 @@ import { memberById } from './common.js';
 import { locate } from '../places.js';
 import { mountCoverPicker } from './cover.js';
 import * as pwa from '../pwa.js';
+import { EMAIL_ENABLED } from '../config.js';
 import { openInstallHelp } from './getapp.js';
 
 export function openMe(ctx) {
@@ -37,19 +38,19 @@ export function openMe(ctx) {
           <div class="grow"><div style="font-weight:600">On this device</div><div class="small muted" id="push-status"></div></div>
           <span id="push-action"></span>
         </div>
-        <div class="form" style="gap:10px">
+        ${EMAIL_ENABLED ? `<div class="form" style="gap:10px">
           <label class="field"><span>Email</span><input name="email" type="email" form="me-form" autocomplete="email" placeholder="you@example.com"></label>
           <label class="switch"><input type="checkbox" name="emailNotify" form="me-form"><span></span>Email me trip updates too</label>
           <p class="hint">Only you see your email. Tap Save to keep changes.</p>
-        </div>
+        </div>` : ''}
       </div>
 
       <div class="card" style="margin-top:12px;box-shadow:none">
         <h3 style="display:flex;align-items:center;gap:8px">${icon('link')}Use GroupTrip on another device</h3>
         <p class="hint" style="margin:6px 0 12px">Open this private link on your phone or laptop to be signed in as you. Don't share it — it's yours.</p>
         <div style="display:grid;gap:8px">
-          <button class="btn btn-secondary btn-block" data-email-link>${icon('link')}Email me my private link</button>
-          <button class="btn btn-ghost btn-block" data-personal>${icon('copy')}Copy my private link</button>
+          ${EMAIL_ENABLED ? `<button class="btn btn-secondary btn-block" data-email-link>${icon('link')}Email me my private link</button>` : ''}
+          <button class="btn ${EMAIL_ENABLED ? 'btn-ghost' : 'btn-secondary'} btn-block" data-personal>${icon('copy')}Copy my private link</button>
         </div>
       </div>
 
@@ -66,13 +67,15 @@ export function openMe(ctx) {
         const f = Object.fromEntries(new FormData(form));
         const ok = await busy(form.querySelector('.btn-primary'), () => store.updateMe(trip.id, {
           name: f.name.trim(), venmo: f.venmo.trim(), ...(f.rsvp ? { rsvp: f.rsvp } : {}),
-          email: (f.email || '').trim(), emailNotify: Boolean(f.emailNotify) && Boolean((f.email || '').trim()),
+          ...(EMAIL_ENABLED ? { email: (f.email || '').trim(), emailNotify: Boolean(f.emailNotify) && Boolean((f.email || '').trim()) } : {}),
         }));
         if (ok) { close(); ctx.refresh('Saved'); }
       };
       dlg.querySelector('[data-personal]').onclick = () => copy(store.personalLink(trip.id), 'Private link copied');
 
       // Email: fill in what's saved (only you can read it).
+      if (EMAIL_ENABLED) wireEmail();
+      function wireEmail() {
       const emailIn = dlg.querySelector('[name=email]');
       const notifyIn = dlg.querySelector('[name=emailNotify]');
       let savedEmail = '';
@@ -90,6 +93,7 @@ export function openMe(ctx) {
         });
         if (ok) toast(`Sent to ${email} — check your inbox`);
       };
+      }
 
       // Notifications on this device.
       const status = dlg.querySelector('#push-status');

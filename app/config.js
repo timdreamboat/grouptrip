@@ -15,3 +15,8 @@ export const GOOGLE_MAP_ID = 'DEMO_MAP_ID';
 // Public half of the key used to send phone/desktop notifications (the
 // private half lives only in the database's server-only settings).
 export const PUSH_PUBLIC_KEY = 'BLvMhsoo5jSQOMMxx6LEatOOScH-mChqPU64c0f0HjXv-tiaF50Kz3j7bgockfzWZo2fNjj8tvY2cNrtJ9nseyw';
+
+// Email (link recovery + email updates) is built but switched off — the app
+// is used in the browser or installed. Turning it on also needs a Brevo or
+// Resend key in the Supabase function secrets (see CLAUDE.md).
+export const EMAIL_ENABLED = false;

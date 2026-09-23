@@ -40,8 +40,7 @@
 ## v2.0 — stay in the loop (2026-09-22)
 - ✅ Install to home screen (PWA) + offline saved copy of each trip
 - ✅ Phone/desktop notifications: polls, plans, joins, expenses, dates, flights, 8am reminders
-- ✅ Email: save your email, "email me my link", recover from the invite page, email updates
-- Waiting on: an email provider account (Brevo or Resend) — see README
+- Email (link recovery, email updates) built but switched off — owner chose browser/app only
 
 ## Ideas next
 - Pins for where we're staying

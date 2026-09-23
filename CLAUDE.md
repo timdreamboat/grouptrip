@@ -84,6 +84,10 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
   push (VAPID keys in `app_secrets`; public half in `app/config.js`) and email
   for members with `email_notify`. `app_secrets` holds server-only values —
   never commit them (repo is public).
+- Email is SWITCHED OFF (owner, 2026-09-22: people use the browser or the
+  installed app). `EMAIL_ENABLED = false` in `app/config.js` hides the email
+  field, email updates and "Email me my link"; the server side stays deployed
+  but idle. To turn it on: set the flag and add a provider key (below).
 - Email (`_shared/email.ts`): Resend (`RESEND_API_KEY`) or Brevo
   (`BREVO_API_KEY`) + `EMAIL_FROM`, set as Edge Function secrets. Until one is
   set, email updates and "Email me my link" politely say email isn't set up.

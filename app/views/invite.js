@@ -3,6 +3,7 @@
 // type it to join.
 import { esc, icon, avatarStack, avatar, busy, toast, sheet } from '../ui.js';
 import * as store from '../store.js';
+import { EMAIL_ENABLED } from '../config.js';
 import { heroHTML, going, organizer, firstName, tripCover } from './common.js';
 
 export function render(root, trip, onJoined) {
@@ -40,7 +41,7 @@ export function render(root, trip, onJoined) {
             <button class="btn ${unclaimed.length ? 'btn-secondary' : 'btn-primary'} btn-lg btn-block">Join the trip ${icon('arrow')}</button>
           </form>
           <p class="hint" style="text-align:center">No account needed. You'll be able to add your flight and split costs.</p>
-          <button class="btn btn-ghost btn-sm" id="recover" style="justify-self:center">Already joined on another device? Email me my link</button>
+          ${EMAIL_ENABLED ? '<button class="btn btn-ghost btn-sm" id="recover" style="justify-self:center">Already joined on another device? Email me my link</button>' : ''}
         </div>
       </div>
     </main>`;
@@ -58,7 +59,8 @@ export function render(root, trip, onJoined) {
     if (ok) onJoined("You're in! Welcome to the trip");
   });
 
-  root.querySelector('#recover').onclick = () => sheet({
+  const recover = root.querySelector('#recover');
+  if (recover) recover.onclick = () => sheet({
     title: 'Email me my link',
     body: `<form class="form" id="recover-form">
       <p class="hint">If you saved your email on this trip, we'll send your private link to it.</p>
