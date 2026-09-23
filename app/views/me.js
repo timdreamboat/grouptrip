@@ -1,9 +1,9 @@
 // "You" settings (name, Venmo, RSVP, use on another device) and the
 // organizer's trip editor.
-import { esc, icon, avatar, sheet, confirmSheet, busy, copy, toast } from '../ui.js';
+import { esc, icon, avatar, sheet, confirmSheet, busy, copy, toast, suggest } from '../ui.js';
 import * as store from '../store.js';
 import { memberById, KINDS } from './common.js';
-import { locate } from '../places.js';
+import { locate, suggestDestinations } from '../places.js';
 import { mountCoverPicker } from './cover.js';
 import * as pwa from '../pwa.js';
 import { EMAIL_ENABLED } from '../config.js';
@@ -167,6 +167,11 @@ export function openEditTrip(ctx) {
         mountCoverPicker(photos, dest, { selected: first ? cover?.url : null, autoPick: !first, onPick: (p) => { cover = p; } });
       };
       if (coverFor) pick(coverFor, true); else photos.innerHTML = '<p class="hint">Add a destination to pick a photo.</p>';
+      let picked = null; // { name, lat, lon } from the suggestions
+      suggest(form.elements.destination, {
+        search: suggestDestinations,
+        onPick: (it) => { picked = it; if (it.name !== coverFor) pick(it.name, false); },
+      });
       form.elements.destination.addEventListener('change', () => {
         const dest = form.elements.destination.value.trim();
         if (dest && dest !== coverFor) pick(dest, false);
@@ -177,7 +182,8 @@ export function openEditTrip(ctx) {
         if (f.startDate && f.endDate && f.endDate < f.startDate) return toast('The end date is before the start date', { error: true });
         const ok = await busy(form.querySelector('.btn-primary'), async () => {
           const moved = f.destination.trim() !== (trip.destination || '');
-          const where = moved && f.destination.trim() ? await locate(f.destination).catch(() => null) : null;
+          const exact = picked?.name === f.destination.trim() ? { lat: picked.lat, lon: picked.lon } : null;
+          const where = moved && f.destination.trim() ? exact ?? await locate(f.destination).catch(() => null) : null;
           return store.updateTrip(trip.id, { ...f, cover: cover ?? { url: '' }, ...(where ?? {}) });
         });
         if (ok) { close(); ctx.refresh('Trip updated'); }

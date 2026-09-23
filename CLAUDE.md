@@ -29,6 +29,10 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
    the choice and its credit are stored on the trip. Wikimedia only serves
    standard widths (500, 960, 1280…) — other sizes return 400.
    Nominatim allows 1 request/second; `places.js` queues requests.
+   Destination type-ahead (create page + trip editor) uses Photon
+   (photon.komoot.io, free/keyless OSM search built for as-you-type; Nominatim
+   forbids autocomplete). Picking a suggestion saves its lat/lon and shows
+   Google's keyless map embed of it. Widget: `suggest()` in `ui.js`.
 4. Calendar map is Google (owner: "OpenStreetMap doesn't work — use Google",
    2026-09-22). `views/tripmap.js` has two modes:
    - No key (today): Google's free embed (`maps.google.com/maps?q=…&output=embed`),

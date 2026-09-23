@@ -1,7 +1,8 @@
 // Create a trip in three quick questions: where, when, who's organizing.
-import { esc, icon, coverBg, busy, toast } from '../ui.js';
+import { esc, icon, coverBg, busy, toast, suggest } from '../ui.js';
 import * as store from '../store.js';
-import { locate } from '../places.js';
+import { locate, suggestDestinations } from '../places.js';
+import { mapEmbed } from '../embeds.js';
 import { mountCoverPicker } from './cover.js';
 import { KINDS } from './common.js';
 
@@ -9,10 +10,14 @@ const STEPS = 3;
 
 export function render(root) {
   document.title = 'New trip · GroupTrip';
-  const data = { destination: '', name: '', startDate: '', endDate: '', organizer: '', cover: null, kind: 'friends' };
+  const data = { destination: '', name: '', startDate: '', endDate: '', organizer: '', cover: null, kind: 'friends', where: null };
   let photosFor = null; // destination the photo picker last searched
   let searchTimer;
   let step = 0;
+
+  // Google's own map of the picked place, like the Place field on plans.
+  const destMap = () => `<iframe class="dest-map" title="Map of ${esc(data.destination)}" loading="lazy"
+    src="${esc(mapEmbed(data.where.label))}"></iframe>`;
 
   const views = [
     () => `
@@ -21,6 +26,7 @@ export function render(root) {
       <div class="cover-preview" style="background:${esc(coverBg(data.destination || 'trip', data.cover?.url))}"></div>
       <input class="input input-xl" name="destination" placeholder="Las Vegas" value="${esc(data.destination)}" autocomplete="off" required>
       <p class="hint" style="margin-top:10px">A city, a region, a beach — anything.</p>
+      <div id="dest-map">${data.where ? destMap() : ''}</div>
       <div id="photos-wrap" style="margin-top:18px" ${data.destination ? '' : 'hidden'}>
         <div class="field"><span>Pick a cover photo</span><div id="photos"></div></div>
       </div>`,
@@ -87,9 +93,26 @@ export function render(root) {
       photosFor = data.destination.trim();
     }
 
+    const destInput = form.elements.destination;
+    if (destInput) {
+      suggest(destInput, {
+        search: suggestDestinations,
+        onPick: (it) => {
+          data.destination = it.name;
+          data.where = { lat: it.lat, lon: it.lon, label: [it.name, it.detail].filter(Boolean).join(', ') };
+          form.querySelector('#dest-map').innerHTML = destMap();
+          preview();
+          clearTimeout(searchTimer);
+          searchPhotos();
+        },
+      });
+    }
+
     form.addEventListener('input', (e) => {
       data[e.target.name] = e.target.value;
       if (e.target.name === 'destination') {
+        // Typed something else after picking: the pinned spot no longer applies.
+        if (data.where) { data.where = null; form.querySelector('#dest-map').innerHTML = ''; }
         preview();
         clearTimeout(searchTimer);
         searchTimer = setTimeout(searchPhotos, 600);
@@ -109,7 +132,7 @@ export function render(root) {
       const code = await busy(form.querySelector('.btn-primary'), async () => {
         const c = await store.createTrip(data);
         // Cover photo + map location (for the weather). Nice-to-have: never block creating the trip.
-        const where = await locate(data.destination).catch(() => null);
+        const where = data.where ? { lat: data.where.lat, lon: data.where.lon } : await locate(data.destination).catch(() => null);
         await store.updateTrip(c, { ...(where ?? {}), ...(data.cover ? { cover: data.cover } : {}) }).catch(() => {});
         return c;
       });

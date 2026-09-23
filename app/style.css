@@ -718,3 +718,14 @@ dialog.viewer::backdrop { background: #000; }
 .my-trips-btn svg.i:first-child { width: 16px; margin-right: -2px; }
 .topbar .title { text-align: center; font-size: 15px; }
 @media (max-width: 420px) { .topbar .pill.org { display: none; } }
+/* ---------- type-ahead suggestions ---------- */
+.suggest-wrap { position: relative; }
+.suggest { position: absolute; z-index: 20; left: 0; right: 0; top: calc(100% + 6px); background: var(--surface);
+  border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow-lg); padding: 6px; max-height: 320px; overflow-y: auto; }
+.suggest-item { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 10px 12px; border: 0;
+  background: none; border-radius: 10px; color: inherit; font: inherit; cursor: pointer; }
+.suggest-item span { display: grid; min-width: 0; }
+.suggest-item b { font-weight: 600; }
+.suggest-item small { color: var(--muted); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.suggest-item.on, .suggest-item:hover { background: var(--surface-2); }
+.dest-map { display: block; width: 100%; height: 170px; border: 0; border-radius: 16px; margin-top: 12px; background: var(--surface-2); }

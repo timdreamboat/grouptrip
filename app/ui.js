@@ -213,3 +213,61 @@ export async function busy(btn, fn) {
 
 export const emptyState = (ic, title, text, action = '') => `
   <div class="empty"><div class="empty-icon">${icon(ic)}</div><h3>${esc(title)}</h3><p>${esc(text)}</p>${action}</div>`;
+
+// Type-ahead list under an input. search(q, signal) → [{ name, detail }];
+// onPick(item) runs when one is chosen (tap, or arrow keys + Enter).
+export function suggest(input, { search, onPick, min = 2, wait = 250 }) {
+  const box = document.createElement('div');
+  box.className = 'suggest';
+  box.setAttribute('role', 'listbox');
+  box.hidden = true;
+  const wrap = document.createElement('div');
+  wrap.className = 'suggest-wrap';
+  input.replaceWith(wrap);
+  wrap.append(input, box);
+  input.setAttribute('aria-autocomplete', 'list');
+  let items = [], active = -1, timer, ctrl, picked = input.value;
+  const close = () => { box.hidden = true; active = -1; };
+  const draw = () => {
+    box.innerHTML = items.map((it, i) => `
+      <button type="button" role="option" class="suggest-item${i === active ? ' on' : ''}" data-i="${i}" aria-selected="${i === active}">
+        ${icon('pin', 'tiny')}<span><b>${esc(it.name)}</b>${it.detail ? `<small>${esc(it.detail)}</small>` : ''}</span>
+      </button>`).join('');
+    box.hidden = !items.length;
+  };
+  const choose = (i) => {
+    const it = items[i];
+    if (!it) return;
+    input.value = picked = it.name;
+    close();
+    onPick(it);
+  };
+  input.addEventListener('input', () => {
+    clearTimeout(timer);
+    ctrl?.abort();
+    const q = input.value.trim();
+    if (q.length < min || q === picked) { items = []; close(); return; }
+    timer = setTimeout(async () => {
+      ctrl = new AbortController();
+      try { items = await search(q, ctrl.signal); } catch { return; }
+      if (input.value.trim() !== q) return;
+      active = -1;
+      draw();
+    }, wait);
+  });
+  input.addEventListener('keydown', (e) => {
+    if (box.hidden) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      active = (active + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+      draw();
+    } else if (e.key === 'Enter' && active >= 0) { e.preventDefault(); choose(active); }
+    else if (e.key === 'Escape') { e.preventDefault(); close(); }
+  });
+  // pointerdown so the pick lands before the input loses focus
+  box.addEventListener('pointerdown', (e) => {
+    const b = e.target.closest('[data-i]');
+    if (b) { e.preventDefault(); choose(Number(b.dataset.i)); }
+  });
+  input.addEventListener('blur', () => setTimeout(close, 150));
+}

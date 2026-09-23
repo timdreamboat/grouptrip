@@ -100,3 +100,25 @@ export function routeUrl(from, to) {
   const at = (p) => (p.lat != null ? `${p.lat},${p.lon}` : p.q);
   return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(at(from))}&destination=${encodeURIComponent(at(to))}`;
 }
+
+// ---------- destination type-ahead ----------
+// Photon (komoot's free, keyless OpenStreetMap search) is built for search-as-you-type,
+// unlike Nominatim. Returns cities, regions, lakes, parks — not streets or shops.
+const SKIP = new Set(['street', 'house']);
+const KEEP_HOUSE = new Set(['attraction', 'theme_park', 'resort', 'island', 'beach']);
+export async function suggestDestinations(q, signal) {
+  const res = await fetch(`https://photon.komoot.io/api/?${new URLSearchParams({ q, limit: '10', lang: 'en' })}`, { signal });
+  if (!res.ok) return [];
+  const { features = [] } = await res.json();
+  const seen = new Set();
+  return features.flatMap(({ properties: p, geometry }) => {
+    if (!p.name || (SKIP.has(p.type) && !KEEP_HOUSE.has(p.osm_value))) return [];
+    const detail = [p.city !== p.name ? p.city : null, p.state !== p.name ? p.state : null, p.country !== p.name ? p.country : null]
+      .filter(Boolean).join(', ');
+    const key = `${p.name}|${detail}`;
+    if (seen.has(key)) return [];
+    seen.add(key);
+    const [lon, lat] = geometry.coordinates;
+    return [{ name: p.name, detail, lat, lon }];
+  }).slice(0, 6);
+}
