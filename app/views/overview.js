@@ -10,6 +10,7 @@ import { stayCard, handleStayClick } from './stays.js';
 import { weatherEmbed } from '../places.js';
 import { pollCard, openPolls, needsMyVote, handlePollClick } from './polls.js';
 import { photoStrip } from './photos.js';
+import { appCard, handleAppCardClick } from './getapp.js';
 
 export function render(el, ctx) {
   el.innerHTML = ctx.isOrg ? organizerHome(ctx) : guestHome(ctx);
@@ -117,6 +118,7 @@ function extras(ctx) {
   const g = going(trip);
   const open = openPolls(trip);
   return `
+    ${appCard()}
     ${open.length ? `<section><div class="section-head"><h2>Open polls</h2>
       <a class="btn btn-xs btn-ghost" href="#/t/${trip.id}/polls">${open.length > 2 ? `All ${open.length}` : 'Polls'}</a></div>
       <div class="stack">${open.slice(0, 2).map((p) => pollCard(p, ctx)).join('')}</div></section>` : ''}
@@ -236,6 +238,7 @@ function bind(el, ctx) {
   const { trip } = ctx;
   el.onclick = async (e) => {
     if (await handleStayClick(e, ctx)) return;
+    if (await handleAppCardClick(e, ctx)) return;
     if (e.target.closest('.poll') && await handlePollClick(e, ctx)) return;
     const t = e.target.closest('[data-action],[data-rsvp],[data-nudge]');
     if (!t) return;

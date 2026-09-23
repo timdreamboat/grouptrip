@@ -11,3 +11,7 @@ export const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdX
 // Map management (free); 'DEMO_MAP_ID' works for testing.
 export const GOOGLE_MAPS_KEY = '';
 export const GOOGLE_MAP_ID = 'DEMO_MAP_ID';
+
+// Public half of the key used to send phone/desktop notifications (the
+// private half lives only in the database's server-only settings).
+export const PUSH_PUBLIC_KEY = 'BLvMhsoo5jSQOMMxx6LEatOOScH-mChqPU64c0f0HjXv-tiaF50Kz3j7bgockfzWZo2fNjj8tvY2cNrtJ9nseyw';

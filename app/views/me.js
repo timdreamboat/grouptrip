@@ -5,6 +5,8 @@ import * as store from '../store.js';
 import { memberById } from './common.js';
 import { locate } from '../places.js';
 import { mountCoverPicker } from './cover.js';
+import * as pwa from '../pwa.js';
+import { openInstallHelp } from './getapp.js';
 
 export function openMe(ctx) {
   const { trip, isOrg } = ctx;
@@ -30,9 +32,25 @@ export function openMe(ctx) {
       </form>
 
       <div class="card" style="margin-top:22px;box-shadow:none">
+        <h3 style="display:flex;align-items:center;gap:8px">${icon('bell')}Notifications</h3>
+        <div class="setting">
+          <div class="grow"><div style="font-weight:600">On this device</div><div class="small muted" id="push-status"></div></div>
+          <span id="push-action"></span>
+        </div>
+        <div class="form" style="gap:10px">
+          <label class="field"><span>Email</span><input name="email" type="email" form="me-form" autocomplete="email" placeholder="you@example.com"></label>
+          <label class="switch"><input type="checkbox" name="emailNotify" form="me-form"><span></span>Email me trip updates too</label>
+          <p class="hint">Only you see your email. Tap Save to keep changes.</p>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:12px;box-shadow:none">
         <h3 style="display:flex;align-items:center;gap:8px">${icon('link')}Use GroupTrip on another device</h3>
         <p class="hint" style="margin:6px 0 12px">Open this private link on your phone or laptop to be signed in as you. Don't share it — it's yours.</p>
-        <button class="btn btn-secondary btn-block" data-personal>${icon('copy')}Copy my private link</button>
+        <div style="display:grid;gap:8px">
+          <button class="btn btn-secondary btn-block" data-email-link>${icon('link')}Email me my private link</button>
+          <button class="btn btn-ghost btn-block" data-personal>${icon('copy')}Copy my private link</button>
+        </div>
       </div>
 
       ${isOrg ? `<button class="btn btn-outline btn-block" style="margin-top:12px" data-edit>${icon('pencil')}Edit trip details</button>` : `
@@ -48,10 +66,55 @@ export function openMe(ctx) {
         const f = Object.fromEntries(new FormData(form));
         const ok = await busy(form.querySelector('.btn-primary'), () => store.updateMe(trip.id, {
           name: f.name.trim(), venmo: f.venmo.trim(), ...(f.rsvp ? { rsvp: f.rsvp } : {}),
+          email: (f.email || '').trim(), emailNotify: Boolean(f.emailNotify) && Boolean((f.email || '').trim()),
         }));
         if (ok) { close(); ctx.refresh('Saved'); }
       };
       dlg.querySelector('[data-personal]').onclick = () => copy(store.personalLink(trip.id), 'Private link copied');
+
+      // Email: fill in what's saved (only you can read it).
+      const emailIn = dlg.querySelector('[name=email]');
+      const notifyIn = dlg.querySelector('[name=emailNotify]');
+      let savedEmail = '';
+      store.getMe(trip.id).then((mine) => {
+        savedEmail = mine?.email || '';
+        if (!emailIn.value) emailIn.value = savedEmail;
+        notifyIn.checked = Boolean(mine?.emailNotify);
+      }).catch(() => {});
+      dlg.querySelector('[data-email-link]').onclick = async (e) => {
+        const email = emailIn.value.trim();
+        if (!email || !emailIn.checkValidity()) { emailIn.focus(); return toast('Add your email above first', { error: true }); }
+        const ok = await busy(e.currentTarget, async () => {
+          if (email !== savedEmail) { await store.updateMe(trip.id, { email }); savedEmail = email; }
+          await store.sendMyLink(trip.id);
+        });
+        if (ok) toast(`Sent to ${email} — check your inbox`);
+      };
+
+      // Notifications on this device.
+      const status = dlg.querySelector('#push-status');
+      const action = dlg.querySelector('#push-action');
+      const drawPush = () => {
+        if (pwa.pushNeedsInstall()) {
+          status.textContent = 'Add GroupTrip to your home screen first';
+          action.innerHTML = '<button class="btn btn-sm btn-secondary">How</button>';
+          action.firstChild.onclick = openInstallHelp;
+        } else if (!pwa.pushSupported()) {
+          status.textContent = "This browser can't show notifications";
+          action.innerHTML = '';
+        } else if (pwa.pushEnabled()) {
+          status.textContent = 'On — polls, plans, expenses and reminders';
+          action.innerHTML = '<button class="btn btn-sm btn-ghost">Turn off</button>';
+          action.firstChild.onclick = async (ev) => { if (await busy(ev.currentTarget, pwa.disablePush)) drawPush(); };
+        } else {
+          status.textContent = 'Off';
+          action.innerHTML = '<button class="btn btn-sm btn-primary">Turn on</button>';
+          action.firstChild.onclick = async (ev) => {
+            if (await busy(ev.currentTarget, pwa.enablePush)) { toast('Notifications are on for your trips on this device'); drawPush(); }
+          };
+        }
+      };
+      drawPush();
       dlg.querySelector('[data-edit]')?.addEventListener('click', () => { close(); openEditTrip(ctx); });
       dlg.querySelector('[data-leave]')?.addEventListener('click', async () => {
         close();

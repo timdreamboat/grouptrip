@@ -801,3 +801,290 @@ begin
   update itinerary_items set lat = p_lat, lon = p_lon where id = p_id and trip_id = o.trip_id;
 end $$;
 -- (get_trip in the v4 section above includes each plan's lat/lon — run this file top to bottom.)
+
+-- ======================================================================
+-- v6 (2026-09-22): notifications (web push + email), "email me my link",
+-- and a 15-minute pg_cron job (reminders; also keeps the free project awake).
+-- ======================================================================
+create extension if not exists pg_net;
+create extension if not exists pg_cron;
+
+alter table members
+  add column email        text check (email is null or email ~* '^[^@\s]+@[^@\s]+\.[^@\s]+$'),
+  add column email_notify boolean not null default false,
+  add column link_sent_at timestamptz;
+create index on members (trip_id, lower(email));
+
+-- Server-only settings. NEVER commit real values — this repo is public.
+create table app_secrets (key text primary key, value text not null);
+alter table app_secrets enable row level security;
+revoke all on app_secrets from anon, authenticated;
+-- insert into app_secrets (key, value) values
+--   ('vapid_public',  '<public key — also in app/config.js PUSH_PUBLIC_KEY>'),
+--   ('vapid_private', '<private key — generate a new pair if lost>'),
+--   ('notify_secret', '<random string>'),
+--   ('site_url',      'https://timdreamboat.github.io/grouptrip/'),
+--   ('functions_url', 'https://<project-ref>.supabase.co/functions/v1');
+
+-- One device can follow several trips, so an endpoint may appear once per member.
+create table push_subscriptions (
+  id         uuid primary key default gen_random_uuid(),
+  member_id  uuid not null references members(id) on delete cascade,
+  endpoint   text not null,
+  p256dh     text not null,
+  auth       text not null,
+  created_at timestamptz not null default now(),
+  constraint push_subscriptions_member_endpoint_key unique (member_id, endpoint)
+);
+create index on push_subscriptions (member_id);
+create index on push_subscriptions (endpoint);
+alter table push_subscriptions enable row level security;
+revoke all on push_subscriptions from anon, authenticated;
+
+-- Outbox: triggers add rows; the 'notify' Edge Function delivers them.
+create table notifications (
+  id         uuid primary key default gen_random_uuid(),
+  trip_id    uuid not null references trips(id) on delete cascade,
+  recipients uuid[] not null,
+  title      text not null,
+  body       text,
+  tab        text,                 -- which screen the notification opens
+  dedupe_key text unique,          -- reminders: one per trip per day
+  created_at timestamptz not null default now(),
+  sent_at    timestamptz
+);
+create index on notifications (trip_id);
+create index on notifications (created_at) where sent_at is null;
+alter table notifications enable row level security;
+revoke all on notifications from anon, authenticated;
+
+create function _poke_notify() returns void
+language plpgsql security definer set search_path = public, extensions as $$
+begin
+  perform net.http_post(
+    url := (select value from app_secrets where key = 'functions_url') || '/notify',
+    headers := jsonb_build_object('Content-Type', 'application/json',
+                                  'x-notify-secret', (select value from app_secrets where key = 'notify_secret')),
+    body := '{}'::jsonb);
+end $$;
+
+create function _notify(p_trip uuid, p_to uuid[], p_title text, p_body text, p_tab text, p_dedupe text default null)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if coalesce(array_length(p_to, 1), 0) = 0 then return; end if;
+  insert into notifications (trip_id, recipients, title, body, tab, dedupe_key)
+  values (p_trip, p_to, left(p_title, 120), left(p_body, 240), p_tab, p_dedupe)
+  on conflict (dedupe_key) do nothing;
+  perform _poke_notify();
+end $$;
+
+create function _joined(p_trip uuid, p_except uuid default null, p_non_org boolean default false) returns uuid[]
+language sql stable security definer set search_path = public as $$
+  select coalesce(array_agg(id), '{}') from members
+  where trip_id = p_trip and joined_at is not null and id is distinct from p_except and (not p_non_org or not is_organizer);
+$$;
+
+create function _money(p_cents integer, p_currency text) returns text
+language sql immutable as $$
+  select case when p_currency = 'USD' then '$' || to_char(p_cents / 100.0, 'FM999,999,990.00')
+              else to_char(p_cents / 100.0, 'FM999,999,990.00') || ' ' || p_currency end;
+$$;
+
+create function _when(p_day date, p_time text) returns text
+language sql immutable as $$
+  select concat_ws(' · ', to_char(p_day, 'Dy, Mon FMDD'),
+                   case when p_time ~ '^\d\d:\d\d$' then to_char(p_time::time, 'FMHH12:MI AM') end);
+$$;
+
+create function _on_poll() returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  perform _notify(new.trip_id, _joined(new.trip_id, new.created_by),
+    coalesce((select name from members where id = new.created_by), 'Someone') || ' started a poll',
+    new.question, 'polls');
+  return null;
+end $$;
+create trigger notify_poll after insert on polls for each row execute function _on_poll();
+
+create function _on_plan() returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  perform _notify(new.trip_id, _joined(new.trip_id, null, true),
+    'New plan: ' || new.title, concat_ws(' · ', _when(new.day, new.time), new.place), 'plan');
+  return null;
+end $$;
+create trigger notify_plan after insert on itinerary_items for each row execute function _on_plan();
+
+create function _on_join() returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if new.joined_at is not null and not new.is_organizer and (tg_op = 'INSERT' or old.joined_at is null) then
+    perform _notify(new.trip_id,
+      (select coalesce(array_agg(id), '{}') from members where trip_id = new.trip_id and is_organizer),
+      new.name || ' joined ' || (select name from trips where id = new.trip_id),
+      'They can add their flight and vote on plans now.', 'people');
+  end if;
+  return null;
+end $$;
+create trigger notify_join after insert or update of joined_at on members for each row execute function _on_join();
+
+create function _on_split() returns trigger language plpgsql security definer set search_path = public as $$
+declare e expenses; payer text; cur text;
+begin
+  select * into e from expenses where id = new.expense_id;
+  if new.member_id = e.paid_by or new.share_cents = 0 then return null; end if;
+  select name into payer from members where id = e.paid_by;
+  select currency into cur from trips where id = e.trip_id;
+  perform _notify(e.trip_id, array[new.member_id],
+    payer || ' added ' || e.description, 'Your share: ' || _money(new.share_cents, cur), 'money');
+  return null;
+end $$;
+create trigger notify_split after insert on expense_splits for each row execute function _on_split();
+
+create function _on_dates() returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if new.start_date is not null and (new.start_date, new.end_date) is distinct from (old.start_date, old.end_date) then
+    perform _notify(new.id, _joined(new.id, null, true),
+      'Trip dates set: ' || to_char(new.start_date, 'Mon FMDD') ||
+        case when new.end_date is not null and new.end_date <> new.start_date then ' – ' || to_char(new.end_date, 'Mon FMDD') else '' end,
+      new.name, 'home');
+  end if;
+  return null;
+end $$;
+create trigger notify_dates after update of start_date, end_date on trips for each row execute function _on_dates();
+
+create function _on_flight() returns trigger language plpgsql security definer set search_path = public as $$
+declare who members;
+begin
+  select * into who from members where id = new.member_id;
+  if who.is_organizer then return null; end if;
+  perform _notify(new.trip_id,
+    (select coalesce(array_agg(id), '{}') from members where trip_id = new.trip_id and is_organizer),
+    who.name || ' added a flight',
+    concat_ws(' · ', new.flight_number, case when new.arr_airport is not null then 'lands ' || new.arr_airport end,
+      _when(coalesce(new.arr_date, new.flight_date), new.arr_time)), 'travel');
+  return null;
+end $$;
+create trigger notify_flight after insert on flights for each row execute function _on_flight();
+
+-- 8am at the destination (time zone estimated from longitude; US Eastern if
+-- unknown): the day before the trip, and each morning of the trip.
+create function enqueue_reminders() returns void language plpgsql security definer set search_path = public as $$
+declare t trips; local_ts timestamp; d date; plans text; n int;
+begin
+  for t in select * from trips where start_date is not null
+                               and current_date between start_date - 2 and coalesce(end_date, start_date) + 1 loop
+    local_ts := (now() at time zone 'UTC') + make_interval(hours => coalesce(round(t.lon / 15)::int, -5));
+    if extract(hour from local_ts) <> 8 or extract(minute from local_ts) >= 15 then continue; end if;
+    d := local_ts::date;
+    select count(*), string_agg(concat_ws(' ', case when time ~ '^\d\d:\d\d$' then to_char(time::time, 'FMHH12:MI AM') end, title), ' · ' order by time nulls first)
+      into n, plans from itinerary_items where trip_id = t.id and day = d;
+    if d = t.start_date - 1 then
+      perform _notify(t.id, _joined(t.id), 'Tomorrow: ' || t.name,
+        coalesce((select count(*) from members where trip_id = t.id and rsvp = 'going')::text || ' going', '') ||
+        coalesce(' · first up: ' || (select title from itinerary_items where trip_id = t.id and day >= t.start_date
+                                      order by day, time nulls first limit 1), ''),
+        'home', 'rem:' || t.id || ':' || d);
+    elsif d between t.start_date and coalesce(t.end_date, t.start_date) then
+      perform _notify(t.id, _joined(t.id),
+        'Today' || coalesce(' in ' || t.destination, '') || case when n > 0 then ': ' || n || ' plan' || case when n = 1 then '' else 's' end else '' end,
+        coalesce(plans, 'Nothing planned — enjoy the free day!'), 'plan', 'rem:' || t.id || ':' || d);
+    end if;
+  end loop;
+end $$;
+
+select cron.schedule('grouptrip-notify', '*/15 * * * *', $$ select enqueue_reminders(); select _poke_notify(); $$);
+
+-- Service role only (Edge Functions).
+create function claim_notifications() returns jsonb language plpgsql security definer set search_path = public as $$
+declare site text := (select value from app_secrets where key = 'site_url'); out jsonb;
+begin
+  with c as (
+    update notifications set sent_at = now()
+    where id in (select id from notifications where sent_at is null and created_at > now() - interval '1 day'
+                 order by created_at limit 100 for update skip locked)
+    returning *)
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'id', c.id, 'title', c.title, 'body', c.body, 'tripName', t.name,
+    'url', site || '#/t/' || t.share_code || '/' || coalesce(c.tab, 'home'),
+    'subs', coalesce((select jsonb_agg(distinct jsonb_build_object('endpoint', s.endpoint, 'p256dh', s.p256dh, 'auth', s.auth))
+                      from push_subscriptions s where s.member_id = any(c.recipients)), '[]'),
+    'emails', coalesce((select jsonb_agg(jsonb_build_object('email', m.email, 'name', m.name,
+                          'link', site || '#/me/' || t.share_code || '/' || m.token))
+                        from members m where m.id = any(c.recipients) and m.email_notify and m.email is not null), '[]'))), '[]')
+  into out
+  from c join trips t on t.id = c.trip_id;
+  return out;
+end $$;
+
+create function drop_push_endpoints(p_endpoints text[]) returns void
+language sql security definer set search_path = public as $$
+  delete from push_subscriptions where endpoint = any(p_endpoints);
+$$;
+
+-- "Email me my link": by token (You screen) or by email (locked out). One per person per 2 minutes.
+create function link_request(p_code text, p_token text, p_email text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare t trips; m members;
+begin
+  select * into t from trips where share_code = p_code;
+  if t.id is null then return null; end if;
+  if p_token is not null then
+    select * into m from members where trip_id = t.id and token = p_token and joined_at is not null;
+  else
+    select * into m from members where trip_id = t.id and lower(email) = lower(trim(p_email)) and joined_at is not null
+    order by created_at limit 1;
+  end if;
+  if m.id is null or m.email is null or (m.link_sent_at is not null and m.link_sent_at > now() - interval '2 minutes') then
+    return null;
+  end if;
+  update members set link_sent_at = now() where id = m.id;
+  return jsonb_build_object('email', m.email, 'name', m.name, 'tripName', t.name,
+    'link', (select value from app_secrets where key = 'site_url') || '#/me/' || t.share_code || '/' || m.token);
+end $$;
+
+create function app_secret(p_key text) returns text
+language sql stable security definer set search_path = public as $$
+  select value from app_secrets where key = p_key;
+$$;
+
+revoke execute on function _poke_notify(), _notify(uuid, uuid[], text, text, text, text), _joined(uuid, uuid, boolean),
+  enqueue_reminders(), claim_notifications(), drop_push_endpoints(text[]), link_request(text, text, text), app_secret(text)
+  from public, anon, authenticated;
+grant execute on function claim_notifications(), drop_push_endpoints(text[]), link_request(text, text, text), app_secret(text)
+  to service_role;
+
+-- For the app.
+create function save_push(p_code text, p_token text, p_sub jsonb) returns void
+language plpgsql security definer set search_path = public as $$
+declare a members := _actor(p_code, p_token);
+begin
+  insert into push_subscriptions (member_id, endpoint, p256dh, auth)
+  values (a.id, p_sub->>'endpoint', p_sub->'keys'->>'p256dh', p_sub->'keys'->>'auth')
+  on conflict (member_id, endpoint) do update set p256dh = excluded.p256dh, auth = excluded.auth;
+end $$;
+
+create function remove_push(p_code text, p_token text, p_endpoint text) returns void
+language plpgsql security definer set search_path = public as $$
+declare a members := _actor(p_code, p_token);
+begin
+  delete from push_subscriptions where endpoint = p_endpoint and member_id = a.id;
+end $$;
+
+create function get_me(p_code text, p_token text) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare a members := _actor(p_code, p_token);
+begin
+  return jsonb_build_object('email', a.email, 'emailNotify', a.email_notify,
+    'pushEndpoints', coalesce((select jsonb_agg(endpoint) from push_subscriptions where member_id = a.id), '[]'));
+end $$;
+
+create or replace function update_me(p_code text, p_token text, p_me jsonb) returns void
+language plpgsql security definer set search_path = public as $$
+declare a members := _actor(p_code, p_token);
+begin
+  update members set
+    name  = coalesce(nullif(trim(p_me->>'name'), ''), name),
+    rsvp  = case when p_me->>'rsvp' in ('going', 'maybe', 'declined') then p_me->>'rsvp' else rsvp end,
+    venmo = case when p_me ? 'venmo' then nullif(regexp_replace(trim(p_me->>'venmo'), '^@', ''), '') else venmo end,
+    email = case when p_me ? 'email' then nullif(lower(trim(p_me->>'email')), '') else email end,
+    email_notify = case when p_me ? 'emailNotify' then coalesce((p_me->>'emailNotify')::boolean, false) else email_notify end
+  where id = a.id;
+end $$;

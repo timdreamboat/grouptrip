@@ -1,7 +1,7 @@
 // What someone sees when they open an invite link and haven't joined yet:
 // a Partiful-style invite card — "Tim invited you" — then tap your name or
 // type it to join.
-import { esc, icon, avatarStack, avatar, busy, toast } from '../ui.js';
+import { esc, icon, avatarStack, avatar, busy, toast, sheet } from '../ui.js';
 import * as store from '../store.js';
 import { heroHTML, going, organizer, firstName, tripCover } from './common.js';
 
@@ -40,6 +40,7 @@ export function render(root, trip, onJoined) {
             <button class="btn ${unclaimed.length ? 'btn-secondary' : 'btn-primary'} btn-lg btn-block">Join the trip ${icon('arrow')}</button>
           </form>
           <p class="hint" style="text-align:center">No account needed. You'll be able to add your flight and split costs.</p>
+          <button class="btn btn-ghost btn-sm" id="recover" style="justify-self:center">Already joined on another device? Email me my link</button>
         </div>
       </div>
     </main>`;
@@ -55,6 +56,22 @@ export function render(root, trip, onJoined) {
     if (!id) return;
     const ok = await busy(claimBtn, () => store.claimMember(trip.id, id));
     if (ok) onJoined("You're in! Welcome to the trip");
+  });
+
+  root.querySelector('#recover').onclick = () => sheet({
+    title: 'Email me my link',
+    body: `<form class="form" id="recover-form">
+      <p class="hint">If you saved your email on this trip, we'll send your private link to it.</p>
+      <label class="field"><span>Your email</span><input name="email" type="email" required autocomplete="email"></label>
+      <button class="btn btn-primary btn-lg">Send my link</button></form>`,
+    onMount(dlg, close) {
+      const f = dlg.querySelector('#recover-form');
+      f.onsubmit = async (e) => {
+        e.preventDefault();
+        const ok = await busy(f.querySelector('.btn'), () => store.recoverLink(trip.id, f.elements.email.value.trim()));
+        if (ok) { close(); toast('If that email is on this trip, your link is on its way'); }
+      };
+    },
   });
 
   const form = root.querySelector('#join');

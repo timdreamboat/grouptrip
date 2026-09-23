@@ -75,6 +75,25 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
   code), deletes single photos, and purges a trip's folder before the trip is
   deleted. Photos are shrunk on the device first (2048px + 640px thumb).
   Free tier storage is 1 GB — roughly 2,000+ photos across all trips.
+- Notifications (v6): database triggers write to the `notifications` outbox
+  (new poll, new plan, someone joins → organizer, expense share, trip dates
+  set, guest adds a flight → organizer) and poke the `notify` Edge Function
+  (verify_jwt OFF, checks `x-notify-secret`). pg_cron job `grouptrip-notify`
+  runs every 15 min: 8am-local reminders (day before + each trip day) and a
+  retry poke — it also keeps the free project from pausing. Delivery = web
+  push (VAPID keys in `app_secrets`; public half in `app/config.js`) and email
+  for members with `email_notify`. `app_secrets` holds server-only values —
+  never commit them (repo is public).
+- Email (`_shared/email.ts`): Resend (`RESEND_API_KEY`) or Brevo
+  (`BREVO_API_KEY`) + `EMAIL_FROM`, set as Edge Function secrets. Until one is
+  set, email updates and "Email me my link" politely say email isn't set up.
+  `email-link` function: send my link (token) / recover by email (always
+  answers ok; link base URL comes from `app_secrets.site_url`, never the request).
+- PWA: `app/manifest.webmanifest`, `app/sw.js` (network-first app files,
+  offline fallback, push display). Add new app files to `SHELL` in sw.js.
+  Trips are also saved in localStorage; offline shows the saved copy + banner.
+  The Claude desktop preview browser can't run service workers — test
+  install/push on a real phone.
 - Edge Function `flight-lookup` is deployed and working; its `AERODATABOX_KEY`
   secret (RapidAPI, AeroDataBox free Basic plan) is set in the Supabase dashboard.
 - Money is stored in integer cents everywhere. Never use floats for totals.

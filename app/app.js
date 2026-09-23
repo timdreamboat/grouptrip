@@ -10,6 +10,7 @@ import * as create from './views/create.js';
 import * as invite from './views/invite.js';
 import * as tripView from './views/trip.js';
 import { locate, coverOptions } from './places.js';
+import * as pwa from './pwa.js';
 
 const root = document.getElementById('app');
 let current = { code: null, tab: null, trip: null };
@@ -85,7 +86,9 @@ async function openTrip(code, tab, { animate = true, keepScroll = false } = {}) 
     tripView.flash();
   }, { animate: animate && !keepScroll });
   enrich(ctx);
+  if (!followed.has(code) && !trip._offline) { followed.add(code); pwa.followTrip(code); }
 }
+const followed = new Set(); // trips this session made sure get notifications
 
 // Trips made before photos/weather existed: the organizer's device fills in a
 // cover photo and map location once, in the background.
@@ -104,6 +107,7 @@ async function enrich({ trip, isOrg, refresh }) {
 }
 
 window.addEventListener('hashchange', route);
+pwa.registerServiceWorker();
 
 // Pick up changes friends made while this tab was in the background.
 document.addEventListener('visibilitychange', () => {

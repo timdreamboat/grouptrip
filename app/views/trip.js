@@ -70,6 +70,7 @@ export function render(root, ctx, tabId) {
           <button class="btn btn-icon btn-ghost" data-me aria-label="You">${avatar(me, 32)}</button>
         </header>
         <main class="main">
+          ${trip._offline ? `<div class="offline-banner">${icon('info', 'tiny')}You're offline — showing your last saved copy. Changes need a connection.</div>` : ''}
           ${tab.group ? `<nav class="seg-nav" aria-label="Group">${TABS.filter((t) => t.group).map((t) =>
             `<a href="${href(t)}" class="${t === tab ? 'on' : ''}">${icon(t.icon)}${t.label}${t.id === 'polls' && counts.polls ? `<span class="badge">${counts.polls}</span>` : ''}</a>`).join('')}</nav>` : ''}
           <div id="tab"></div>

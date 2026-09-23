@@ -45,14 +45,28 @@ function remember(trip) {
 export function forgetTrip(code) {
   write(TRIPS, listTrips().filter((t) => t.id !== code));
   dropToken(code);
+  try { localStorage.removeItem(CACHE_PREFIX + code); } catch { /* ignore */ }
 }
+// Trips this device is a member of (for turning notifications on for all of them).
+export const joinedCodes = () => Object.keys(read(IDS, {}));
 
 // ---------- reading ----------
+// Offline: every trip opened is saved on the device; with no connection we
+// show that copy (marked _offline) instead of an error.
+const CACHE_PREFIX = 'grouptrip.cache.';
 export async function getTrip(code) {
-  const trip = await rpc('get_trip', { p_code: code, p_token: tokenFor(code) });
+  let trip;
+  try {
+    trip = await rpc('get_trip', { p_code: code, p_token: tokenFor(code) });
+  } catch (err) {
+    const saved = read(CACHE_PREFIX + code, null);
+    if (saved && (!navigator.onLine || err instanceof TypeError)) return { ...saved, _offline: true };
+    throw err;
+  }
   // A stale token (e.g. removed from the trip) means this device is no longer a member.
   if (!trip.me && tokenFor(code)) dropToken(code);
   remember(trip);
+  if (trip.me) write(CACHE_PREFIX + code, trip);
   return trip;
 }
 
@@ -78,6 +92,23 @@ export async function claimMember(code, memberId) {
 const act = (fn, code, args = {}) => rpc(fn, { p_code: code, p_token: tokenFor(code), ...args });
 
 export const updateMe = (code, me) => act('update_me', code, { p_me: me });
+export const getMe = (code) => act('get_me', code);
+export const savePush = (code, sub) => act('save_push', code, { p_sub: sub });
+export const removePush = (code, endpoint) => act('remove_push', code, { p_endpoint: endpoint });
+
+// "Email me my link" — from the You screen (saved email) or when locked out.
+async function emailLinkFn(body) {
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/email-link`, {
+    method: 'POST',
+    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const out = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(out?.error || 'Could not send the email. Please try again.');
+  return out;
+}
+export const sendMyLink = (code) => emailLinkFn({ action: 'send', code, token: tokenFor(code) });
+export const recoverLink = (code, email) => emailLinkFn({ action: 'recover', code, email });
 export const updateTrip = (code, trip) => act('update_trip', code, { p_trip: trip });
 export async function deleteTrip(code) {
   await photosFn({ action: 'purge', code, token: tokenFor(code) }); // remove the album's files first

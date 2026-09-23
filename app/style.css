@@ -631,3 +631,15 @@ dialog.viewer::backdrop { background: #000; }
 .gm-style .pin-row { color: #6d6a72; }
 .gm-style .pin-notes { background: #efede8; color: #16151a; }
 .gm-style .pin-link { color: #b8330f !important; }
+
+/* ---------- install / notifications / offline ---------- */
+.app-card { position: relative; background: linear-gradient(135deg, var(--accent-soft), var(--surface) 65%); }
+.app-card-x { position: absolute; top: 10px; right: 10px; width: 30px; }
+.app-card h3 { padding-right: 28px; }
+.steps { margin: 0 0 12px; padding-left: 20px; display: grid; gap: 10px; line-height: 1.5; }
+.offline-banner {
+  display: flex; align-items: center; gap: 8px; margin: 8px 0 0; padding: 10px 14px; border-radius: 14px;
+  background: var(--warn-soft); color: var(--warn); font-size: 13px; font-weight: 500;
+}
+.setting { display: flex; align-items: center; gap: 12px; padding: 12px 0; }
+.setting .grow { flex: 1; min-width: 0; }
