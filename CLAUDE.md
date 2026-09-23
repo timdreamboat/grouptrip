@@ -28,6 +28,10 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
    the choice and its credit are stored on the trip. Wikimedia only serves
    standard widths (500, 960, 1280…) — other sizes return 400.
    Nominatim allows 1 request/second; `places.js` queues requests.
+5. Exchange rates (owner asked for multi-currency, 2026-09-22): `rateTo()` in
+   `app/money.js` fetches today's rate from Frankfurter (free, keyless). An
+   expense in another currency is stored converted to the trip currency, with
+   the original amount, currency and rate kept for display and editing.
 4. Calendar map is Google (owner: "OpenStreetMap doesn't work — use Google",
    2026-09-22). `views/tripmap.js` has two modes:
    - No key (today): Google's free embed (`maps.google.com/maps?q=…&output=embed`),
@@ -114,6 +118,9 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
   the person a new token and un-joins them; they tap their name on the invite
   link again. Their data and RSVP stay.
 - Money is stored in integer cents everywhere. Never use floats for totals.
+  Splits: equal / amounts / shares (`weightedShares` = largest-remainder so
+  shares always sum exactly). Settlements ("mark as paid") count in
+  `balances()`. Receipts live in the trip's photo folder (not the album).
 
 ## Design direction
 Modern (2027) consumer app, mobile-first. References: Partiful/Luma (invite

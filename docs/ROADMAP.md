@@ -58,9 +58,11 @@
 ## Ideas next
 - Local time + currency on Home; photo reactions; notifications when a poll opens
 
-## v2 — nicer splitting
-- Uneven splits (by amount / by shares), multiple currencies
-- Mark payments as settled
+## v2.4 — money upgrades (2026-09-22)
+- ✅ Uneven splits (amounts / shares), other currencies (today's rate), receipt photos
+- ✅ Mark as paid / Got it, payment history with undo, notifications to the other person
+
+## Later (money)
 - Categories and a spending summary
 
 ## Later ideas

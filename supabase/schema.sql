@@ -522,7 +522,7 @@ end $$;
 
 -- ======================================================================
 -- v4 (2026-09-22): polls and the shared photo album.
--- NOTE: the get_trip below is the CURRENT version (kept up to date through v9);
+-- NOTE: the get_trip below is the CURRENT version (kept up to date through v10);
 -- plpgsql only checks table names when it runs, so defining it here is fine.
 -- get_trip below replaces the earlier versions (adds polls + photos).
 -- ======================================================================
@@ -655,10 +655,17 @@ begin
     'expenses', coalesce((select jsonb_agg(jsonb_build_object(
                             'id', e.id, 'description', e.description, 'amount', e.amount_cents,
                             'paidBy', e.paid_by, 'createdBy', e.created_by, 'spentOn', e.spent_on,
-                            'splits', (select jsonb_agg(jsonb_build_object('memberId', s.member_id, 'share', s.share_cents))
+                            'originalCents', e.original_cents, 'originalCurrency', e.original_currency, 'rate', e.rate,
+                            'splitMode', e.split_mode, 'receiptPath', e.receipt_path, 'receiptThumb', e.receipt_thumb,
+                            'splits', (select jsonb_agg(jsonb_build_object('memberId', s.member_id, 'share', s.share_cents, 'weight', s.weight))
                                        from expense_splits s where s.expense_id = e.id))
                           order by e.created_at desc)
-                          from expenses e where e.trip_id = tid), '[]')
+                          from expenses e where e.trip_id = tid), '[]'),
+    'settlements', coalesce((select jsonb_agg(jsonb_build_object(
+                               'id', x.id, 'from', x.from_member, 'to', x.to_member, 'amount', x.amount_cents,
+                               'createdBy', x.created_by, 'createdAt', x.created_at)
+                             order by x.created_at desc)
+                             from settlements x where x.trip_id = tid), '[]')
   );
 end $$;
 
@@ -1338,3 +1345,141 @@ begin
     delete from stay_guests where stay_id = p_stay and member_id = a.id;
   end if;
 end $$;
+
+-- ======================================================================
+-- v10 (2026-09-22): money upgrades — uneven splits, other currencies,
+-- receipt photos, and "mark as paid". get_trip's expenses also return
+-- originalCents, originalCurrency, rate, splitMode, receiptPath, receiptThumb
+-- and each split's weight; get_trip also returns 'settlements'
+-- (see the v4 get_trip, kept current).
+-- ======================================================================
+alter table expenses
+  add column original_cents    integer,
+  add column original_currency text check (original_currency is null or original_currency ~ '^[A-Z]{3}$'),
+  add column rate              numeric,
+  add column split_mode        text not null default 'equal' check (split_mode in ('equal', 'amounts', 'shares')),
+  add column receipt_path      text,
+  add column receipt_thumb     text;
+alter table expense_splits add column weight numeric;  -- shares mode: 2 = a couple; amounts mode: entered cents
+
+create table settlements (
+  id           uuid primary key default gen_random_uuid(),
+  trip_id      uuid not null references trips(id) on delete cascade,
+  from_member  uuid not null references members(id) on delete cascade,
+  to_member    uuid not null references members(id) on delete cascade,
+  amount_cents integer not null check (amount_cents > 0),
+  created_by   uuid references members(id) on delete set null,
+  created_at   timestamptz not null default now(),
+  check (from_member <> to_member)
+);
+create index on settlements (trip_id);
+create index on settlements (from_member);
+create index on settlements (to_member);
+create index on settlements (created_by);
+alter table settlements enable row level security;
+revoke all on settlements from anon, authenticated;
+
+create function _expense_extras(p_trip uuid, p_id uuid, p_extra jsonb) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if p_extra is null then return; end if;
+  if coalesce(p_extra->>'receiptPath', '') <> '' and not (p_extra->>'receiptPath' like p_trip::text || '/%'
+     and coalesce(p_extra->>'receiptThumb', '') like p_trip::text || '/%') then
+    raise exception 'Receipt is not in this trip''s folder';
+  end if;
+  update expenses set
+    original_cents    = nullif(p_extra->>'originalCents', '')::integer,
+    original_currency = nullif(upper(p_extra->>'originalCurrency'), ''),
+    rate              = nullif(p_extra->>'rate', '')::numeric,
+    split_mode        = coalesce(nullif(p_extra->>'splitMode', ''), 'equal'),
+    receipt_path      = case when p_extra ? 'receiptPath' then nullif(p_extra->>'receiptPath', '') else receipt_path end,
+    receipt_thumb     = case when p_extra ? 'receiptPath' then nullif(p_extra->>'receiptThumb', '') else receipt_thumb end,
+    spent_on          = case when p_extra->>'spentOn' ~ '^\d{4}-\d{2}-\d{2}$' then (p_extra->>'spentOn')::date else spent_on end
+  where id = p_id;
+end $$;
+revoke execute on function _expense_extras(uuid, uuid, jsonb) from public, anon, authenticated;
+
+drop function add_expense(text, text, text, integer, uuid, jsonb);
+create function add_expense(p_code text, p_token text, p_description text, p_amount integer, p_paid_by uuid, p_splits jsonb, p_extra jsonb default null)
+returns uuid language plpgsql security definer set search_path = public as $$
+declare a members := _actor(p_code, p_token); new_id uuid;
+begin
+  if (select coalesce(sum((s->>'share')::integer), -1) from jsonb_array_elements(p_splits) s) <> p_amount then
+    raise exception 'Split shares must add up to the total';
+  end if;
+  if exists (
+    select 1 from (select p_paid_by as mid union select (s->>'memberId')::uuid from jsonb_array_elements(p_splits) s) u
+    where not exists (select 1 from members m where m.id = u.mid and m.trip_id = a.trip_id)
+  ) then raise exception 'Unknown person in expense'; end if;
+  insert into expenses (trip_id, description, amount_cents, paid_by, created_by, spent_on)
+  values (a.trip_id, trim(p_description), p_amount, p_paid_by, a.id, current_date)
+  returning id into new_id;
+  perform _expense_extras(a.trip_id, new_id, p_extra);
+  insert into expense_splits (expense_id, member_id, share_cents, weight)
+  select new_id, (s->>'memberId')::uuid, (s->>'share')::integer, nullif(s->>'weight', '')::numeric
+  from jsonb_array_elements(p_splits) s;
+  return new_id;
+end $$;
+
+drop function update_expense(text, text, uuid, text, integer, uuid, jsonb);
+create function update_expense(p_code text, p_token text, p_id uuid, p_description text, p_amount integer, p_paid_by uuid, p_splits jsonb, p_extra jsonb default null)
+returns void language plpgsql security definer set search_path = public as $$
+declare a members := _actor(p_code, p_token); e expenses;
+begin
+  select * into e from expenses where id = p_id and trip_id = a.trip_id;
+  if e.id is null or not (e.created_by = a.id or e.paid_by = a.id or a.is_organizer) then
+    raise exception 'Only the person who added or paid this expense can edit it';
+  end if;
+  if p_amount is null or p_amount <= 0 then raise exception 'Enter an amount'; end if;
+  if (select coalesce(sum((s->>'share')::integer), -1) from jsonb_array_elements(p_splits) s) <> p_amount then
+    raise exception 'Split shares must add up to the total';
+  end if;
+  if exists (
+    select 1 from (select p_paid_by as mid union select (s->>'memberId')::uuid from jsonb_array_elements(p_splits) s) u
+    where not exists (select 1 from members m where m.id = u.mid and m.trip_id = a.trip_id)
+  ) then raise exception 'Unknown person in expense'; end if;
+  update expenses set description = trim(p_description), amount_cents = p_amount, paid_by = p_paid_by where id = e.id;
+  perform _expense_extras(a.trip_id, e.id, p_extra);
+  perform set_config('grouptrip.quiet', 'on', true);
+  delete from expense_splits where expense_id = e.id;
+  insert into expense_splits (expense_id, member_id, share_cents, weight)
+  select e.id, (s->>'memberId')::uuid, (s->>'share')::integer, nullif(s->>'weight', '')::numeric
+  from jsonb_array_elements(p_splits) s;
+  perform set_config('grouptrip.quiet', 'off', true);
+end $$;
+
+create function add_settlement(p_code text, p_token text, p_from uuid, p_to uuid, p_amount integer) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare a members := _actor(p_code, p_token); new_id uuid;
+begin
+  if a.id not in (p_from, p_to) and not a.is_organizer then raise exception 'Only the people involved can mark this paid'; end if;
+  if (select count(*) from members where id in (p_from, p_to) and trip_id = a.trip_id) <> 2 then raise exception 'Unknown person'; end if;
+  insert into settlements (trip_id, from_member, to_member, amount_cents, created_by)
+  values (a.trip_id, p_from, p_to, p_amount, a.id) returning id into new_id;
+  return new_id;
+end $$;
+
+create function remove_settlement(p_code text, p_token text, p_id uuid) returns void
+language plpgsql security definer set search_path = public as $$
+declare a members := _actor(p_code, p_token);
+begin
+  delete from settlements where id = p_id and trip_id = a.trip_id
+    and (created_by = a.id or a.id in (from_member, to_member) or a.is_organizer);
+  if not found then raise exception 'Only the people involved can undo this payment'; end if;
+end $$;
+
+create function _on_settlement() returns trigger language plpgsql security definer set search_path = public as $$
+declare cur text := (select currency from trips where id = new.trip_id);
+begin
+  if new.created_by = new.to_member then
+    perform _notify(new.trip_id, array[new.from_member],
+      (select name from members where id = new.to_member) || ' marked your payment as received',
+      _money(new.amount_cents, cur) || ' — you''re settled up with them.', 'money');
+  else
+    perform _notify(new.trip_id, array[new.to_member],
+      (select name from members where id = new.from_member) || ' paid you ' || _money(new.amount_cents, cur),
+      'Marked as paid in GroupTrip.', 'money');
+  end if;
+  return null;
+end $$;
+create trigger notify_settlement after insert on settlements for each row execute function _on_settlement();

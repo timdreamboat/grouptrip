@@ -126,7 +126,7 @@ export const updateStay = (code, id, stay) => act('update_stay', code, { p_id: i
 export const setStayLocation = (code, id, lat, lon) => act('set_stay_location', code, { p_id: id, p_lat: lat, p_lon: lon });
 export const setMyStay = (code, id, on) => act('set_my_stay', code, { p_stay: id, p_on: on });
 export const updateExpense = (code, id, e) => act('update_expense', code, {
-  p_id: id, p_description: e.description, p_amount: e.amount, p_paid_by: e.paidBy, p_splits: e.splits,
+  p_id: id, p_description: e.description, p_amount: e.amount, p_paid_by: e.paidBy, p_splits: e.splits, p_extra: e.extra ?? null,
 });
 export const updatePoll = (code, id, question) => act('update_poll', code, { p_poll: id, p_question: question });
 export const removePollOption = (code, optionId) => act('remove_poll_option', code, { p_option: optionId });
@@ -134,8 +134,10 @@ export const resetMember = (code, id) => act('reset_member', code, { p_id: id })
 export const addFlight = (code, flight) => act('add_flight', code, { p_flight: flight });
 export const removeFlight = (code, id) => act('remove_flight', code, { p_id: id });
 export const addExpense = (code, e) => act('add_expense', code, {
-  p_description: e.description, p_amount: e.amount, p_paid_by: e.paidBy, p_splits: e.splits,
+  p_description: e.description, p_amount: e.amount, p_paid_by: e.paidBy, p_splits: e.splits, p_extra: e.extra ?? null,
 });
+export const addSettlement = (code, from, to, amount) => act('add_settlement', code, { p_from: from, p_to: to, p_amount: amount });
+export const removeSettlement = (code, id) => act('remove_settlement', code, { p_id: id });
 export const removeExpense = (code, id) => act('remove_expense', code, { p_id: id });
 export const addStay = (code, stay) => act('add_stay', code, { p_stay: stay });
 export const removeStay = (code, id) => act('remove_stay', code, { p_id: id });
@@ -203,6 +205,16 @@ export async function uploadPhotos(code, files, onProgress) {
 }
 
 export const removePhoto = (code, id) => photosFn({ action: 'delete', code, token: tokenFor(code), id });
+
+// A receipt photo for an expense (same trip folder as the album, not in it).
+export async function uploadReceipt(code, file) {
+  const [slot] = await photosFn({ action: 'sign', code, token: tokenFor(code), count: 1 });
+  const full = await shrink(file, 1600, 0.82);
+  const thumb = await shrink(file, 400, 0.75);
+  await put(slot.uploadUrl, full.blob);
+  await put(slot.thumbUploadUrl, thumb.blob);
+  return { receiptPath: slot.path, receiptThumb: slot.thumbPath };
+}
 
 export async function lookupFlight(number, date) {
   const res = await fetch(`${SUPABASE_URL}/functions/v1/flight-lookup?number=${encodeURIComponent(number)}&date=${date}`, {

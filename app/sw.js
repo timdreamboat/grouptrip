@@ -1,6 +1,6 @@
 // GroupTrip service worker: makes the app installable, keeps it working
 // offline (last-seen copy of the app files), and shows push notifications.
-const CACHE = 'grouptrip-v2';
+const CACHE = 'grouptrip-v3';
 
 // The app's own files. Add new files here so they work offline too.
 const SHELL = [
