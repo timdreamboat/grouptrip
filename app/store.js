@@ -79,7 +79,11 @@ const act = (fn, code, args = {}) => rpc(fn, { p_code: code, p_token: tokenFor(c
 
 export const updateMe = (code, me) => act('update_me', code, { p_me: me });
 export const updateTrip = (code, trip) => act('update_trip', code, { p_trip: trip });
-export async function deleteTrip(code) { await act('delete_trip', code); forgetTrip(code); }
+export async function deleteTrip(code) {
+  await photosFn({ action: 'purge', code, token: tokenFor(code) }); // remove the album's files first
+  await act('delete_trip', code);
+  forgetTrip(code);
+}
 export const inviteMember = (code, name) => act('invite_member', code, { p_name: name });
 export const removeMember = (code, id) => act('remove_member', code, { p_id: id });
 export const addItem = (code, item) => act('add_item', code, { p_item: item });
@@ -95,6 +99,67 @@ export const removeStay = (code, id) => act('remove_stay', code, { p_id: id });
 export const addListItem = (code, text, personal) => act('add_list_item', code, { p_text: text, p_personal: personal });
 export const updateListItem = (code, id, change) => act('update_list_item', code, { p_id: id, p_change: change });
 export const removeListItem = (code, id) => act('remove_list_item', code, { p_id: id });
+export const createPoll = (code, poll) => act('create_poll', code, { p_poll: poll });
+export const addPollOption = (code, pollId, option) => act('add_poll_option', code, { p_poll: pollId, p_option: option });
+export const setVote = (code, optionId, on) => act('set_vote', code, { p_option: optionId, p_on: on });
+export const closePoll = (code, pollId, closed) => act('close_poll', code, { p_poll: pollId, p_closed: closed });
+export const removePoll = (code, pollId) => act('remove_poll', code, { p_poll: pollId });
+
+// ---------- photo album ----------
+async function photosFn(body) {
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/photos`, {
+    method: 'POST',
+    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const out = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(out?.error || 'Photo upload is not available right now.');
+  return out;
+}
+
+export const photoUrl = (path) => `${SUPABASE_URL}/storage/v1/object/public/trip-photos/${path}`;
+
+// Shrink on the device before uploading: full size (longest side 2048px) + a
+// small thumbnail for the grid. Keeps uploads fast and the free storage roomy.
+async function shrink(file, max, quality) {
+  const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+  const scale = Math.min(1, max / Math.max(bitmap.width, bitmap.height));
+  const w = Math.round(bitmap.width * scale), h = Math.round(bitmap.height * scale);
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  canvas.getContext('2d').drawImage(bitmap, 0, 0, w, h);
+  bitmap.close?.();
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality));
+  return { blob, w, h };
+}
+
+async function put(url, blob) {
+  const res = await fetch(url, { method: 'PUT', headers: { 'Content-Type': 'image/jpeg' }, body: blob });
+  if (!res.ok) throw new Error('Upload failed. Check your connection and try again.');
+}
+
+// Uploads files one by one; onProgress(done, total). Returns how many worked.
+export async function uploadPhotos(code, files, onProgress) {
+  let done = 0, ok = 0, slots = [];
+  for (const [i, file] of files.entries()) {
+    if (i % 20 === 0) { // upload slots come 20 at a time
+      slots = await photosFn({ action: 'sign', code, token: tokenFor(code), count: Math.min(20, files.length - i) });
+    }
+    const slot = slots[i % 20];
+    try {
+      const full = await shrink(file, 2048, 0.85);
+      const thumb = await shrink(file, 640, 0.78);
+      await put(slot.uploadUrl, full.blob);
+      await put(slot.thumbUploadUrl, thumb.blob);
+      await act('add_photo', code, { p_photo: { path: slot.path, thumbPath: slot.thumbPath, width: full.w, height: full.h } });
+      ok++;
+    } catch { /* skip files that aren't images or fail to upload */ }
+    onProgress?.(++done, files.length);
+  }
+  return ok;
+}
+
+export const removePhoto = (code, id) => photosFn({ action: 'delete', code, token: tokenFor(code), id });
 
 export async function lookupFlight(number, date) {
   const res = await fetch(`${SUPABASE_URL}/functions/v1/flight-lookup?number=${encodeURIComponent(number)}&date=${date}`, {

@@ -8,6 +8,8 @@ import { openAddFlight } from './flights.js';
 import { openEditTrip, openMe, openNotes } from './me.js';
 import { stayCard, handleStayClick } from './stays.js';
 import { weatherEmbed } from '../places.js';
+import { pollCard, openPolls, needsMyVote, handlePollClick } from './polls.js';
+import { photoStrip } from './photos.js';
 
 export function render(el, ctx) {
   el.innerHTML = ctx.isOrg ? organizerHome(ctx) : guestHome(ctx);
@@ -113,7 +115,14 @@ function organizerHome(ctx) {
 function extras(ctx) {
   const { trip, isOrg } = ctx;
   const g = going(trip);
+  const open = openPolls(trip);
   return `
+    ${open.length ? `<section><div class="section-head"><h2>Open polls</h2>
+      <a class="btn btn-xs btn-ghost" href="#/t/${trip.id}/polls">${open.length > 2 ? `All ${open.length}` : 'Polls'}</a></div>
+      <div class="stack">${open.slice(0, 2).map((p) => pollCard(p, ctx)).join('')}</div></section>` : ''}
+
+    ${photoStrip(ctx)}
+
     ${trip.stays.length ? `<section><div class="section-head"><h2>Where we're staying</h2>
       <a class="btn btn-xs btn-ghost" href="#/t/${trip.id}/travel">All travel</a></div>
       <div class="stack">${trip.stays.map((s) => stayCard(s, { isOrg: false })).join('')}</div></section>` : ''}
@@ -156,10 +165,12 @@ function guestHome(ctx) {
   const bal = myBalance(trip);
   const myList = trip.lists.filter((l) => l.personal);
   const unclaimed = trip.lists.filter((l) => !l.personal && !l.claimedBy).length;
+  const toVote = needsMyVote(trip).length;
   const todos = [
     { done: myFlights.length > 0, title: 'Add your flight', sub: myFlights.length ? `${myFlights[0].flightNumber} · ${fmtDay(myFlights[0].date)}` : 'So we know when you land', action: 'add-flight', hide: me.rsvp === 'declined' },
     { done: Boolean(me.venmo), title: 'Add your Venmo', sub: me.venmo ? `@${me.venmo}` : 'So friends can pay you back in one tap', action: 'me' },
     { done: myList.length > 0 && myList.every((l) => l.done), title: 'Pack your bag', sub: myList.length ? `${myList.filter((l) => l.done).length} of ${myList.length} packed` : 'Your private packing list', href: 'lists', hide: me.rsvp === 'declined' },
+    ...(toVote ? [{ done: false, title: `Vote in ${toVote} poll${toVote === 1 ? '' : 's'}`, sub: 'The group is deciding', href: 'polls' }] : []),
     ...(unclaimed ? [{ done: false, title: 'Help cover the group list', sub: `${unclaimed} thing${unclaimed === 1 ? '' : 's'} nobody's bringing yet`, href: 'lists' }] : []),
     ...(bal < 0 ? [{ done: false, title: 'Settle up', sub: `You owe ${fmt(-bal, trip.currency)}`, href: 'money' }] : []),
   ].filter((t) => !t.hide);
@@ -225,6 +236,7 @@ function bind(el, ctx) {
   const { trip } = ctx;
   el.onclick = async (e) => {
     if (await handleStayClick(e, ctx)) return;
+    if (e.target.closest('.poll') && await handlePollClick(e, ctx)) return;
     const t = e.target.closest('[data-action],[data-rsvp],[data-nudge]');
     if (!t) return;
     if (t.dataset.rsvp) {

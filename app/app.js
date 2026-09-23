@@ -16,8 +16,14 @@ let current = { code: null, tab: null, trip: null };
 
 // Smooth cross-fades between screens where the browser supports it.
 function paint(fn, { animate = true } = {}) {
-  if (animate && document.startViewTransition && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    const t = document.startViewTransition(fn);
+  if (animate && document.startViewTransition && document.visibilityState === 'visible'
+      && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    // Draw exactly once: inside the transition, or directly if the browser
+    // never gets to it (e.g. the tab isn't being rendered).
+    let drawn = false;
+    const draw = () => { if (!drawn) { drawn = true; fn(); } };
+    const t = document.startViewTransition(draw);
+    setTimeout(draw, 400);
     // A newer navigation can interrupt an animation; that's fine.
     t.ready.catch(() => {}); t.finished.catch(() => {}); t.updateCallbackDone.catch(() => {});
   } else fn();

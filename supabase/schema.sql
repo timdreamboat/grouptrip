@@ -519,3 +519,253 @@ begin
     and (owner_id = a.id or (owner_id is null and (created_by = a.id or a.is_organizer)));
   if not found then raise exception 'Only the person who added it can remove it'; end if;
 end $$;
+
+-- ======================================================================
+-- v4 (2026-09-22): polls and the shared photo album.
+-- get_trip below replaces the earlier versions (adds polls + photos).
+-- ======================================================================
+create table polls (
+  id         uuid primary key default gen_random_uuid(),
+  trip_id    uuid not null references trips(id) on delete cascade,
+  question   text not null check (length(question) between 1 and 200),
+  kind       text not null default 'text' check (kind in ('text', 'date')),
+  multi      boolean not null default true,      -- can people pick more than one?
+  allow_add  boolean not null default true,      -- can anyone add options?
+  closed     boolean not null default false,
+  created_by uuid references members(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+create table poll_options (
+  id         uuid primary key default gen_random_uuid(),
+  poll_id    uuid not null references polls(id) on delete cascade,
+  label      text not null check (length(label) between 1 and 200),
+  start_date date,   -- date polls: a proposed trip window
+  end_date   date,
+  created_by uuid references members(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+create table poll_votes (
+  option_id  uuid not null references poll_options(id) on delete cascade,
+  member_id  uuid not null references members(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (option_id, member_id)
+);
+
+-- Photo files live in the public 'trip-photos' bucket, under the trip's internal id.
+create table photos (
+  id          uuid primary key default gen_random_uuid(),
+  trip_id     uuid not null references trips(id) on delete cascade,
+  path        text not null,
+  thumb_path  text not null,
+  width       integer,
+  height      integer,
+  uploaded_by uuid references members(id) on delete set null,
+  created_at  timestamptz not null default now()
+);
+
+create index on polls (trip_id);
+create index on polls (created_by);
+create index on poll_options (poll_id);
+create index on poll_options (created_by);
+create index on poll_votes (member_id);
+create index on photos (trip_id);
+create index on photos (uploaded_by);
+
+alter table polls        enable row level security;
+alter table poll_options enable row level security;
+alter table poll_votes   enable row level security;
+alter table photos       enable row level security;
+revoke all on polls, poll_options, poll_votes, photos from anon, authenticated;
+
+-- Public bucket: readable by URL (unguessable paths under the trip's internal
+-- id — never the share code). Uploads only via signed URLs issued by the
+-- 'photos' Edge Function after it checks the person is on the trip.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('trip-photos', 'trip-photos', true, 10485760, array['image/jpeg', 'image/webp'])
+on conflict (id) do nothing;
+
+create or replace function get_trip(p_code text, p_token text default null) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare t trips; tid uuid := _trip(p_code); me members;
+begin
+  select * into t from trips where id = tid;
+  if p_token is not null then
+    select * into me from members where trip_id = tid and token = p_token and joined_at is not null;
+  end if;
+  return jsonb_build_object(
+    'id', t.share_code, 'name', t.name, 'destination', t.destination,
+    'startDate', t.start_date, 'endDate', t.end_date, 'currency', t.currency,
+    'lat', t.lat, 'lon', t.lon, 'notes', t.notes,
+    'cover', case when t.cover_url is null then null
+                  else jsonb_build_object('url', t.cover_url, 'credit', t.cover_credit, 'link', t.cover_link) end,
+    'me', case when me.id is null then null
+               else jsonb_build_object('id', me.id, 'isOrganizer', me.is_organizer) end,
+    'members', coalesce((select jsonb_agg(jsonb_build_object(
+                           'id', m.id, 'name', m.name, 'isOrganizer', m.is_organizer, 'rsvp', m.rsvp,
+                           'joined', m.joined_at is not null, 'venmo', m.venmo)
+                         order by m.is_organizer desc, m.created_at)
+                         from members m where m.trip_id = tid), '[]'),
+    'itinerary', coalesce((select jsonb_agg(jsonb_build_object(
+                             'id', i.id, 'day', i.day, 'time', i.time, 'title', i.title, 'notes', i.notes,
+                             'place', i.place, 'opentableRid', i.opentable_rid, 'bookingUrl', i.booking_url)
+                           order by i.day nulls last, i.time nulls first, i.created_at)
+                           from itinerary_items i where i.trip_id = tid), '[]'),
+    'flights', coalesce((select jsonb_agg(jsonb_build_object(
+                           'id', f.id, 'memberId', f.member_id, 'flightNumber', f.flight_number, 'date', f.flight_date,
+                           'depAirport', f.dep_airport, 'depTime', f.dep_time,
+                           'arrAirport', f.arr_airport, 'arrTime', f.arr_time, 'arrDate', f.arr_date)
+                         order by f.created_at)
+                         from flights f where f.trip_id = tid), '[]'),
+    'stays', coalesce((select jsonb_agg(jsonb_build_object(
+                         'id', s.id, 'name', s.name, 'address', s.address,
+                         'checkIn', s.check_in, 'checkInTime', s.check_in_time,
+                         'checkOut', s.check_out, 'checkOutTime', s.check_out_time,
+                         'bookingUrl', s.booking_url, 'confirmation', s.confirmation, 'notes', s.notes)
+                       order by s.check_in nulls last, s.created_at)
+                       from stays s where s.trip_id = tid), '[]'),
+    'lists', coalesce((select jsonb_agg(jsonb_build_object(
+                         'id', l.id, 'text', l.text, 'personal', l.owner_id is not null,
+                         'claimedBy', l.claimed_by, 'createdBy', l.created_by, 'done', l.done)
+                       order by l.created_at)
+                       from list_items l
+                       where l.trip_id = tid and (l.owner_id is null or l.owner_id = me.id)), '[]'),
+    'polls', coalesce((select jsonb_agg(jsonb_build_object(
+                         'id', p.id, 'question', p.question, 'kind', p.kind, 'multi', p.multi,
+                         'allowAdd', p.allow_add, 'closed', p.closed, 'createdBy', p.created_by, 'createdAt', p.created_at,
+                         'options', coalesce((select jsonb_agg(jsonb_build_object(
+                                      'id', o.id, 'label', o.label, 'startDate', o.start_date, 'endDate', o.end_date,
+                                      'votes', coalesce((select jsonb_agg(v.member_id order by v.created_at)
+                                                         from poll_votes v where v.option_id = o.id), '[]'))
+                                    order by o.start_date nulls last, o.created_at)
+                                    from poll_options o where o.poll_id = p.id), '[]'))
+                       order by p.closed, p.created_at desc)
+                       from polls p where p.trip_id = tid), '[]'),
+    'photos', coalesce((select jsonb_agg(jsonb_build_object(
+                          'id', ph.id, 'path', ph.path, 'thumbPath', ph.thumb_path, 'width', ph.width, 'height', ph.height,
+                          'uploadedBy', ph.uploaded_by, 'createdAt', ph.created_at)
+                        order by ph.created_at desc)
+                        from photos ph where ph.trip_id = tid), '[]'),
+    'expenses', coalesce((select jsonb_agg(jsonb_build_object(
+                            'id', e.id, 'description', e.description, 'amount', e.amount_cents,
+                            'paidBy', e.paid_by, 'createdBy', e.created_by, 'spentOn', e.spent_on,
+                            'splits', (select jsonb_agg(jsonb_build_object('memberId', s.member_id, 'share', s.share_cents))
+                                       from expense_splits s where s.expense_id = e.id))
+                          order by e.created_at desc)
+                          from expenses e where e.trip_id = tid), '[]')
+  );
+end $$;
+
+-- ---------- poll actions (anyone on the trip) ----------
+-- p_poll: {question, kind, multi, allowAdd, options: [{label, startDate, endDate}]}
+create function create_poll(p_code text, p_token text, p_poll jsonb) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare a members := _actor(p_code, p_token); new_id uuid;
+begin
+  if jsonb_array_length(coalesce(p_poll->'options', '[]')) < 2 then raise exception 'Add at least two options'; end if;
+  insert into polls (trip_id, question, kind, multi, allow_add, created_by)
+  values (a.trip_id, trim(p_poll->>'question'), coalesce(p_poll->>'kind', 'text'),
+          coalesce((p_poll->>'multi')::boolean, true), coalesce((p_poll->>'allowAdd')::boolean, true), a.id)
+  returning id into new_id;
+  insert into poll_options (poll_id, label, start_date, end_date, created_by)
+  select new_id, trim(o->>'label'), nullif(o->>'startDate', '')::date, nullif(o->>'endDate', '')::date, a.id
+  from jsonb_array_elements(p_poll->'options') o
+  where length(trim(o->>'label')) > 0;
+  return new_id;
+end $$;
+
+create function add_poll_option(p_code text, p_token text, p_poll uuid, p_option jsonb) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare a members := _actor(p_code, p_token); p polls; new_id uuid;
+begin
+  select * into p from polls where id = p_poll and trip_id = a.trip_id;
+  if p.id is null then raise exception 'Poll not found'; end if;
+  if p.closed then raise exception 'This poll is closed'; end if;
+  if not p.allow_add and p.created_by is distinct from a.id and not a.is_organizer then
+    raise exception 'Only the person who made this poll can add options';
+  end if;
+  insert into poll_options (poll_id, label, start_date, end_date, created_by)
+  values (p.id, trim(p_option->>'label'), nullif(p_option->>'startDate', '')::date, nullif(p_option->>'endDate', '')::date, a.id)
+  returning id into new_id;
+  return new_id;
+end $$;
+
+create function set_vote(p_code text, p_token text, p_option uuid, p_on boolean) returns void
+language plpgsql security definer set search_path = public as $$
+declare a members := _actor(p_code, p_token); p polls;
+begin
+  select pl.* into p from polls pl join poll_options o on o.poll_id = pl.id
+  where o.id = p_option and pl.trip_id = a.trip_id;
+  if p.id is null then raise exception 'Poll not found'; end if;
+  if p.closed then raise exception 'This poll is closed'; end if;
+  if p_on then
+    if not p.multi then
+      delete from poll_votes v using poll_options o
+      where v.option_id = o.id and o.poll_id = p.id and v.member_id = a.id;
+    end if;
+    insert into poll_votes (option_id, member_id) values (p_option, a.id) on conflict do nothing;
+  else
+    delete from poll_votes where option_id = p_option and member_id = a.id;
+  end if;
+end $$;
+
+create function close_poll(p_code text, p_token text, p_poll uuid, p_closed boolean) returns void
+language plpgsql security definer set search_path = public as $$
+declare a members := _actor(p_code, p_token);
+begin
+  update polls set closed = p_closed
+  where id = p_poll and trip_id = a.trip_id and (created_by = a.id or a.is_organizer);
+  if not found then raise exception 'Only the person who made this poll can close it'; end if;
+end $$;
+
+create function remove_poll(p_code text, p_token text, p_poll uuid) returns void
+language plpgsql security definer set search_path = public as $$
+declare a members := _actor(p_code, p_token);
+begin
+  delete from polls where id = p_poll and trip_id = a.trip_id and (created_by = a.id or a.is_organizer);
+  if not found then raise exception 'Only the person who made this poll can delete it'; end if;
+end $$;
+
+-- ---------- photos ----------
+-- Used by the 'photos' Edge Function: confirms the person is on the trip and
+-- returns the trip's internal id (the storage folder).
+create function photo_folder(p_code text, p_token text) returns uuid
+language plpgsql stable security definer set search_path = public as $$
+declare a members := _actor(p_code, p_token);
+begin
+  return a.trip_id;
+end $$;
+
+-- Organizer-only: the folder to empty before the trip is deleted.
+create function photo_folder_to_purge(p_code text, p_token text) returns uuid
+language plpgsql stable security definer set search_path = public as $$
+declare o members := _organizer(p_code, p_token);
+begin
+  return o.trip_id;
+end $$;
+
+create function add_photo(p_code text, p_token text, p_photo jsonb) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare a members := _actor(p_code, p_token); new_id uuid;
+begin
+  if not (p_photo->>'path' like a.trip_id::text || '/%' and p_photo->>'thumbPath' like a.trip_id::text || '/%') then
+    raise exception 'Photo is not in this trip''s album';
+  end if;
+  insert into photos (trip_id, path, thumb_path, width, height, uploaded_by)
+  values (a.trip_id, p_photo->>'path', p_photo->>'thumbPath',
+          nullif(p_photo->>'width', '')::integer, nullif(p_photo->>'height', '')::integer, a.id)
+  returning id into new_id;
+  return new_id;
+end $$;
+
+-- Returns the file paths so the Edge Function can delete the files.
+create function remove_photo(p_code text, p_token text, p_photo uuid) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare a members := _actor(p_code, p_token); ph photos;
+begin
+  delete from photos where id = p_photo and trip_id = a.trip_id and (uploaded_by = a.id or a.is_organizer)
+  returning * into ph;
+  if ph.id is null then raise exception 'Only the person who added this photo can remove it'; end if;
+  return jsonb_build_object('path', ph.path, 'thumbPath', ph.thumb_path);
+end $$;

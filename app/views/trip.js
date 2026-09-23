@@ -9,16 +9,22 @@ import * as flights from './flights.js';
 import * as wallet from './wallet.js';
 import * as people from './people.js';
 import * as lists from './lists.js';
+import * as polls from './polls.js';
+import * as photos from './photos.js';
 
-// `bar: false` = sidebar only on desktop; on phones it's reached from Home.
+// Desktop sidebar shows every tab. Phones show five: the `group` tabs share
+// one "Group" button and switch between themselves with a pill row.
 export const TABS = [
   { id: 'home', label: 'Home', icon: 'home', view: overview },
   { id: 'plan', label: 'Calendar', icon: 'calendar', view: plan },
   { id: 'travel', label: 'Travel', icon: 'luggage', view: flights },
   { id: 'money', label: 'Money', icon: 'wallet', view: wallet },
-  { id: 'lists', label: 'Lists', icon: 'list', view: lists },
-  { id: 'people', label: 'People', icon: 'users', view: people, bar: false },
+  { id: 'polls', label: 'Polls', icon: 'list', view: polls, group: true },
+  { id: 'photos', label: 'Photos', icon: 'sparkle', view: photos, group: true },
+  { id: 'lists', label: 'Lists', icon: 'check', view: lists, group: true },
+  { id: 'people', label: 'People', icon: 'users', view: people, group: true },
 ];
+let lastGroupTab = 'polls';
 const ALIASES = { flights: 'travel' };
 
 export function render(root, ctx, tabId) {
@@ -28,7 +34,11 @@ export function render(root, ctx, tabId) {
   const counts = {
     plan: trip.itinerary.length, travel: trip.flights.length + trip.stays.length, money: trip.expenses.length,
     lists: trip.lists.filter((l) => !l.personal && !l.claimedBy).length, people: trip.members.length,
+    polls: polls.needsMyVote(trip).length, photos: trip.photos.length,
   };
+  if (tab.group) lastGroupTab = tab.id;
+  const barTabs = [...TABS.filter((t) => !t.group), { id: lastGroupTab, label: 'Group', icon: 'users', isGroup: true }];
+  const barOn = (t) => (t.isGroup ? tab.group : t === tab);
   const href = (t) => `#/t/${trip.id}/${t.id}`;
   document.title = `${tab.id === 'home' ? '' : `${tab.label} · `}${trip.name}`;
 
@@ -59,11 +69,16 @@ export function render(root, ctx, tabId) {
           ${isOrg ? `<span class="pill org">${icon('crown')}Organizer</span>` : ''}
           <button class="btn btn-icon btn-ghost" data-me aria-label="You">${avatar(me, 32)}</button>
         </header>
-        <main class="main" id="tab"></main>
+        <main class="main">
+          ${tab.group ? `<nav class="seg-nav" aria-label="Group">${TABS.filter((t) => t.group).map((t) =>
+            `<a href="${href(t)}" class="${t === tab ? 'on' : ''}">${icon(t.icon)}${t.label}${t.id === 'polls' && counts.polls ? `<span class="badge">${counts.polls}</span>` : ''}</a>`).join('')}</nav>` : ''}
+          <div id="tab"></div>
+        </main>
       </div>
 
       <nav class="tabbar" aria-label="Trip sections">
-        ${TABS.filter((t) => t.bar !== false).map((t) => `<a href="${href(t)}" class="${t === tab ? 'on' : ''}" ${t === tab ? 'aria-current="page"' : ''}>${icon(t.icon)}${t.label}</a>`).join('')}
+        ${barTabs.map((t) => `<a href="${href(t)}" class="${barOn(t) ? 'on' : ''}" ${barOn(t) ? 'aria-current="page"' : ''}>
+          <span class="tab-icon">${icon(t.icon)}${t.isGroup && counts.polls ? '<span class="dot-badge"></span>' : ''}</span>${t.label}</a>`).join('')}
       </nav>
     </div>`;
 

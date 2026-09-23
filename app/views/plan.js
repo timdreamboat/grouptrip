@@ -173,13 +173,13 @@ function item(it, { isOrg }) {
   </div>`;
 }
 
-function openAddItem(ctx, day) {
+export function openAddItem(ctx, day, preset = {}) {
   const { trip } = ctx;
   sheet({
     title: 'Add a plan',
     body: `
       <form class="form" id="item-form">
-        <label class="field"><span>What's the plan?</span><input name="title" required maxlength="200" placeholder="Dinner at the lake house"></label>
+        <label class="field"><span>What's the plan?</span><input name="title" required maxlength="200" placeholder="Dinner at the lake house" value="${esc(preset.title || '')}"></label>
         <div class="grid-2">
           <label class="field"><span>Day</span><input type="date" name="day" value="${esc(day || trip.startDate || '')}"></label>
           <label class="field"><span>Time</span><input type="time" name="time"></label>

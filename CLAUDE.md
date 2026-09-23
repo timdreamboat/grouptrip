@@ -37,10 +37,12 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
   - `views/` one file per screen: `home` (trips list/landing), `create`,
     `invite` (what someone sees before joining), `trip` (shell), and the
     tabs `overview` (Home), `plan` (Calendar: plans + flights + check-ins),
-    `flights` (Travel: stays + flights), `wallet` (Money), `lists` (who's
-    bringing what + private packing list), `people` (sidebar/Home only), plus
-    `me` (settings, trip editor, "Good to know"), `stays`, `cover` (photo
-    picker).
+    `flights` (Travel: stays + flights), `wallet` (Money), and the "Group"
+    tabs — `polls`, `photos` (shared album + full-screen viewer), `lists`
+    (who's bringing what + private packing list), `people`. Phones show five
+    bar buttons (Home, Calendar, Travel, Money, Group); Group switches between
+    its four with a pill row. Also `me` (settings, trip editor, "Good to
+    know"), `stays`, `cover` (photo picker).
   - `style.css` is the design system (tokens, light/dark, mobile tab bar +
     bottom sheets, desktop sidebar + dialogs). Reuse its components.
 - Data: Supabase project `grouptrip` (ref fnedxcktddvioxseogng, ca-central-1,
@@ -56,6 +58,11 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
 - Edge Function `calendar` (verify_jwt OFF — calendar apps can't send auth)
   serves a subscribable .ics feed at `/functions/v1/calendar?trip=<share_code>`.
   Same access as the invite link; never include private lists, tokens or money.
+- Edge Function `photos` (verify_jwt on) issues signed upload URLs into the
+  public `trip-photos` bucket (folder = trip's internal id, never the share
+  code), deletes single photos, and purges a trip's folder before the trip is
+  deleted. Photos are shrunk on the device first (2048px + 640px thumb).
+  Free tier storage is 1 GB — roughly 2,000+ photos across all trips.
 - Edge Function `flight-lookup` is deployed and working; its `AERODATABOX_KEY`
   secret (RapidAPI, AeroDataBox free Basic plan) is set in the Supabase dashboard.
 - Money is stored in integer cents everywhere. Never use floats for totals.

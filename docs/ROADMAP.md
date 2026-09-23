@@ -28,8 +28,12 @@
 - ✅ Calendar tab merging plans, flights and check-ins; subscribe in Apple/Google/Outlook
 - ✅ Where we're staying; "Good to know" notes; who's bringing what; private packing lists
 
+## v1.8 — decide & remember (2026-09-22)
+- ✅ Polls (dates or anything); organizer locks in the winner as trip dates or a plan
+- ✅ Shared photo album with full-screen viewer; photos shrunk on-device before upload
+
 ## Ideas next
-- Polls (dates, activities), photo sharing after the trip, local time + currency on Home
+- Local time + currency on Home; photo reactions; notifications when a poll opens
 
 ## v2 — nicer splitting
 - Uneven splits (by amount / by shares), multiple currencies
