@@ -1,24 +1,9 @@
-// The only file that touches storage. Every function is async and the app
-// re-reads the whole trip after each change.
-//
-// - Shared mode (config.js has a Supabase URL + key): data lives in Supabase
-//   and is reached through the share-code functions in supabase/schema.sql.
-// - Local mode (config.js empty): data lives in this browser only.
+// The only file that talks to the database (Supabase) and keeps
+// per-device identity. Every trip change goes through a share-code function
+// in supabase/schema.sql; the person's secret token says who is acting.
 
 import { SUPABASE_URL, SUPABASE_KEY } from './config.js';
 
-export const shared = Boolean(SUPABASE_URL && SUPABASE_KEY);
-const newId = () => crypto.randomUUID();
-
-// ---------- tiny localStorage helpers ----------
-function readLS(key, fallback) {
-  try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; }
-}
-function writeLS(key, value) {
-  try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* storage unavailable */ }
-}
-
-// ---------- shared mode: Supabase RPC over plain fetch ----------
 async function rpc(fn, args) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
     method: 'POST',
@@ -26,99 +11,96 @@ async function rpc(fn, args) {
     body: JSON.stringify(args),
   });
   const body = await res.json().catch(() => null);
-  if (!res.ok) throw new Error(body?.message || `Request failed (${res.status})`);
+  if (!res.ok) throw new Error(body?.message || 'Something went wrong. Please try again.');
   return body;
 }
 
-// Trips this browser has opened, so the home page can list them.
-const RECENT = 'grouptrip.recent';
+// ---------- this device: who am I on each trip, which trips have I seen ----------
+function read(key, fallback) {
+  try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; }
+}
+function write(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* storage unavailable */ }
+}
+
+const IDS = 'grouptrip.identities';   // { [code]: token }
+const TRIPS = 'grouptrip.trips';      // recent trips for the home screen
+
+export const tokenFor = (code) => read(IDS, {})[code] ?? null;
+export function saveToken(code, token) { write(IDS, { ...read(IDS, {}), [code]: token }); }
+function dropToken(code) { const ids = read(IDS, {}); delete ids[code]; write(IDS, ids); }
+
+export const listTrips = () => read(TRIPS, []);
 function remember(trip) {
-  const list = readLS(RECENT, []).filter((t) => t.id !== trip.id);
-  writeLS(RECENT, [{ id: trip.id, name: trip.name, destination: trip.destination, startDate: trip.startDate }, ...list].slice(0, 30));
+  const me = trip.me && trip.members.find((m) => m.id === trip.me.id);
+  const summary = {
+    id: trip.id, name: trip.name, destination: trip.destination, startDate: trip.startDate, endDate: trip.endDate,
+    role: trip.me ? (trip.me.isOrganizer ? 'organizer' : 'guest') : 'invited',
+    going: trip.members.filter((m) => m.rsvp === 'going').map((m) => ({ name: m.name })),
+    myName: me?.name,
+  };
+  write(TRIPS, [summary, ...listTrips().filter((t) => t.id !== trip.id)].slice(0, 40));
 }
-function forget(id) {
-  writeLS(RECENT, readLS(RECENT, []).filter((t) => t.id !== id));
-}
-
-const remote = {
-  listTrips: async () => readLS(RECENT, []),
-  getTrip: async (code) => { const t = await rpc('get_trip', { p_code: code }); remember(t); return t; },
-  createTrip: async (f) => rpc('create_trip', {
-    p_name: f.name, p_destination: f.destination, p_start: f.startDate || null, p_end: f.endDate || null, p_currency: f.currency,
-  }),
-  deleteTrip: async (code) => { await rpc('delete_trip', { p_code: code }); forget(code); },
-  addMember: (code, name) => rpc('add_member', { p_code: code, p_name: name }),
-  removeMember: (code, id) => rpc('remove_member', { p_code: code, p_id: id }),
-  addItem: (code, item) => rpc('add_item', { p_code: code, p_item: item }),
-  removeItem: (code, id) => rpc('remove_item', { p_code: code, p_id: id }),
-  addFlight: (code, flight) => rpc('add_flight', { p_code: code, p_flight: flight }),
-  removeFlight: (code, id) => rpc('remove_flight', { p_code: code, p_id: id }),
-  addExpense: (code, e) => rpc('add_expense', {
-    p_code: code, p_description: e.description, p_amount: e.amount, p_paid_by: e.paidBy, p_splits: e.splits,
-  }),
-  removeExpense: (code, id) => rpc('remove_expense', { p_code: code, p_id: id }),
-  lookupFlight: async (number, date) => {
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/flight-lookup?number=${encodeURIComponent(number)}&date=${date}`, {
-      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
-    });
-    const body = await res.json().catch(() => null);
-    if (!res.ok) throw new Error(body?.error || 'Flight lookup is not available right now.');
-    return body;
-  },
-};
-
-// ---------- local mode: this browser only ----------
-const KEY = 'grouptrip.v0';
-const loadDb = () => readLS(KEY, { trips: [] });
-
-function edit(id, fn) {
-  const db = loadDb();
-  const trip = db.trips.find((t) => t.id === id);
-  if (!trip) throw new Error('Trip not found');
-  trip.flights ??= [];
-  const result = fn(trip);
-  writeLS(KEY, db);
-  return result;
+export function forgetTrip(code) {
+  write(TRIPS, listTrips().filter((t) => t.id !== code));
+  dropToken(code);
 }
 
-const local = {
-  listTrips: async () => loadDb().trips,
-  getTrip: async (id) => {
-    const t = loadDb().trips.find((t) => t.id === id);
-    if (!t) throw new Error('Trip not found');
-    return { flights: [], ...t };
-  },
-  createTrip: async (f) => {
-    const db = loadDb();
-    const trip = {
-      id: newId(), name: f.name, destination: f.destination, startDate: f.startDate, endDate: f.endDate,
-      currency: f.currency || 'USD', members: [], itinerary: [], flights: [], expenses: [],
-    };
-    db.trips.unshift(trip);
-    writeLS(KEY, db);
-    return trip.id;
-  },
-  deleteTrip: async (id) => { const db = loadDb(); db.trips = db.trips.filter((t) => t.id !== id); writeLS(KEY, db); },
-  addMember: async (id, name) => edit(id, (t) => { t.members.push({ id: newId(), name }); }),
-  removeMember: async (id, memberId) => edit(id, (t) => {
-    if (t.expenses.some((e) => e.paidBy === memberId || e.splits.some((s) => s.memberId === memberId))) {
-      throw new Error('This person is part of an expense — remove those expenses first.');
-    }
-    t.members = t.members.filter((m) => m.id !== memberId);
-    t.flights = t.flights.filter((f) => f.memberId !== memberId);
-  }),
-  addItem: async (id, item) => edit(id, (t) => { t.itinerary.push({ id: newId(), ...item }); }),
-  removeItem: async (id, itemId) => edit(id, (t) => { t.itinerary = t.itinerary.filter((i) => i.id !== itemId); }),
-  addFlight: async (id, flight) => edit(id, (t) => { t.flights.push({ id: newId(), ...flight }); }),
-  removeFlight: async (id, flightId) => edit(id, (t) => { t.flights = t.flights.filter((f) => f.id !== flightId); }),
-  addExpense: async (id, e) => edit(id, (t) => {
-    t.expenses.unshift({ id: newId(), spentOn: new Date().toISOString().slice(0, 10), ...e });
-  }),
-  removeExpense: async (id, expenseId) => edit(id, (t) => { t.expenses = t.expenses.filter((e) => e.id !== expenseId); }),
-  lookupFlight: async () => { throw new Error('Automatic lookup turns on once sharing is set up. Type the times in for now.'); },
-};
+// ---------- reading ----------
+export async function getTrip(code) {
+  const trip = await rpc('get_trip', { p_code: code, p_token: tokenFor(code) });
+  // A stale token (e.g. removed from the trip) means this device is no longer a member.
+  if (!trip.me && tokenFor(code)) dropToken(code);
+  remember(trip);
+  return trip;
+}
 
-export const {
-  listTrips, getTrip, createTrip, deleteTrip, addMember, removeMember, addItem, removeItem,
-  addFlight, removeFlight, addExpense, removeExpense, lookupFlight,
-} = shared ? remote : local;
+// ---------- joining ----------
+export async function createTrip(f) {
+  const r = await rpc('create_trip', {
+    p_name: f.name, p_destination: f.destination, p_start: f.startDate || null, p_end: f.endDate || null,
+    p_currency: f.currency || 'USD', p_organizer: f.organizer,
+  });
+  saveToken(r.code, r.token);
+  return r.code;
+}
+export async function joinTrip(code, name) {
+  const r = await rpc('join_trip', { p_code: code, p_name: name });
+  saveToken(code, r.token);
+}
+export async function claimMember(code, memberId) {
+  const r = await rpc('claim_member', { p_code: code, p_member: memberId });
+  saveToken(code, r.token);
+}
+
+// ---------- acting (all need this device's token) ----------
+const act = (fn, code, args = {}) => rpc(fn, { p_code: code, p_token: tokenFor(code), ...args });
+
+export const updateMe = (code, me) => act('update_me', code, { p_me: me });
+export const updateTrip = (code, trip) => act('update_trip', code, { p_trip: trip });
+export async function deleteTrip(code) { await act('delete_trip', code); forgetTrip(code); }
+export const inviteMember = (code, name) => act('invite_member', code, { p_name: name });
+export const removeMember = (code, id) => act('remove_member', code, { p_id: id });
+export const addItem = (code, item) => act('add_item', code, { p_item: item });
+export const removeItem = (code, id) => act('remove_item', code, { p_id: id });
+export const addFlight = (code, flight) => act('add_flight', code, { p_flight: flight });
+export const removeFlight = (code, id) => act('remove_flight', code, { p_id: id });
+export const addExpense = (code, e) => act('add_expense', code, {
+  p_description: e.description, p_amount: e.amount, p_paid_by: e.paidBy, p_splits: e.splits,
+});
+export const removeExpense = (code, id) => act('remove_expense', code, { p_id: id });
+
+export async function lookupFlight(number, date) {
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/flight-lookup?number=${encodeURIComponent(number)}&date=${date}`, {
+    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
+  });
+  const body = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(body?.error || 'Flight lookup is not available right now.');
+  return body;
+}
+
+// ---------- links ----------
+const base = () => location.origin + location.pathname;
+export const inviteLink = (code) => `${base()}#/t/${code}`;
+// Opens the trip as this person on another device. Private — it signs in as them.
+export const personalLink = (code) => `${base()}#/me/${code}/${tokenFor(code)}`;

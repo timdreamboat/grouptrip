@@ -51,6 +51,10 @@ export function openTableRid(text) {
 export const openTableSearch = (destination) =>
   `https://www.opentable.com/s?term=${encodeURIComponent(destination || '')}`;
 
-// Venmo / PayPal pay-back links (open in their app or a new tab).
-export const venmoLink = (amountCents, note) =>
-  `https://venmo.com/?txn=pay&amount=${(amountCents / 100).toFixed(2)}&note=${encodeURIComponent(note)}`;
+// Venmo pay link (opens their app or a new tab). With the recipient's
+// username it goes straight to them; without, Venmo asks who to pay.
+export function venmoLink(amountCents, note, recipient) {
+  const p = new URLSearchParams({ txn: 'pay', amount: (amountCents / 100).toFixed(2), note });
+  if (recipient) p.set('recipients', recipient);
+  return `https://venmo.com/?${p}`;
+}

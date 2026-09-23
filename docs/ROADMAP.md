@@ -18,6 +18,11 @@
 - ✅ Venmo buttons on Settle up
 - Next: weather (Windy embed), shared Google Calendar embed
 
+## v1.6 — redesign (2026-09-22)
+- ✅ Organizer vs guest roles; Partiful-style invite page; claim a pre-added name
+- ✅ New design system, mobile tab bar + bottom sheets, desktop sidebar, dark mode
+- ✅ Venmo buttons go straight to the person when they've added their username
+
 ## v2 — nicer splitting
 - Uneven splits (by amount / by shares), multiple currencies
 - Mark payments as settled

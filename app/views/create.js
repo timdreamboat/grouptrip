@@ -1,0 +1,74 @@
+// Create a trip in three quick questions: where, when, who's organizing.
+import { esc, icon, cover, busy, toast } from '../ui.js';
+import * as store from '../store.js';
+
+const STEPS = 3;
+
+export function render(root) {
+  document.title = 'New trip · GroupTrip';
+  const data = { destination: '', name: '', startDate: '', endDate: '', organizer: '' };
+  let step = 0;
+
+  const views = [
+    () => `
+      <div class="eyebrow">Step 1 of ${STEPS}</div>
+      <h1 class="display">Where are you going?</h1>
+      <div class="cover-preview" style="background:${cover(data.destination || 'trip')}"></div>
+      <input class="input input-xl" name="destination" placeholder="Lake Tahoe" value="${esc(data.destination)}" autocomplete="off" required>
+      <p class="hint" style="margin-top:10px">A city, a region, a cabin — anything.</p>`,
+    () => `
+      <div class="eyebrow">Step 2 of ${STEPS}</div>
+      <h1 class="display">When?</h1>
+      <div class="grid-2">
+        <label class="field"><span>Start</span><input type="date" name="startDate" value="${esc(data.startDate)}"></label>
+        <label class="field"><span>End</span><input type="date" name="endDate" value="${esc(data.endDate)}"></label>
+      </div>
+      <p class="hint" style="margin-top:10px">Not sure yet? Skip it — you can add dates later.</p>`,
+    () => `
+      <div class="eyebrow">Step 3 of ${STEPS}</div>
+      <h1 class="display">Last thing.</h1>
+      <div class="form">
+        <label class="field"><span>Trip name</span><input name="name" required maxlength="120" value="${esc(data.name || (data.destination ? `${data.destination} trip` : ''))}"></label>
+        <label class="field"><span>Your name</span><input name="organizer" required maxlength="80" value="${esc(data.organizer)}" placeholder="So your friends know who invited them" autocomplete="given-name"></label>
+      </div>`,
+  ];
+
+  const draw = () => {
+    root.innerHTML = `
+      <div class="flow">
+        <header class="site-head" style="padding:0 16px;max-width:560px;margin:0 auto;width:100%">
+          <a class="btn btn-icon btn-secondary btn-sm" href="#/" aria-label="Cancel">${icon('x')}</a>
+          <div class="flow-steps" style="width:120px">${Array.from({ length: STEPS }, (_, i) => `<span class="${i <= step ? 'on' : ''}"></span>`).join('')}</div>
+          <span style="width:36px"></span>
+        </header>
+        <form class="flow-body" id="flow" novalidate>
+          ${views[step]()}
+          <div class="flow-nav">
+            ${step ? `<button type="button" class="btn btn-secondary btn-lg" data-back>${icon('back')}</button>` : ''}
+            <button class="btn btn-primary btn-lg">${step === STEPS - 1 ? `Create trip ${icon('sparkle')}` : step === 1 && !data.startDate ? 'Skip for now' : `Continue ${icon('arrow')}`}</button>
+          </div>
+        </form>
+      </div>`;
+    const form = root.querySelector('#flow');
+    const first = form.querySelector('input');
+    setTimeout(() => first?.focus(), 30);
+
+    form.addEventListener('input', (e) => {
+      data[e.target.name] = e.target.value;
+      if (e.target.name === 'destination') form.querySelector('.cover-preview').style.background = cover(data.destination || 'trip');
+      if (step === 1) form.querySelector('.btn-primary').innerHTML = data.startDate ? `Continue ${icon('arrow')}` : 'Skip for now';
+    });
+    form.querySelector('[data-back]')?.addEventListener('click', () => { step--; draw(); });
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      for (const el of form.querySelectorAll('input')) data[el.name] = el.value.trim();
+      if (step === 0 && !data.destination) return toast('Where are you headed?', { error: true });
+      if (step === 1 && data.endDate && data.startDate && data.endDate < data.startDate) return toast('The end date is before the start date', { error: true });
+      if (step < STEPS - 1) { step++; draw(); return; }
+      if (!data.name || !data.organizer) return toast('Add a trip name and your name', { error: true });
+      const code = await busy(form.querySelector('.btn-primary'), () => store.createTrip(data));
+      if (code) { sessionStorage.setItem('grouptrip.flash', 'Trip created — now invite your crew'); location.hash = `#/t/${code}`; }
+    };
+  };
+  draw();
+}

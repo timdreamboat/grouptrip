@@ -23,20 +23,37 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
 2. Expense splitting and settle-up math (`app/money.js`).
 
 ## Architecture
-- `app/` — no-build static PWA (plain HTML/CSS/JS, no framework, no npm).
-  Open `app/index.html` directly or serve the folder; will be hosted on
-  GitHub Pages.
+- `app/` — no-build static web app (plain HTML/CSS/JS modules, no npm),
+  published to GitHub Pages from `main` by `.github/workflows/pages.yml`.
+  - `app.js` router · `store.js` the only file that talks to Supabase and
+    keeps this device's identity · `ui.js` design primitives (icons, avatars,
+    covers, sheets, toasts) · `money.js` split math · `embeds.js` partner URLs
+  - `views/` one file per screen: `home` (trips list/landing), `create`,
+    `invite` (what someone sees before joining), `trip` (shell), and the
+    tabs `overview`, `plan`, `flights`, `wallet` (money), `people`, plus `me`
+    (settings + organizer trip editor).
+  - `style.css` is the design system (tokens, light/dark, mobile tab bar +
+    bottom sheets, desktop sidebar + dialogs). Reuse its components.
 - Data: Supabase project `grouptrip` (ref fnedxcktddvioxseogng, ca-central-1,
-  free tier). `app/store.js` is the only file that touches storage; it falls
-  back to browser-only storage if `app/config.js` is emptied.
-- Access = share link. No accounts. Tables have RLS on with no policies and
-  are revoked from anon; everything goes through share-code functions in
-  `supabase/schema.sql` (the Supabase advisor warnings about public
+  free tier). Keep `supabase/schema.sql` in sync with every migration.
+- Roles, no accounts: the invite link (`#/t/<share_code>`) lets anyone view and
+  join; joining gives a secret per-person token saved on that device. The
+  organizer is the member with `is_organizer`; organizer-only: edit/delete
+  trip, itinerary, add/remove people. Anyone joined: RSVP, own flight,
+  expenses. `#/me/<code>/<token>` is a person's private link for another
+  device. Tables are locked (RLS, no policies); everything goes through the
+  functions in `supabase/schema.sql` (Supabase advisor warnings about public
   SECURITY DEFINER functions are expected — that IS the access model).
-  Keep `supabase/schema.sql` in sync with every migration.
 - Edge Function `flight-lookup` is deployed and working; its `AERODATABOX_KEY`
   secret (RapidAPI, AeroDataBox free Basic plan) is set in the Supabase dashboard.
 - Money is stored in integer cents everywhere. Never use floats for totals.
+
+## Design direction
+Modern (2027) consumer app, mobile-first. References: Partiful/Luma (invite
+page), Flighty (boarding-pass flight cards), Splitwise/Tricount (balances
+framed around *you*), Wanderlog (day timeline). Organizer and guest must feel
+different: organizer home = planning dashboard (invite, readiness, waiting
+on); guest home = RSVP, personal to-dos, balance, next up.
 
 ## Standing conventions
 - Everything free-tier unless the owner explicitly approves a cost.
