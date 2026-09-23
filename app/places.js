@@ -72,3 +72,31 @@ export function weatherEmbed({ lat, lon }, fahrenheit = true) {
   });
   return `https://embed.windy.com/embed2.html?${p}`;
 }
+
+// ---------- distances between places (needs coordinates, i.e. a Google key) ----------
+const rad = (d) => (d * Math.PI) / 180;
+export function distanceKm(a, b) {
+  if (a?.lat == null || b?.lat == null) return null;
+  const h = Math.sin(rad(b.lat - a.lat) / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(rad(b.lon - a.lon) / 2) ** 2;
+  return 12742 * Math.asin(Math.sqrt(h));
+}
+// Straight-line distance, in miles for US-dollar trips, km otherwise.
+export function distanceText(a, b, miles = true) {
+  const km = distanceKm(a, b);
+  if (km == null) return '';
+  const v = miles ? km * 0.621371 : km;
+  return `${v < 10 ? v.toFixed(1) : Math.round(v)} ${miles ? 'mi' : 'km'}`;
+}
+// The middle of everyone's hotels, weighted by how many people are at each.
+export function middleOf(stays) {
+  const pts = stays.filter((s) => s.lat != null);
+  if (pts.length < 2) return null;
+  let w = 0, lat = 0, lon = 0;
+  for (const s of pts) { const n = Math.max(s.guests?.length || 0, 1); w += n; lat += s.lat * n; lon += s.lon * n; }
+  return { lat: lat / w, lon: lon / w };
+}
+// Google Maps directions from one place to another (opens the app on phones).
+export function routeUrl(from, to) {
+  const at = (p) => (p.lat != null ? `${p.lat},${p.lon}` : p.q);
+  return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(at(from))}&destination=${encodeURIComponent(at(to))}`;
+}

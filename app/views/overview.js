@@ -130,7 +130,7 @@ function extras(ctx) {
 
     ${trip.stays.length ? `<section><div class="section-head"><h2>Where we're staying</h2>
       <a class="btn btn-xs btn-ghost" href="#/t/${trip.id}/travel">All travel</a></div>
-      <div class="stack">${trip.stays.map((s) => stayCard(s, { isOrg: false })).join('')}</div></section>` : ''}
+      <div class="stack">${trip.stays.map((s) => stayCard(s, { ...ctx, isOrg: false })).join('')}</div></section>` : ''}
 
     ${trip.notes || isOrg ? `
     <section>

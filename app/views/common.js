@@ -53,3 +53,13 @@ export function statusPill(m, trip) {
 export const soon = (iso) => (iso ? daysUntil(iso) : 9999);
 
 export const tripCover = (trip) => coverBg(trip.destination || trip.name, trip.cover?.url ?? trip.cover);
+
+// Where someone is staying (on a given day, if the stay has dates).
+export function stayOf(trip, memberId, day = null) {
+  const mine = trip.stays.filter((st) => (st.guests || []).includes(memberId));
+  if (!day) return mine[0] ?? null;
+  return mine.find((st) => (!st.checkIn || st.checkIn <= day) && (!st.checkOut || st.checkOut >= day)) ?? mine[0] ?? null;
+}
+export const guestsOf = (trip, st) => (st.guests || []).map((id) => memberById(trip, id)).filter(Boolean);
+export const namesOf = (people, meId) =>
+  people.map((m) => (m.id === meId ? 'you' : firstName(m.name))).join(', ').replace(/^you/, 'You');

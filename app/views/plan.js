@@ -6,7 +6,8 @@ import * as store from '../store.js';
 import * as embed from '../embeds.js';
 import { going, organizer, firstName, nameOf } from './common.js';
 import { handleStayClick } from './stays.js';
-import { mountTripMap, focusPin, pinned, staysOnMap, stayQuery, hasGoogleKey, googleFindPlace, placeQuery } from './tripmap.js';
+import { mountTripMap, focusPin, pinned, staysOnMap, stayQuery, hasGoogleKey, googleFindPlace, placeQuery, fromHotelsHTML } from './tripmap.js';
+import { distanceText } from '../places.js';
 
 export function render(el, ctx) {
   const { trip, isOrg } = ctx;
@@ -74,7 +75,7 @@ export function render(el, ctx) {
       return el.querySelector('#trip-map')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
     if (await handleStayClick(e, ctx)) return;
-    const t = e.target.closest('[data-action],[data-jump],[data-ot],[data-map],[data-del],[data-edit]');
+    const t = e.target.closest('[data-action],[data-jump],[data-ot],[data-map],[data-del],[data-edit],[data-from]');
     if (!t) return;
     if (t.dataset.jump) {
       e.preventDefault();
@@ -86,7 +87,8 @@ export function render(el, ctx) {
     }
     if (t.dataset.action === 'add') return openAddItem(ctx);
     if (t.dataset.action === 'sync') return openSync(ctx);
-    const it = trip.itinerary.find((x) => x.id === (t.dataset.ot || t.dataset.map || t.dataset.del || t.dataset.edit));
+    const it = trip.itinerary.find((x) => x.id === (t.dataset.ot || t.dataset.map || t.dataset.del || t.dataset.edit || t.dataset.from));
+    if (t.dataset.from) return sheet({ title: it.title, body: `<div class="pin-card">${fromHotelsHTML(it, trip)}</div>` });
     if (t.dataset.edit) return openAddItem(ctx, null, { item: it });
     if (t.dataset.ot) {
       return embedSheet(`Reserve · ${it.title}`, embed.openTableEmbed(it.opentableRid,
@@ -157,7 +159,7 @@ function openSync({ trip }) {
   });
 }
 
-function item(it, { isOrg }, pinNo = 0) {
+function item(it, { isOrg, trip }, pinNo = 0) {
   const kind = pinNo ? 'numbered' : it.opentableRid ? 'ot' : '';
   return `
   <div class="tl-item">
@@ -176,6 +178,7 @@ function item(it, { isOrg }, pinNo = 0) {
       ${it.opentableRid || it.place || it.bookingUrl ? `<div class="tl-actions">
         ${it.opentableRid ? `<button class="btn btn-sm btn-primary" data-ot="${it.id}">${icon('utensils')}Reserve a table</button>` : ''}
         ${it.place ? `<button class="btn btn-sm btn-secondary" data-map="${it.id}">${icon('map')}Map</button>` : ''}
+        ${it.place && trip.stays.length ? `<button class="btn btn-sm btn-secondary" data-from="${it.id}">${icon('bed')}From hotels</button>` : ''}
         ${it.bookingUrl ? `<a class="btn btn-sm btn-outline" href="${esc(it.bookingUrl)}" target="_blank" rel="noopener">Booking ${icon('external')}</a>` : ''}
       </div>` : ''}
     </article>
@@ -234,8 +237,10 @@ export function openAddItem(ctx, day, preset = {}) {
         if (form.elements.place.value.trim() !== q) return found; // they kept typing
         found = { q, hit };
         status.className = `place-status ${hit ? 'found' : 'missing'}`;
+        const dists = trip.stays.filter((st) => st.lat != null)
+          .map((st) => `${distanceText(st, hit ?? {}, trip.currency === 'USD')} from ${esc(st.name)}`).filter((x) => !x.startsWith(' from'));
         status.innerHTML = hit
-          ? `${icon('pin', 'tiny')}On Google Maps: ${esc(hit.label)}`
+          ? `${icon('pin', 'tiny')}On Google Maps: ${esc(hit.label)}${dists.length ? `<br><b>${dists.join(' · ')}</b>` : ''}`
           : `${icon('info', 'tiny')}Google couldn't find that — add a street or town to pin it`;
         return found;
       };

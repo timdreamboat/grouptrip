@@ -3,8 +3,10 @@
 //   numbered pin, in the order they happen; tapping one opens the plan's card.
 // - Without a key: Google's free embedded map shows one plan's place at a
 //   time; the numbered chips under it switch plans and show the plan's card.
-import { esc, icon, fmtDay, fmtTime } from '../ui.js';
+import { esc, icon, avatarStack, fmtDay, fmtTime } from '../ui.js';
 import { GOOGLE_MAPS_KEY, GOOGLE_MAP_ID } from '../config.js';
+import { distanceText, middleOf, routeUrl } from '../places.js';
+import { guestsOf, namesOf } from './common.js';
 
 export const hasGoogleKey = Boolean(GOOGLE_MAPS_KEY);
 
@@ -29,6 +31,7 @@ export function stayCardHTML(st, trip) {
     <div class="pin-card">
       <div class="pin-card-head"><span class="pin-num stay">${icon('bed', 'tiny')}</span><b>${esc(st.name)}</b></div>
       ${st.address ? `<div class="pin-row">${icon('pin', 'tiny')}${esc(st.address)}</div>` : ''}
+      ${guestsOf(trip, st).length ? `<div class="pin-row">${avatarStack(guestsOf(trip, st), 5, 20)}<span>${esc(namesOf(guestsOf(trip, st), trip.me?.id))}</span></div>` : ''}
       ${st.checkIn ? `<div class="pin-row">${icon('calendar', 'tiny')}In ${esc(when(st.checkIn, st.checkInTime))}${st.checkOut ? ` · Out ${esc(when(st.checkOut, st.checkOutTime))}` : ''}</div>` : ''}
       ${st.confirmation ? `<div class="pin-notes">Confirmation: ${esc(st.confirmation)}</div>` : ''}
       <a class="pin-link" href="https://www.google.com/maps/dir/?api=1&destination=${dest}" target="_blank" rel="noopener">Directions ${icon('external', 'tiny')}</a>
@@ -47,7 +50,31 @@ export function cardHTML(it, n, trip) {
       ${it.place ? `<div class="pin-row">${icon('pin', 'tiny')}${esc(it.place)}</div>` : ''}
       ${it.day || it.time ? `<div class="pin-row">${icon('calendar', 'tiny')}${esc([it.day && fmtDay(it.day), it.time && fmtTime(it.time)].filter(Boolean).join(' · '))}</div>` : ''}
       ${it.notes ? `<div class="pin-notes">${esc(it.notes)}</div>` : ''}
+      ${it.place ? fromHotelsHTML(it, trip) : ''}
       <a class="pin-link" href="${esc(directions(it, trip))}" target="_blank" rel="noopener">Directions ${icon('external', 'tiny')}</a>
+    </div>`;
+}
+
+// How far the plan is from each hotel, and who's coming from where.
+export function fromHotelsHTML(it, trip) {
+  const stays = trip.stays.filter((st) => st.address || st.name);
+  if (!stays.length) return '';
+  const miles = trip.currency === 'USD';
+  const to = { lat: it.lat, lon: it.lon, q: placeQuery(it, trip) };
+  return `
+    <div class="from-hotels">
+      <div class="eyebrow">From each hotel</div>
+      ${stays.map((st) => {
+        const guests = guestsOf(trip, st);
+        const dist = distanceText(st, it, miles);
+        return `
+        <div class="from-row">
+          <span class="pin-num stay">${icon('bed', 'tiny')}</span>
+          <div class="from-name"><b>${esc(st.name)}</b>${guests.length ? `<span>${esc(namesOf(guests, trip.me?.id))}</span>` : ''}</div>
+          ${dist ? `<span class="from-dist">${esc(dist)}</span>` : ''}
+          <a class="pin-link" target="_blank" rel="noopener" href="${esc(routeUrl({ lat: st.lat, lon: st.lon, q: stayQuery(st, trip) }, to))}">Route ${icon('external', 'tiny')}</a>
+        </div>`;
+      }).join('')}
     </div>`;
 }
 
@@ -111,11 +138,25 @@ async function mountGoogle(el, trip, pins, stays) {
   stays.forEach((st) => {
     const pin = document.createElement('div');
     pin.className = 'map-pin stay';
-    pin.innerHTML = `<span class="shape"></span><span class="n">${icon('bed', 'tiny')}</span>`;
+    const guests = guestsOf(trip, st);
+    pin.innerHTML = `<span class="shape"></span><span class="n">${icon('bed', 'tiny')}</span>
+      ${guests.length ? `<span class="pin-guests">${avatarStack(guests, 4, 20)}</span>` : ''}`;
     const marker = new AdvancedMarkerElement({ map, position: { lat: st.lat, lng: st.lon }, content: pin, title: st.name, zIndex: 10 });
     marker.addListener('click', () => { info.setContent(stayCardHTML(st, trip)); info.open({ anchor: marker, map }); });
     markers.set(st.id, marker);
   });
+  // The middle of everyone's hotels — a good spot for group plans.
+  const mid = middleOf(stays);
+  if (mid) {
+    const dot = document.createElement('div');
+    dot.className = 'mid-pin';
+    dot.innerHTML = `<span></span><b>Middle</b>`;
+    const marker = new AdvancedMarkerElement({ map, position: { lat: mid.lat, lng: mid.lon }, content: dot, title: 'Middle of everyone' });
+    marker.addListener('click', () => {
+      info.setContent(`<div class="pin-card"><b>Middle of everyone</b><div class="pin-row">The center point between everyone's hotels, weighted by how many people are at each. Plans near here are easiest for the whole group.</div></div>`);
+      info.open({ anchor: marker, map });
+    });
+  }
   const all = [...pins, ...stays];
   if (all.length > 1) {
     const b = new maps.LatLngBounds();
@@ -139,7 +180,9 @@ async function mountGoogle(el, trip, pins, stays) {
 // switch between the hotel (bed) and the plans (numbers).
 function mountEmbed(el, detailEl, trip, pins, stays) {
   const spots = [
-    ...stays.map((st) => ({ id: st.id, stay: true, label: icon('bed', 'tiny'), title: st.name, q: stayQuery(st, trip), card: () => stayCardHTML(st, trip) })),
+    ...stays.map((st) => ({ id: st.id, stay: true, label: icon('bed', 'tiny'), q: stayQuery(st, trip), card: () => stayCardHTML(st, trip),
+      chip: `${icon('bed', 'tiny')}${guestsOf(trip, st).length ? avatarStack(guestsOf(trip, st), 3, 20) : ''}`,
+      title: [st.name, namesOf(guestsOf(trip, st), trip.me?.id)].filter(Boolean).join(' — ') })),
     ...pins.map((it, i) => ({ id: it.id, label: String(i + 1), title: it.title, q: placeQuery(it, trip), card: () => cardHTML(it, i + 1, trip) })),
   ];
   const show = (spot) => {
@@ -150,7 +193,7 @@ function mountEmbed(el, detailEl, trip, pins, stays) {
       ${spot ? `<div class="map-pin center-pin ${spot.stay ? 'stay' : ''}" aria-hidden="true"><span class="shape"></span><span class="n">${spot.label}</span></div>` : ''}`;
     if (!detailEl) return;
     detailEl.innerHTML = spots.length ? `
-      <div class="pin-chips">${spots.map((p) => `<button class="pin-chip ${p.stay ? 'stay' : ''} ${p === spot ? 'on' : ''}" data-pin="${p.id}" title="${esc(p.title)}" aria-label="${esc(p.title)}">${p.label}</button>`).join('')}</div>
+      <div class="pin-chips">${spots.map((p) => `<button class="pin-chip ${p.stay ? 'stay' : ''} ${p === spot ? 'on' : ''}" data-pin="${p.id}" title="${esc(p.title)}" aria-label="${esc(p.title)}">${p.chip ?? p.label}</button>`).join('')}</div>
       ${spot ? `<div class="pin-detail">${spot.card()}</div>` : ''}` : '';
   };
   // Start on the next plan that hasn't happened yet, else the hotel.

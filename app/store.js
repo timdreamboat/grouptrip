@@ -124,6 +124,7 @@ export const updateItem = (code, id, item) => act('update_item', code, { p_id: i
 export const updateFlight = (code, id, flight) => act('update_flight', code, { p_id: id, p_flight: flight });
 export const updateStay = (code, id, stay) => act('update_stay', code, { p_id: id, p_stay: stay });
 export const setStayLocation = (code, id, lat, lon) => act('set_stay_location', code, { p_id: id, p_lat: lat, p_lon: lon });
+export const setMyStay = (code, id, on) => act('set_my_stay', code, { p_stay: id, p_on: on });
 export const updateExpense = (code, id, e) => act('update_expense', code, {
   p_id: id, p_description: e.description, p_amount: e.amount, p_paid_by: e.paidBy, p_splits: e.splits,
 });

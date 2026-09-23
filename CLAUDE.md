@@ -100,6 +100,10 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
   install/push on a real phone.
 - Edge Function `flight-lookup` is deployed and working; its `AERODATABOX_KEY`
   secret (RapidAPI, AeroDataBox free Basic plan) is set in the Supabase dashboard.
+- Hotels: `stay_guests` says who stays where (a person can be at more than
+  one, e.g. moving hotels). Map/plan cards show "From each hotel" (distance
+  needs coordinates → Google key; Route opens Google Maps directions, since
+  the keyless embed can't draw routes). `middleOf()` = guest-weighted center.
 - Today (`views/today.js`) shows at the top of Home while the phone's local
   date is within the trip. Times are compared to the phone's clock (you're at
   the destination); flight status is estimated from scheduled times.

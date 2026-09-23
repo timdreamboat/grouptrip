@@ -658,3 +658,20 @@ dialog.viewer::backdrop { background: #000; }
 .today-next { background: linear-gradient(135deg, var(--accent-soft), var(--surface) 70%); border-color: color-mix(in srgb, var(--accent) 25%, var(--line)); }
 .today-title { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; margin: 4px 0 2px; }
 .today-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.stay-guests { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+.stay-guests > span.small { flex: 1; min-width: 120px; }
+.pin-guests { position: absolute; top: 40px; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+.pin-guests .av-stack { --ring-color: #fff; }
+.mid-pin { display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; }
+.mid-pin span { width: 18px; height: 18px; border-radius: 50%; background: rgba(255, 90, 46, .25); border: 3px solid var(--accent); box-shadow: 0 0 0 4px rgba(255, 90, 46, .15); }
+.mid-pin b { font: 700 11px var(--font-ui); color: var(--accent-ink); background: #fff; padding: 1px 6px; border-radius: 99px; box-shadow: var(--shadow-sm); }
+.from-hotels { display: grid; gap: 6px; margin-top: 4px; padding-top: 8px; border-top: 1px solid var(--line); }
+.from-row { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.from-name { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.3; }
+.from-name span { color: var(--muted); font-size: 12px; }
+.from-dist { font-weight: 600; font-variant-numeric: tabular-nums; }
+.gm-style .from-name span { color: #6d6a72; }
+.pin-chip.stay { display: inline-flex; align-items: center; gap: 6px; padding: 0 6px 0 10px; }
+.pin-chip.stay .av-stack { --ring-color: var(--surface); }
+.pin-chip.stay.on .av-stack { --ring-color: var(--text); }
+.pin-chip .av-stack .av + .av, .pin-guests .av-stack .av + .av { margin-left: -5px; }

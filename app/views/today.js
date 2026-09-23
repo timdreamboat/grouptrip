@@ -3,7 +3,7 @@
 // quick actions. Times are the phone's local time (you're at the destination).
 import { esc, icon, avatar, fmtDay, fmtTime, tripDays, embedSheet, copy } from '../ui.js';
 import * as embed from '../embeds.js';
-import { memberById, firstName } from './common.js';
+import { memberById, firstName, stayOf } from './common.js';
 import { placeQuery } from './tripmap.js';
 
 const pad = (n) => String(n).padStart(2, '0');
@@ -39,8 +39,9 @@ export function todayCard(ctx) {
   const later = plans.filter((p) => p !== next && (!p.time || !next?.time || minutesOf(p.time) > minutesOf(next.time)));
 
   const flights = trip.flights.filter((f) => f.date === today || (f.arrDate || f.date) === today);
-  const stay = trip.stays.find((st) => st.checkIn && st.checkIn <= today && (!st.checkOut || st.checkOut >= today))
-    ?? trip.stays.find((st) => st.checkIn === today);
+  // Your own hotel tonight, else wherever the group is staying.
+  const stay = stayOf(trip, trip.me.id, today)
+    ?? trip.stays.find((st) => st.checkIn && st.checkIn <= today && (!st.checkOut || st.checkOut >= today));
   const stayNote = stay && (stay.checkIn === today ? `Check-in today${stay.checkInTime ? ` from ${fmtTime(stay.checkInTime)}` : ''}`
     : stay.checkOut === today ? `Check-out today${stay.checkOutTime ? ` by ${fmtTime(stay.checkOutTime)}` : ''}` : '');
 

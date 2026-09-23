@@ -1,5 +1,6 @@
 // Where we're staying: address, check-in/out, confirmation, map, booking link.
-import { esc, icon, fmtDay, fmtTime, sheet, embedSheet, confirmSheet, busy, copy, toast, emptyState } from '../ui.js';
+import { esc, icon, avatar, avatarStack, fmtDay, fmtTime, sheet, embedSheet, confirmSheet, busy, copy, toast, emptyState } from '../ui.js';
+import { guestsOf, namesOf, firstName } from './common.js';
 import * as store from '../store.js';
 import * as embed from '../embeds.js';
 import { hasGoogleKey, googleFindPlace, stayQuery } from './tripmap.js';
@@ -7,8 +8,11 @@ import { hasGoogleKey, googleFindPlace, stayQuery } from './tripmap.js';
 const nights = (a, b) => (a && b ? Math.round((new Date(`${b}T00:00`) - new Date(`${a}T00:00`)) / 86400000) : 0);
 const when = (d, t) => `<div style="font-weight:600">${esc(fmtDay(d))}</div>${t ? `<div class="small muted">${esc(fmtTime(t))}</div>` : ''}`;
 
-export function stayCard(s, { isOrg }) {
+export function stayCard(s, ctx) {
+  const { isOrg, trip } = ctx;
   const n = nights(s.checkIn, s.checkOut);
+  const guests = trip ? guestsOf(trip, s) : [];
+  const imHere = trip?.me && (s.guests || []).includes(trip.me.id);
   return `
   <article class="card stay">
     <div class="title-row" style="display:flex;gap:12px;align-items:flex-start">
@@ -25,6 +29,12 @@ export function stayCard(s, { isOrg }) {
       <div><div class="eyebrow">Check in</div><div class="tabular">${s.checkIn ? when(s.checkIn, s.checkInTime) : '—'}</div></div>
       <div class="nights">${n ? `${n} night${n === 1 ? '' : 's'}` : ''}</div>
       <div style="text-align:right"><div class="eyebrow">Check out</div><div class="tabular">${s.checkOut ? when(s.checkOut, s.checkOutTime) : '—'}</div></div>
+    </div>` : ''}
+    ${trip ? `
+    <div class="stay-guests">
+      ${guests.length ? `${avatarStack(guests, 5, 26)}<span class="small"><b>${esc(namesOf(guests, trip.me?.id))}</b> ${guests.length === 1 && !imHere ? 'is' : 'are'} staying here</span>`
+        : '<span class="small muted">Nobody added yet</span>'}
+      ${trip.me ? `<button class="btn btn-xs ${imHere ? 'btn-ghost' : 'btn-secondary'}" data-stay-me="${s.id}" data-on="${!imHere}">${imHere ? 'Not me' : "I'm staying here"}</button>` : ''}
     </div>` : ''}
     ${s.notes ? `<p class="small muted" style="margin:12px 0 0;white-space:pre-wrap">${esc(s.notes)}</p>` : ''}
     <div class="tl-actions">
@@ -51,10 +61,15 @@ export function staysSection(ctx, { heading = true } = {}) {
 
 // Handles stay buttons anywhere inside `el`. Returns true if it handled the click.
 export async function handleStayClick(e, ctx) {
-  const t = e.target.closest('[data-stay-add],[data-stay-del],[data-stay-map],[data-stay-conf],[data-stay-edit]');
+  const t = e.target.closest('[data-stay-add],[data-stay-del],[data-stay-map],[data-stay-conf],[data-stay-edit],[data-stay-me]');
   if (!t) return false;
   const { trip } = ctx;
   const s = trip.stays.find((x) => x.id === (t.dataset.stayDel || t.dataset.stayMap || t.dataset.stayConf || t.dataset.stayEdit));
+  if (t.dataset.stayMe) {
+    const on = t.dataset.on === 'true';
+    ctx.run(() => store.setMyStay(trip.id, t.dataset.stayMe, on), on ? "Got it — you're staying there" : 'Removed you from that place');
+    return true;
+  }
   if (t.hasAttribute('data-stay-add')) openAddStay(ctx);
   else if (t.dataset.stayEdit) openAddStay(ctx, s);
   else if (t.dataset.stayMap) embedSheet(s.name, embed.mapEmbed(s.address));
@@ -70,6 +85,9 @@ export async function handleStayClick(e, ctx) {
 export function openAddStay(ctx, stay = null) {
   const { trip } = ctx;
   const v = (k, fallback = '') => esc(stay ? stay[k] ?? '' : fallback);
+  const people = trip.members.filter((m) => m.rsvp !== 'declined' || (stay?.guests || []).includes(m.id));
+  // New place: everyone going if it's the first one, otherwise nobody yet.
+  const guestDefault = (m) => (stay ? (stay.guests || []).includes(m.id) : !trip.stays.length && m.rsvp === 'going');
   sheet({
     title: stay ? 'Edit place' : 'Where are you staying?',
     body: `
@@ -82,6 +100,9 @@ export function openAddStay(ctx, stay = null) {
           <label class="field"><span>Check out</span><input type="date" name="checkOut" value="${v('checkOut', trip.endDate || '')}"></label>
           <label class="field"><span>Time</span><input type="time" name="checkOutTime" value="${v('checkOutTime', '11:00')}"></label>
         </div>
+        <div class="field"><span>Who's staying here?</span><div class="picks">
+          ${people.map((m) => `<label><input type="checkbox" name="guest" value="${m.id}" ${guestDefault(m) ? 'checked' : ''}>
+            <span class="pick">${avatar(m, 30)}${esc(m.id === trip.me.id ? 'Me' : firstName(m.name))}</span></label>`).join('')}</div></div>
         <label class="field"><span>Confirmation number</span><input name="confirmation" autocomplete="off" value="${v('confirmation')}"></label>
         <label class="field"><span>Booking link</span><input name="bookingUrl" type="url" placeholder="Airbnb, hotel or VRBO page" value="${v('bookingUrl')}"></label>
         <label class="field"><span>Notes</span><textarea name="notes" rows="3" placeholder="Parking, which rooms, how to get the key…">${v('notes')}</textarea></label>
@@ -98,7 +119,8 @@ export function openAddStay(ctx, stay = null) {
           const same = stay && stay.name === f.name.trim() && (stay.address || '') === f.address.trim();
           let at = same && stay.lat != null ? { lat: stay.lat, lon: stay.lon } : null;
           if (!same && hasGoogleKey) at = await googleFindPlace(stayQuery({ name: f.name.trim(), address: f.address.trim() }, trip), trip).catch(() => null);
-          const data = { ...f, lat: at?.lat ?? '', lon: at?.lon ?? '' };
+          const data = { ...f, lat: at?.lat ?? '', lon: at?.lon ?? '', guests: [...form.querySelectorAll('[name=guest]:checked')].map((c) => c.value) };
+          delete data.guest;
           return stay ? store.updateStay(trip.id, stay.id, data) : store.addStay(trip.id, data);
         });
         if (ok) { close(); ctx.refresh(stay ? 'Place updated' : 'Place added'); }

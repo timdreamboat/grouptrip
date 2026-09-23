@@ -50,6 +50,11 @@
 - ✅ Where we're staying on the Calendar map (bed pin + card)
 - ✅ Today at the top of Home: next up with countdown, rest of today, flights today, the hotel, quick actions
 
+## v2.3 — different hotels (2026-09-22)
+- ✅ Who's staying where (organizer assigns; anyone can say "I'm staying here")
+- ✅ Faces on hotel pins/buttons; "From each hotel" on plans with distance + route
+- ✅ With a Google key: distances while adding a plan, "Middle of everyone" marker
+
 ## Ideas next
 - Local time + currency on Home; photo reactions; notifications when a poll opens
 

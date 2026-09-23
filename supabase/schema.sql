@@ -522,6 +522,8 @@ end $$;
 
 -- ======================================================================
 -- v4 (2026-09-22): polls and the shared photo album.
+-- NOTE: the get_trip below is the CURRENT version (kept up to date through v9);
+-- plpgsql only checks table names when it runs, so defining it here is fine.
 -- get_trip below replaces the earlier versions (adds polls + photos).
 -- ======================================================================
 create table polls (
@@ -624,7 +626,8 @@ begin
                          'checkIn', s.check_in, 'checkInTime', s.check_in_time,
                          'checkOut', s.check_out, 'checkOutTime', s.check_out_time,
                          'bookingUrl', s.booking_url, 'confirmation', s.confirmation, 'notes', s.notes,
-                         'lat', s.lat, 'lon', s.lon)
+                         'lat', s.lat, 'lon', s.lon,
+                         'guests', coalesce((select jsonb_agg(g.member_id) from stay_guests g where g.stay_id = s.id), '[]'))
                        order by s.check_in nulls last, s.created_at)
                        from stays s where s.trip_id = tid), '[]'),
     'lists', coalesce((select jsonb_agg(jsonb_build_object(
@@ -1264,4 +1267,74 @@ returns void language plpgsql security definer set search_path = public as $$
 declare o members := _organizer(p_code, p_token);
 begin
   update stays set lat = p_lat, lon = p_lon where id = p_id and trip_id = o.trip_id;
+end $$;
+
+-- ======================================================================
+-- v9 (2026-09-22): who's staying where. get_trip's stays also return
+-- 'guests' (member ids) — see the v4 get_trip, which is kept current.
+-- ======================================================================
+create table stay_guests (
+  stay_id   uuid not null references stays(id) on delete cascade,
+  member_id uuid not null references members(id) on delete cascade,
+  primary key (stay_id, member_id)
+);
+create index on stay_guests (member_id);
+alter table stay_guests enable row level security;
+revoke all on stay_guests from anon, authenticated;
+
+create function _set_stay_guests(p_trip uuid, p_stay uuid, p_guests jsonb) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if p_guests is null or jsonb_typeof(p_guests) <> 'array' then return; end if;
+  delete from stay_guests where stay_id = p_stay;
+  insert into stay_guests (stay_id, member_id)
+  select p_stay, m.id from members m
+  where m.trip_id = p_trip and m.id in (select (g #>> '{}')::uuid from jsonb_array_elements(p_guests) g)
+  on conflict do nothing;
+end $$;
+revoke execute on function _set_stay_guests(uuid, uuid, jsonb) from public, anon, authenticated;
+
+-- add_stay / update_stay (v8) now end with: perform _set_stay_guests(o.trip_id, <stay id>, p_stay->'guests');
+create or replace function add_stay(p_code text, p_token text, p_stay jsonb) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare o members := _organizer(p_code, p_token); new_id uuid;
+begin
+  insert into stays (trip_id, name, address, check_in, check_in_time, check_out, check_out_time, booking_url, confirmation, notes, lat, lon)
+  values (o.trip_id, trim(p_stay->>'name'), nullif(trim(p_stay->>'address'), ''),
+          nullif(p_stay->>'checkIn', '')::date, nullif(p_stay->>'checkInTime', ''),
+          nullif(p_stay->>'checkOut', '')::date, nullif(p_stay->>'checkOutTime', ''),
+          nullif(trim(p_stay->>'bookingUrl'), ''), nullif(trim(p_stay->>'confirmation'), ''), nullif(trim(p_stay->>'notes'), ''),
+          nullif(p_stay->>'lat', '')::double precision, nullif(p_stay->>'lon', '')::double precision)
+  returning id into new_id;
+  perform _set_stay_guests(o.trip_id, new_id, p_stay->'guests');
+  return new_id;
+end $$;
+
+create or replace function update_stay(p_code text, p_token text, p_id uuid, p_stay jsonb) returns void
+language plpgsql security definer set search_path = public as $$
+declare o members := _organizer(p_code, p_token);
+begin
+  update stays set
+    name = trim(p_stay->>'name'), address = nullif(trim(p_stay->>'address'), ''),
+    check_in = nullif(p_stay->>'checkIn', '')::date, check_in_time = nullif(p_stay->>'checkInTime', ''),
+    check_out = nullif(p_stay->>'checkOut', '')::date, check_out_time = nullif(p_stay->>'checkOutTime', ''),
+    booking_url = nullif(trim(p_stay->>'bookingUrl'), ''), confirmation = nullif(trim(p_stay->>'confirmation'), ''),
+    notes = nullif(trim(p_stay->>'notes'), ''),
+    lat = nullif(p_stay->>'lat', '')::double precision, lon = nullif(p_stay->>'lon', '')::double precision
+  where id = p_id and trip_id = o.trip_id;
+  if not found then raise exception 'Place not found'; end if;
+  perform _set_stay_guests(o.trip_id, p_id, p_stay->'guests');
+end $$;
+
+-- Anyone can say "I'm staying here" (or not).
+create function set_my_stay(p_code text, p_token text, p_stay uuid, p_on boolean) returns void
+language plpgsql security definer set search_path = public as $$
+declare a members := _actor(p_code, p_token);
+begin
+  if not exists (select 1 from stays where id = p_stay and trip_id = a.trip_id) then raise exception 'Place not found'; end if;
+  if p_on then
+    insert into stay_guests (stay_id, member_id) values (p_stay, a.id) on conflict do nothing;
+  else
+    delete from stay_guests where stay_id = p_stay and member_id = a.id;
+  end if;
 end $$;
