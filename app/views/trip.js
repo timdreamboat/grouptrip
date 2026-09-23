@@ -1,6 +1,7 @@
 // The trip shell: sidebar on desktop, top bar + floating tab bar on phones.
 // Renders the active tab into <main>.
 import { esc, icon, avatar, fmtRange, toast } from '../ui.js';
+import { listTrips } from '../store.js';
 import { memberById, tripCover, words } from './common.js';
 import { openMe } from './me.js';
 import * as overview from './overview.js';
@@ -30,6 +31,7 @@ const ALIASES = { flights: 'travel' };
 export function render(root, ctx, tabId) {
   const { trip, isOrg } = ctx;
   const w = words(trip);
+  const tripCount = listTrips().filter((t) => t.role !== 'invited').length;
   const labelOf = (t) => (t.id === 'plan' ? w.plan : t.id === 'money' ? w.money : t.label);
   const tab = TABS.find((t) => t.id === (ALIASES[tabId] ?? tabId)) ?? TABS[0];
   const me = memberById(trip, trip.me.id);
@@ -48,6 +50,8 @@ export function render(root, ctx, tabId) {
     <div class="shell">
       <aside class="sidebar">
         <a class="brand" href="#/"><span class="brand-mark">${icon('plane')}</span>GroupTrip</a>
+        <a class="my-trips" href="#/">${icon('grid')}My trips${tripCount > 1 ? `<span class="count">${tripCount}</span>` : ''}</a>
+        <div class="eyebrow" style="margin:0 4px -12px">This trip</div>
         <a class="side-trip" href="${href(TABS[0])}" style="text-decoration:none">
           <span class="thumb" style="background:${esc(tripCover(trip))}"></span>
           <span style="min-width:0"><div class="name">${esc(trip.name)}</div><div class="small muted">${esc(fmtRange(trip.startDate, trip.endDate))}</div></span>
@@ -55,7 +59,6 @@ export function render(root, ctx, tabId) {
         <nav class="side-nav">
           ${TABS.map((t) => `<a href="${href(t)}" class="${t === tab ? 'on' : ''}">${icon(t.icon)}${labelOf(t)}${counts[t.id] ? `<span class="count">${counts[t.id]}</span>` : ''}</a>`).join('')}
         </nav>
-        <a class="btn btn-ghost btn-sm" href="#/" style="justify-content:flex-start">${icon('back')}All trips</a>
         <button class="side-me" data-me>
           ${avatar(me, 36)}
           <span style="flex:1;min-width:0"><div style="font-weight:600">${esc(me.name)}</div>
@@ -66,8 +69,8 @@ export function render(root, ctx, tabId) {
 
       <div>
         <header class="topbar">
-          <a class="btn btn-icon btn-ghost" href="#/" aria-label="All trips">${icon('back')}</a>
-          <div class="title">${tab.id === 'home' ? '' : esc(trip.name)}</div>
+          <a class="btn btn-sm btn-secondary my-trips-btn" href="#/" aria-label="My trips">${icon('back')}${icon('grid')}<span>My trips</span></a>
+          <div class="title">${esc(trip.name)}</div>
           ${isOrg ? `<span class="pill org">${icon('crown')}Organizer</span>` : ''}
           <button class="btn btn-icon btn-ghost" data-me aria-label="You">${avatar(me, 32)}</button>
         </header>

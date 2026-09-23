@@ -1,6 +1,7 @@
 # CLAUDE.md — GroupTrip project context for Claude Code
 
-Read this first in every session. The owner (Tim) works by giving plain-English
+Read this first in every session, then `docs/HANDOFF.md` for current status,
+owner decisions and what's pending. The owner (Tim) works by giving plain-English
 instructions. Do the work end-to-end and explain outcomes in one or two
 sentences, not code detail.
 

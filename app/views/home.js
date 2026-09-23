@@ -15,7 +15,7 @@ export function render(root) {
       </header>
 
       ${trips.length ? `
-        <div class="page-head" style="margin-top:24px"><div><h1 class="display">Your trips</h1>
+        <div class="page-head" style="margin-top:24px"><div><h1 class="display">My trips</h1>
           <div class="sub">${trips.length} trip${trips.length === 1 ? '' : 's'} on this device</div></div></div>
         <div class="trip-grid">
           ${sorted.map((t) => {

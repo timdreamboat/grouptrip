@@ -67,6 +67,9 @@
 - ✅ Business: Agenda, reimbursable expenses (category, card, receipt), by person/category, spreadsheet export, private per person
 - ✅ Family: splits default to shares (households), family suggestions
 
+## v2.6 — navigation (2026-09-22)
+- ✅ "My trips" button in the phone top bar and a My trips row in the desktop sidebar
+
 ## Later (money)
 - Categories and a spending summary
 

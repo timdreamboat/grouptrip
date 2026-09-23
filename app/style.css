@@ -705,3 +705,16 @@ dialog.viewer::backdrop { background: #000; }
 .kind-picks input:focus-visible + .kind-card { box-shadow: 0 0 0 4px var(--ring); }
 .cat-row { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; font-size: 14px; }
 .cat-row .progress { grid-column: 1 / -1; height: 5px; }
+
+/* ---------- way back to My trips ---------- */
+.my-trips {
+  display: flex; align-items: center; gap: 12px; height: 46px; padding: 0 14px; border-radius: 14px;
+  text-decoration: none; font-weight: 600; background: var(--surface-2); color: var(--text);
+}
+.my-trips:hover { background: var(--surface-3); }
+.my-trips .count { margin-left: auto; font-size: 12px; color: var(--muted); font-weight: 500; }
+.my-trips-btn { gap: 4px; padding: 0 12px 0 6px; flex: none; }
+.my-trips-btn svg.i { width: 17px; height: 17px; }
+.my-trips-btn svg.i:first-child { width: 16px; margin-right: -2px; }
+.topbar .title { text-align: center; font-size: 15px; }
+@media (max-width: 420px) { .topbar .pill.org { display: none; } }
