@@ -3,7 +3,7 @@
 import { esc, icon, avatar, avatarStack, fmtDay, fmtTime, share, copy } from '../ui.js';
 import { fmt } from '../money.js';
 import * as store from '../store.js';
-import { heroHTML, going, flightsOf, organizer, firstName, myBalance, nextUp, memberById } from './common.js';
+import { heroHTML, going, flightsOf, organizer, firstName, myBalance, nextUp, memberById, words, isBusiness } from './common.js';
 import { openAddFlight } from './flights.js';
 import { openEditTrip, openMe, openNotes } from './me.js';
 import { stayCard, handleStayClick } from './stays.js';
@@ -43,7 +43,7 @@ function organizerHome(ctx) {
   const withFlights = g.filter((m) => flightsOf(trip, m.id).length);
   const steps = [
     { done: Boolean(trip.startDate), title: 'Set the dates', sub: trip.startDate ? 'Dates are set' : 'So everyone can book flights', action: 'edit-trip' },
-    { done: joined.length > 1, title: 'Get your crew in', sub: `${joined.length} of ${people.length} joined`, href: 'people' },
+    { done: joined.length > 1, title: `Get your ${words(trip).crew} in`, sub: `${joined.length} of ${people.length} joined`, href: 'people' },
     { done: g.length > 0 && withFlights.length === g.length, title: 'Collect flights', sub: `${withFlights.length} of ${g.length} added`, href: 'travel' },
     { done: trip.stays.length > 0, title: 'Add where you\'re staying', sub: trip.stays.length ? trip.stays[0].name : 'Address, check-in, confirmation', href: 'travel' },
     { done: trip.itinerary.length > 0, title: 'Start the plan', sub: trip.itinerary.length ? `${trip.itinerary.length} plans` : 'Dinners, activities, anything', href: 'plan' },
@@ -65,7 +65,7 @@ function organizerHome(ctx) {
 
     <section class="card invite-card-org stack">
       <div>
-        <h2>Invite your crew</h2>
+        <h2>Invite your ${words(trip).crew}</h2>
         <p class="hint" style="margin-top:4px">Anyone with this link can join, add their flight and split costs.</p>
       </div>
       <div class="link-box"><code>${esc(store.inviteLink(trip.id))}</code>
@@ -107,7 +107,7 @@ function organizerHome(ctx) {
     <section class="stack">
       ${nextUpCard(ctx)}
       <div class="stat-grid">
-        <a class="stat" href="#/t/${trip.id}/money" style="text-decoration:none"><div class="num">${fmt(spent, trip.currency)}</div><div class="lbl">Spent so far</div></a>
+        <a class="stat" href="#/t/${trip.id}/money" style="text-decoration:none"><div class="num">${fmt(spent, trip.currency)}</div><div class="lbl">${isBusiness(trip) ? 'Team spend' : 'Spent so far'}</div></a>
         <a class="stat" href="#/t/${trip.id}/people" style="text-decoration:none"><div class="num">${g.length}</div><div class="lbl">Going</div></a>
       </div>
     </section>
@@ -171,13 +171,14 @@ function guestHome(ctx) {
   const myList = trip.lists.filter((l) => l.personal);
   const unclaimed = trip.lists.filter((l) => !l.personal && !l.claimedBy).length;
   const toVote = needsMyVote(trip).length;
+  const toReimburse = trip.expenses.filter((e) => e.paidBy === me.id && !e.companyPaid && !e.reimbursed).reduce((t, e) => t + e.amount, 0);
   const todos = [
     { done: myFlights.length > 0, title: 'Add your flight', sub: myFlights.length ? `${myFlights[0].flightNumber} · ${fmtDay(myFlights[0].date)}` : 'So we know when you land', action: 'add-flight', hide: me.rsvp === 'declined' },
     { done: Boolean(me.venmo), title: 'Add your Venmo', sub: me.venmo ? `@${me.venmo}` : 'So friends can pay you back in one tap', action: 'me' },
     { done: myList.length > 0 && myList.every((l) => l.done), title: 'Pack your bag', sub: myList.length ? `${myList.filter((l) => l.done).length} of ${myList.length} packed` : 'Your private packing list', href: 'lists', hide: me.rsvp === 'declined' },
     ...(toVote ? [{ done: false, title: `Vote in ${toVote} poll${toVote === 1 ? '' : 's'}`, sub: 'The group is deciding', href: 'polls' }] : []),
     ...(unclaimed ? [{ done: false, title: 'Help cover the group list', sub: `${unclaimed} thing${unclaimed === 1 ? '' : 's'} nobody's bringing yet`, href: 'lists' }] : []),
-    ...(bal < 0 ? [{ done: false, title: 'Settle up', sub: `You owe ${fmt(-bal, trip.currency)}`, href: 'money' }] : []),
+    ...(bal < 0 && !isBusiness(trip) ? [{ done: false, title: 'Settle up', sub: `You owe ${fmt(-bal, trip.currency)}`, href: 'money' }] : []),
   ].filter((t) => !t.hide);
   const left = todos.filter((t) => !t.done).length;
 
@@ -213,9 +214,11 @@ function guestHome(ctx) {
     <section class="stack">
       ${nextUpCard(ctx)}
       <div class="stat-grid">
+        ${isBusiness(trip) ? `<a class="stat" href="#/t/${trip.id}/money" style="text-decoration:none">
+          <div class="num">${fmt(toReimburse, trip.currency)}</div><div class="lbl">To be reimbursed</div></a>` : `
         <a class="stat" href="#/t/${trip.id}/money" style="text-decoration:none">
           <div class="num ${bal > 0 ? 'amt pos' : bal < 0 ? 'amt neg' : ''}">${fmt(Math.abs(bal), trip.currency)}</div>
-          <div class="lbl">${bal > 0 ? "You're owed" : bal < 0 ? 'You owe' : 'All square'}</div></a>
+          <div class="lbl">${bal > 0 ? "You're owed" : bal < 0 ? 'You owe' : 'All square'}</div></a>`}
         <a class="stat" href="#/t/${trip.id}/people" style="text-decoration:none"><div class="num">${going(trip).length}</div><div class="lbl">Going</div></a>
       </div>
     </section>

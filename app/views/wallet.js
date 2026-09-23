@@ -6,9 +6,11 @@ import { esc, icon, avatar, fmtShort, sheet, confirmSheet, busy, toast, emptySta
 import { fmt, toCents, equalShares, weightedShares, balances, settleUp, rateTo, CURRENCIES } from '../money.js';
 import * as store from '../store.js';
 import * as embed from '../embeds.js';
-import { memberById, nameOf, firstName } from './common.js';
+import { memberById, nameOf, firstName, isBusiness } from './common.js';
+import * as biz from './bizexpenses.js';
 
 export function render(el, ctx) {
+  if (isBusiness(ctx.trip)) return biz.render(el, ctx);
   const { trip, isOrg } = ctx;
   const meId = trip.me.id;
   const money = (c) => fmt(c, trip.currency);
@@ -152,7 +154,8 @@ function openAddExpense(ctx, exp = null) {
   const label = (m) => (m.id === trip.me.id ? 'Me' : firstName(m.name));
   let currency = exp?.originalCurrency || trip.currency;
   let rate = exp?.rate ? Number(exp.rate) : 1;
-  let mode = exp?.splitMode || 'equal';
+  // Family trips default to shares, so each household can count its people.
+  let mode = exp?.splitMode || (trip.kind === 'family' ? 'shares' : 'equal');
   let receipt = exp?.receiptPath ? { receiptPath: exp.receiptPath, receiptThumb: exp.receiptThumb } : null;
   let receiptFile = null;
   const entered = exp ? (exp.originalCents ?? exp.amount) : 0;
@@ -181,6 +184,7 @@ function openAddExpense(ctx, exp = null) {
               `<button type="button" data-mode="${v}" class="${mode === v ? 'on' : ''}">${l}</button>`).join('')}
           </div>
         </div>
+        ${trip.kind === 'family' ? '<p class="hint" style="margin-top:-6px">Tip: splitting by household? Give one person per family a share for each family member.</p>' : ''}
         <div id="split-equal" class="picks">
           ${people.map((m) => `<label><input type="checkbox" name="split" value="${m.id}" ${exp ? (splitOf(m.id) ? 'checked' : '') : 'checked'}>
             <span class="pick">${avatar(m, 30)}${esc(label(m))}</span></label>`).join('')}

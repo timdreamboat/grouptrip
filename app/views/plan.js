@@ -4,7 +4,7 @@
 import { esc, icon, fmtDay, fmtTime, tripDays, sheet, embedSheet, confirmSheet, busy, toast, copy, emptyState } from '../ui.js';
 import * as store from '../store.js';
 import * as embed from '../embeds.js';
-import { going, organizer, firstName, nameOf } from './common.js';
+import { going, organizer, firstName, nameOf, words } from './common.js';
 import { handleStayClick } from './stays.js';
 import { mountTripMap, focusPin, pinned, staysOnMap, stayQuery, hasGoogleKey, googleFindPlace, placeQuery, fromHotelsHTML } from './tripmap.js';
 import { distanceText } from '../places.js';
@@ -33,11 +33,11 @@ export function render(el, ctx) {
 
   el.innerHTML = `
     <header class="page-head">
-      <div><h1 class="display">Calendar</h1>
+      <div><h1 class="display">${words(trip).plan}</h1>
         <div class="sub">${entries.length ? `${trip.itinerary.length} plan${trip.itinerary.length === 1 ? '' : 's'} · ${trip.flights.length} flight${trip.flights.length === 1 ? '' : 's'}` : 'Everything, day by day'}</div></div>
       <div style="display:flex;gap:8px">
         ${isOrg ? `<button class="btn btn-secondary btn-sm" data-action="sync">${icon('calplus')}Sync</button>
-          <button class="btn page-action" data-action="add">${icon('plus')}Add plan</button>`
+          <button class="btn page-action" data-action="add">${icon('plus')}${words(trip).addPlan}</button>`
         : `<button class="btn page-action" data-action="sync">${icon('calplus')}Add to my calendar</button>`}
       </div>
     </header>
@@ -191,7 +191,7 @@ export function openAddItem(ctx, day, preset = {}) {
   const it = preset.item;
   const v = (k) => esc(it?.[k] ?? '');
   sheet({
-    title: it ? 'Edit plan' : 'Add a plan',
+    title: it ? 'Edit plan' : words(trip).addPlan,
     body: `
       <form class="form" id="item-form">
         <label class="field"><span>What's the plan?</span><input name="title" required maxlength="200" placeholder="Dinner at the lake house" value="${esc(it?.title ?? preset.title ?? '')}"></label>
@@ -213,7 +213,7 @@ export function openAddItem(ctx, day, preset = {}) {
           </div>
         </details>
       </form>`,
-    foot: `<button class="btn btn-primary btn-lg" form="item-form">${it ? 'Save changes' : 'Add to plan'}</button>`,
+    foot: `<button class="btn btn-primary btn-lg" form="item-form">${it ? 'Save changes' : words(trip).addPlan}</button>`,
     onMount(dlg, close) {
       const form = dlg.querySelector('#item-form');
       const status = dlg.querySelector('#place-status');

@@ -63,3 +63,34 @@ export function stayOf(trip, memberId, day = null) {
 export const guestsOf = (trip, st) => (st.guests || []).map((id) => memberById(trip, id)).filter(Boolean);
 export const namesOf = (people, meId) =>
   people.map((m) => (m.id === meId ? 'you' : firstName(m.name))).join(', ').replace(/^you/, 'You');
+
+// ---------- trip types: words and suggestions that change with the kind of trip ----------
+export const KINDS = {
+  friends: {
+    label: 'Friends', blurb: 'Split costs, settle up with Venmo',
+    crew: 'crew', plan: 'Calendar', addPlan: 'Add plan', money: 'Money', groupList: "Who's bringing what",
+    groupIdeas: ['Sunscreen', 'Bluetooth speaker', 'First-aid kit', 'Snacks', 'Drinks', 'Coffee', 'Card games', 'Bug spray', 'Beach towels', 'Phone tripod'],
+    packIdeas: ['ID / passport', 'Phone charger', 'Wallet', 'Medications', 'Toiletries', 'Sunglasses', 'Headphones', 'Swimsuit', 'Jacket', 'Comfortable shoes'],
+  },
+  family: {
+    label: 'Family', blurb: 'Split by household, kid-friendly lists',
+    crew: 'family', plan: 'Calendar', addPlan: 'Add plan', money: 'Money', groupList: "Who's bringing what",
+    groupIdeas: ['Sunscreen', 'First-aid kit', 'Snacks for the kids', 'Board games', 'Beach toys', 'Car seats', 'Stroller', 'Bug spray', 'Coffee', 'Paper towels'],
+    packIdeas: ['ID / passport', "Kids' medications", 'Phone charger', 'Tablets & headphones', 'Swimsuits', 'Jackets', 'Toiletries', 'Diapers & wipes', 'Comfort toy', 'Snacks for the drive'],
+  },
+  business: {
+    label: 'Business', blurb: 'Agenda, reimbursable expenses, export',
+    crew: 'team', plan: 'Agenda', addPlan: 'Add to agenda', money: 'Expenses', groupList: 'Shared supplies',
+    groupIdeas: ['Booth materials', 'Banner', 'Swag', 'Business cards', 'Extension cord', 'Clicker', 'Printed handouts', 'Snacks for the booth'],
+    packIdeas: ['Laptop & charger', 'Badge / registration', 'Business cards', 'Portable battery', 'Notebook', 'Dress clothes', 'ID / passport', 'Presentation backup', 'Headphones', 'Comfortable shoes'],
+  },
+};
+export const words = (trip) => KINDS[trip?.kind] ?? KINDS.friends;
+export const isBusiness = (trip) => trip?.kind === 'business';
+
+export const CATEGORIES = [
+  ['travel', '✈️', 'Airfare & travel'], ['lodging', '🏨', 'Lodging'], ['meals', '🍽', 'Meals'],
+  ['transport', '🚕', 'Ground transport'], ['entertainment', '🥂', 'Client entertainment'],
+  ['supplies', '📦', 'Supplies'], ['other', '•', 'Other'],
+];
+export const categoryOf = (key) => CATEGORIES.find((c) => c[0] === key) ?? CATEGORIES.at(-1);

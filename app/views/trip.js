@@ -1,7 +1,7 @@
 // The trip shell: sidebar on desktop, top bar + floating tab bar on phones.
 // Renders the active tab into <main>.
 import { esc, icon, avatar, fmtRange, toast } from '../ui.js';
-import { memberById, tripCover } from './common.js';
+import { memberById, tripCover, words } from './common.js';
 import { openMe } from './me.js';
 import * as overview from './overview.js';
 import * as plan from './plan.js';
@@ -29,6 +29,8 @@ const ALIASES = { flights: 'travel' };
 
 export function render(root, ctx, tabId) {
   const { trip, isOrg } = ctx;
+  const w = words(trip);
+  const labelOf = (t) => (t.id === 'plan' ? w.plan : t.id === 'money' ? w.money : t.label);
   const tab = TABS.find((t) => t.id === (ALIASES[tabId] ?? tabId)) ?? TABS[0];
   const me = memberById(trip, trip.me.id);
   const counts = {
@@ -40,7 +42,7 @@ export function render(root, ctx, tabId) {
   const barTabs = [...TABS.filter((t) => !t.group), { id: lastGroupTab, label: 'Group', icon: 'users', isGroup: true }];
   const barOn = (t) => (t.isGroup ? tab.group : t === tab);
   const href = (t) => `#/t/${trip.id}/${t.id}`;
-  document.title = `${tab.id === 'home' ? '' : `${tab.label} · `}${trip.name}`;
+  document.title = `${tab.id === 'home' ? '' : `${labelOf(tab)} · `}${trip.name}`;
 
   root.innerHTML = `
     <div class="shell">
@@ -51,7 +53,7 @@ export function render(root, ctx, tabId) {
           <span style="min-width:0"><div class="name">${esc(trip.name)}</div><div class="small muted">${esc(fmtRange(trip.startDate, trip.endDate))}</div></span>
         </a>
         <nav class="side-nav">
-          ${TABS.map((t) => `<a href="${href(t)}" class="${t === tab ? 'on' : ''}">${icon(t.icon)}${t.label}${counts[t.id] ? `<span class="count">${counts[t.id]}</span>` : ''}</a>`).join('')}
+          ${TABS.map((t) => `<a href="${href(t)}" class="${t === tab ? 'on' : ''}">${icon(t.icon)}${labelOf(t)}${counts[t.id] ? `<span class="count">${counts[t.id]}</span>` : ''}</a>`).join('')}
         </nav>
         <a class="btn btn-ghost btn-sm" href="#/" style="justify-content:flex-start">${icon('back')}All trips</a>
         <button class="side-me" data-me>
@@ -79,7 +81,7 @@ export function render(root, ctx, tabId) {
 
       <nav class="tabbar" aria-label="Trip sections">
         ${barTabs.map((t) => `<a href="${href(t)}" class="${barOn(t) ? 'on' : ''}" ${barOn(t) ? 'aria-current="page"' : ''}>
-          <span class="tab-icon">${icon(t.icon)}${t.isGroup && counts.polls ? '<span class="dot-badge"></span>' : ''}</span>${t.label}</a>`).join('')}
+          <span class="tab-icon">${icon(t.icon)}${t.isGroup && counts.polls ? '<span class="dot-badge"></span>' : ''}</span>${labelOf(t)}</a>`).join('')}
       </nav>
     </div>`;
 

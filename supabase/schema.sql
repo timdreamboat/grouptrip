@@ -522,7 +522,8 @@ end $$;
 
 -- ======================================================================
 -- v4 (2026-09-22): polls and the shared photo album.
--- NOTE: the get_trip below is the CURRENT version (kept up to date through v10);
+-- NOTE: the get_trip below is the CURRENT trip builder (up to date through v11);
+-- in v11 it is renamed to _get_trip_all and wrapped by a new get_trip.
 -- plpgsql only checks table names when it runs, so defining it here is fine.
 -- get_trip below replaces the earlier versions (adds polls + photos).
 -- ======================================================================
@@ -597,7 +598,7 @@ begin
     select * into me from members where trip_id = tid and token = p_token and joined_at is not null;
   end if;
   return jsonb_build_object(
-    'id', t.share_code, 'name', t.name, 'destination', t.destination,
+    'id', t.share_code, 'name', t.name, 'destination', t.destination, 'kind', t.kind,
     'startDate', t.start_date, 'endDate', t.end_date, 'currency', t.currency,
     'lat', t.lat, 'lon', t.lon, 'notes', t.notes,
     'cover', case when t.cover_url is null then null
@@ -657,9 +658,10 @@ begin
                             'paidBy', e.paid_by, 'createdBy', e.created_by, 'spentOn', e.spent_on,
                             'originalCents', e.original_cents, 'originalCurrency', e.original_currency, 'rate', e.rate,
                             'splitMode', e.split_mode, 'receiptPath', e.receipt_path, 'receiptThumb', e.receipt_thumb,
+                            'category', e.category, 'companyPaid', e.company_paid, 'reimbursed', e.reimbursed,
                             'splits', (select jsonb_agg(jsonb_build_object('memberId', s.member_id, 'share', s.share_cents, 'weight', s.weight))
                                        from expense_splits s where s.expense_id = e.id))
-                          order by e.created_at desc)
+                          order by e.spent_on desc nulls last, e.created_at desc)
                           from expenses e where e.trip_id = tid), '[]'),
     'settlements', coalesce((select jsonb_agg(jsonb_build_object(
                                'id', x.id, 'from', x.from_member, 'to', x.to_member, 'amount', x.amount_cents,
@@ -1483,3 +1485,121 @@ begin
   return null;
 end $$;
 create trigger notify_settlement after insert on settlements for each row execute function _on_settlement();
+
+-- ======================================================================
+-- v11 (2026-09-22): trip types (friends / family / business).
+-- Business trips: expenses are reimbursed (category, company card,
+-- reimbursed flag), not split; non-organizers only receive their own.
+-- get_trip is now a wrapper around _get_trip_all (the v4 function, renamed;
+-- it also returns 'kind' and each expense's category/companyPaid/reimbursed,
+-- and orders expenses by spent_on desc). Change trip contents in _get_trip_all.
+-- ======================================================================
+alter table trips add column kind text not null default 'friends' check (kind in ('friends', 'family', 'business'));
+alter table expenses
+  add column category     text check (category is null or category in ('travel', 'lodging', 'meals', 'transport', 'entertainment', 'supplies', 'other')),
+  add column company_paid boolean not null default false,
+  add column reimbursed   boolean not null default false;
+
+drop function create_trip(text, text, date, date, text, text);
+create function create_trip(p_name text, p_destination text, p_start date, p_end date, p_currency text, p_organizer text, p_kind text default 'friends')
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare t trips; m members;
+begin
+  insert into trips (name, destination, start_date, end_date, currency, kind)
+  values (trim(p_name), nullif(trim(p_destination), ''), p_start, p_end, coalesce(nullif(upper(trim(p_currency)), ''), 'USD'),
+          case when p_kind in ('friends', 'family', 'business') then p_kind else 'friends' end)
+  returning * into t;
+  insert into members (trip_id, name, is_organizer, rsvp, joined_at)
+  values (t.id, trim(p_organizer), true, 'going', now())
+  returning * into m;
+  return jsonb_build_object('code', t.share_code, 'memberId', m.id, 'token', m.token);
+end $$;
+
+-- update_trip also accepts 'kind'; _expense_extras also sets category and
+-- company_paid (same shape as before, two more lines each).
+create or replace function update_trip(p_code text, p_token text, p_trip jsonb) returns void
+language plpgsql security definer set search_path = public as $$
+declare o members := _organizer(p_code, p_token);
+begin
+  update trips set
+    name         = coalesce(nullif(trim(p_trip->>'name'), ''), name),
+    destination  = case when p_trip ? 'destination' then nullif(trim(p_trip->>'destination'), '') else destination end,
+    start_date   = case when p_trip ? 'startDate' then nullif(p_trip->>'startDate', '')::date else start_date end,
+    end_date     = case when p_trip ? 'endDate' then nullif(p_trip->>'endDate', '')::date else end_date end,
+    lat          = case when p_trip ? 'lat' then (p_trip->>'lat')::double precision else lat end,
+    lon          = case when p_trip ? 'lon' then (p_trip->>'lon')::double precision else lon end,
+    notes        = case when p_trip ? 'notes' then nullif(trim(p_trip->>'notes'), '') else notes end,
+    cover_url    = case when p_trip ? 'cover' then nullif(p_trip->'cover'->>'url', '') else cover_url end,
+    cover_credit = case when p_trip ? 'cover' then nullif(p_trip->'cover'->>'credit', '') else cover_credit end,
+    cover_link   = case when p_trip ? 'cover' then nullif(p_trip->'cover'->>'link', '') else cover_link end,
+    kind         = case when p_trip->>'kind' in ('friends', 'family', 'business') then p_trip->>'kind' else kind end
+  where id = o.trip_id;
+end $$;
+
+create or replace function _expense_extras(p_trip uuid, p_id uuid, p_extra jsonb) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if p_extra is null then return; end if;
+  if coalesce(p_extra->>'receiptPath', '') <> '' and not (p_extra->>'receiptPath' like p_trip::text || '/%'
+     and coalesce(p_extra->>'receiptThumb', '') like p_trip::text || '/%') then
+    raise exception 'Receipt is not in this trip''s folder';
+  end if;
+  update expenses set
+    original_cents    = nullif(p_extra->>'originalCents', '')::integer,
+    original_currency = nullif(upper(p_extra->>'originalCurrency'), ''),
+    rate              = nullif(p_extra->>'rate', '')::numeric,
+    split_mode        = coalesce(nullif(p_extra->>'splitMode', ''), 'equal'),
+    receipt_path      = case when p_extra ? 'receiptPath' then nullif(p_extra->>'receiptPath', '') else receipt_path end,
+    receipt_thumb     = case when p_extra ? 'receiptPath' then nullif(p_extra->>'receiptThumb', '') else receipt_thumb end,
+    spent_on          = case when p_extra->>'spentOn' ~ '^\d{4}-\d{2}-\d{2}$' then (p_extra->>'spentOn')::date else spent_on end,
+    category          = case when p_extra ? 'category' then nullif(p_extra->>'category', '') else category end,
+    company_paid      = case when p_extra ? 'companyPaid' then coalesce((p_extra->>'companyPaid')::boolean, false) else company_paid end
+  where id = p_id;
+end $$;
+revoke execute on function _expense_extras(uuid, uuid, jsonb) from public, anon, authenticated;
+
+create function set_reimbursed(p_code text, p_token text, p_ids uuid[], p_done boolean) returns void
+language plpgsql security definer set search_path = public as $$
+declare o members := _organizer(p_code, p_token); n int; who uuid; total int; cur text;
+begin
+  update expenses set reimbursed = p_done
+  where id = any(p_ids) and trip_id = o.trip_id and not company_paid and reimbursed <> p_done;
+  get diagnostics n = row_count;
+  if p_done and n > 0 then
+    select currency into cur from trips where id = o.trip_id;
+    for who, total in select paid_by, sum(amount_cents)::int from expenses
+                      where id = any(p_ids) and trip_id = o.trip_id and not company_paid and paid_by <> o.id group by paid_by loop
+      perform _notify(o.trip_id, array[who], 'You''ve been reimbursed ' || _money(total, cur),
+        (select name from trips where id = o.trip_id), 'money');
+    end loop;
+  end if;
+end $$;
+
+create function _on_expense() returns trigger language plpgsql security definer set search_path = public as $$
+declare t trips; org uuid;
+begin
+  select * into t from trips where id = new.trip_id;
+  if t.kind <> 'business' then return null; end if;
+  select id into org from members where trip_id = t.id and is_organizer;
+  if org is null or new.created_by = org then return null; end if;
+  perform _notify(t.id, array[org],
+    coalesce((select name from members where id = new.created_by), 'Someone') || ' submitted ' || _money(new.amount_cents, t.currency),
+    new.description, 'money');
+  return null;
+end $$;
+create trigger notify_expense after insert on expenses for each row execute function _on_expense();
+
+alter function get_trip(text, text) rename to _get_trip_all;
+revoke execute on function _get_trip_all(text, text) from public, anon, authenticated;
+
+create function get_trip(p_code text, p_token text default null) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare j jsonb := _get_trip_all(p_code, p_token); me jsonb := j->'me';
+begin
+  if j->>'kind' = 'business' and coalesce((me->>'isOrganizer')::boolean, false) = false then
+    j := jsonb_set(j, '{expenses}', coalesce((
+      select jsonb_agg(e) from jsonb_array_elements(j->'expenses') e
+      where jsonb_typeof(me) = 'object' and (e->>'paidBy' = me->>'id' or e->>'createdBy' = me->>'id')), '[]'));
+  end if;
+  return j;
+end $$;

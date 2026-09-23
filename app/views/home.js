@@ -24,7 +24,7 @@ export function render(root) {
             <a class="trip-card" href="#/t/${esc(t.id)}">
               <div class="cover" style="background:${esc(coverBg(t.destination || t.name, t.cover))}">
                 <div style="display:flex;justify-content:space-between;gap:8px">
-                  <span class="chip glass">${t.role === 'organizer' ? `${icon('crown')}Organizer` : 'Guest'}</span>
+                  <span class="chip glass">${t.role === 'organizer' ? `${icon('crown')}Organizer` : 'Guest'}${t.kind && t.kind !== 'friends' ? ` · ${t.kind === 'business' ? 'Business' : 'Family'}` : ''}</span>
                   ${cd ? `<span class="chip glass">${esc(cd)}</span>` : ''}
                 </div>
                 <div class="display">${esc(t.name)}</div>

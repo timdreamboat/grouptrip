@@ -693,3 +693,15 @@ dialog.viewer::backdrop { background: #000; }
 .receipt-preview img { width: 64px; height: 64px; border-radius: 12px; }
 .receipt-full { display: block; width: 100%; border-radius: 12px; }
 .pay-flow { flex: none; flex-wrap: nowrap; display: flex; align-items: center; gap: 6px; }
+
+/* ---------- trip types ---------- */
+.kind-picks { display: grid; gap: 8px; }
+@media (min-width: 520px) { .kind-picks { grid-template-columns: repeat(3, 1fr); } }
+.kind-picks label { cursor: pointer; }
+.kind-picks input { position: absolute; opacity: 0; pointer-events: none; }
+.kind-card { display: grid; gap: 2px; padding: 12px 14px; border-radius: 16px; border: 1.5px solid var(--line-strong); background: var(--surface); transition: all .15s; height: 100%; }
+.kind-card small { color: var(--muted); font-size: 12px; line-height: 1.35; }
+.kind-picks input:checked + .kind-card { border-color: var(--accent); background: var(--accent-soft); }
+.kind-picks input:focus-visible + .kind-card { box-shadow: 0 0 0 4px var(--ring); }
+.cat-row { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; font-size: 14px; }
+.cat-row .progress { grid-column: 1 / -1; height: 5px; }

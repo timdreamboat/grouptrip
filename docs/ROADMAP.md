@@ -62,6 +62,11 @@
 - ✅ Uneven splits (amounts / shares), other currencies (today's rate), receipt photos
 - ✅ Mark as paid / Got it, payment history with undo, notifications to the other person
 
+## v2.5 — trip types (2026-09-22)
+- ✅ Friends / Family / Business, chosen at creation, changeable later
+- ✅ Business: Agenda, reimbursable expenses (category, card, receipt), by person/category, spreadsheet export, private per person
+- ✅ Family: splits default to shares (households), family suggestions
+
 ## Later (money)
 - Categories and a spending summary
 

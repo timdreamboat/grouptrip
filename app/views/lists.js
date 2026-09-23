@@ -1,10 +1,8 @@
 // Lists: the group's "who's bringing what" and your own private packing list.
 import { esc, icon, avatar, busy } from '../ui.js';
 import * as store from '../store.js';
-import { memberById, firstName } from './common.js';
+import { memberById, firstName, words } from './common.js';
 
-const GROUP_IDEAS = ['Sunscreen', 'Bluetooth speaker', 'First-aid kit', 'Snacks', 'Drinks', 'Coffee', 'Card games', 'Bug spray', 'Beach towels', 'Phone tripod'];
-const PACKING_IDEAS = ['ID / passport', 'Phone charger', 'Wallet', 'Medications', 'Toiletries', 'Sunglasses', 'Headphones', 'Swimsuit', 'Jacket', 'Comfortable shoes'];
 
 export function render(el, ctx) {
   const { trip } = ctx;
@@ -12,17 +10,18 @@ export function render(el, ctx) {
   const mine = trip.lists.filter((l) => l.personal);
   const packed = mine.filter((l) => l.done).length;
   const unclaimed = shared.filter((l) => !l.claimedBy).length;
+  const w = words(trip);
 
   el.innerHTML = `
     <header class="page-head">
-      <div><h1 class="display">Lists</h1><div class="sub">Who's bringing what, and your own packing list</div></div>
+      <div><h1 class="display">Lists</h1><div class="sub">${w.groupList}, and your own packing list</div></div>
     </header>
     <div class="stack-lg">
       <section>
-        <div class="section-head"><h2>Who's bringing what</h2><span class="sub">${shared.length ? (unclaimed ? `${unclaimed} unclaimed` : 'All covered') : 'Shared with everyone'}</span></div>
+        <div class="section-head"><h2>${w.groupList}</h2><span class="sub">${shared.length ? (unclaimed ? `${unclaimed} unclaimed` : 'All covered') : 'Shared with everyone'}</span></div>
         <div class="card stack" style="gap:12px">
           ${addForm('shared', 'Add something the group needs')}
-          ${ideas(GROUP_IDEAS, shared, 'shared')}
+          ${ideas(w.groupIdeas, shared, 'shared')}
           ${shared.length ? `<div class="rows">${shared.map((l) => sharedRow(l, ctx)).join('')}</div>` : ''}
         </div>
       </section>
@@ -33,7 +32,7 @@ export function render(el, ctx) {
         <div class="card stack" style="gap:12px">
           ${mine.length ? `<div class="progress"><span style="width:${Math.round((packed / mine.length) * 100)}%"></span></div>` : ''}
           ${addForm('personal', 'Add something to pack')}
-          ${ideas(PACKING_IDEAS, mine, 'personal')}
+          ${ideas(w.packIdeas, mine, 'personal')}
           ${mine.length ? `<div class="rows">${mine.map((l) => personalRow(l)).join('')}</div>` : ''}
         </div>
       </section>

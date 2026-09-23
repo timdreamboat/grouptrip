@@ -104,6 +104,13 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
   install/push on a real phone.
 - Edge Function `flight-lookup` is deployed and working; its `AERODATABOX_KEY`
   secret (RapidAPI, AeroDataBox free Basic plan) is set in the Supabase dashboard.
+- Trip types (`trips.kind`: friends / family / business). Wording and
+  suggestions come from `KINDS`/`words(trip)` in `views/common.js` — use it
+  instead of hard-coding "crew", "Calendar", "Money". Business trips use
+  `views/bizexpenses.js` (reimbursable: category, company card, receipt,
+  reimbursed flag, CSV export); non-organizers only receive their own
+  expenses (enforced in `get_trip`, which wraps `_get_trip_all` — change trip
+  contents in `_get_trip_all`). Family trips default expense splits to shares.
 - Hotels: `stay_guests` says who stays where (a person can be at more than
   one, e.g. moving hotels). Map/plan cards show "From each hotel" (distance
   needs coordinates → Google key; Route opens Google Maps directions, since

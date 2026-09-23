@@ -37,6 +37,7 @@ function remember(trip) {
     id: trip.id, name: trip.name, destination: trip.destination, startDate: trip.startDate, endDate: trip.endDate,
     role: trip.me ? (trip.me.isOrganizer ? 'organizer' : 'guest') : 'invited',
     going: trip.members.filter((m) => m.rsvp === 'going').map((m) => ({ name: m.name })),
+    kind: trip.kind,
     cover: trip.cover?.url ?? null,
     myName: me?.name,
   };
@@ -74,7 +75,7 @@ export async function getTrip(code) {
 export async function createTrip(f) {
   const r = await rpc('create_trip', {
     p_name: f.name, p_destination: f.destination, p_start: f.startDate || null, p_end: f.endDate || null,
-    p_currency: f.currency || 'USD', p_organizer: f.organizer,
+    p_currency: f.currency || 'USD', p_organizer: f.organizer, p_kind: f.kind || 'friends',
   });
   saveToken(r.code, r.token);
   return r.code;
@@ -138,6 +139,7 @@ export const addExpense = (code, e) => act('add_expense', code, {
 });
 export const addSettlement = (code, from, to, amount) => act('add_settlement', code, { p_from: from, p_to: to, p_amount: amount });
 export const removeSettlement = (code, id) => act('remove_settlement', code, { p_id: id });
+export const setReimbursed = (code, ids, done) => act('set_reimbursed', code, { p_ids: ids, p_done: done });
 export const removeExpense = (code, id) => act('remove_expense', code, { p_id: id });
 export const addStay = (code, stay) => act('add_stay', code, { p_stay: stay });
 export const removeStay = (code, id) => act('remove_stay', code, { p_id: id });

@@ -2,7 +2,7 @@
 // organizer's trip editor.
 import { esc, icon, avatar, sheet, confirmSheet, busy, copy, toast } from '../ui.js';
 import * as store from '../store.js';
-import { memberById } from './common.js';
+import { memberById, KINDS } from './common.js';
 import { locate } from '../places.js';
 import { mountCoverPicker } from './cover.js';
 import * as pwa from '../pwa.js';
@@ -145,6 +145,10 @@ export function openEditTrip(ctx) {
           <label class="field"><span>Start</span><input type="date" name="startDate" value="${esc(trip.startDate || '')}"></label>
           <label class="field"><span>End</span><input type="date" name="endDate" value="${esc(trip.endDate || '')}"></label>
         </div>
+        <div class="field"><span>Kind of trip</span>
+          <div class="kind-picks">${Object.entries(KINDS).map(([k, v]) => `
+            <label><input type="radio" name="kind" value="${k}" ${(trip.kind || 'friends') === k ? 'checked' : ''}>
+              <span class="kind-card"><b>${v.label}</b><small>${v.blurb}</small></span></label>`).join('')}</div></div>
         <div class="field"><span>Cover photo</span><div id="photos"></div></div>
         <button class="btn btn-primary btn-lg">Save changes</button>
       </form>

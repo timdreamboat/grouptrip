@@ -3,12 +3,13 @@ import { esc, icon, coverBg, busy, toast } from '../ui.js';
 import * as store from '../store.js';
 import { locate } from '../places.js';
 import { mountCoverPicker } from './cover.js';
+import { KINDS } from './common.js';
 
 const STEPS = 3;
 
 export function render(root) {
   document.title = 'New trip · GroupTrip';
-  const data = { destination: '', name: '', startDate: '', endDate: '', organizer: '', cover: null };
+  const data = { destination: '', name: '', startDate: '', endDate: '', organizer: '', cover: null, kind: 'friends' };
   let photosFor = null; // destination the photo picker last searched
   let searchTimer;
   let step = 0;
@@ -35,6 +36,10 @@ export function render(root) {
       <div class="eyebrow">Step 3 of ${STEPS}</div>
       <h1 class="display">Last thing.</h1>
       <div class="form">
+        <div class="field"><span>What kind of trip?</span>
+          <div class="kind-picks">${Object.entries(KINDS).map(([k, v]) => `
+            <label><input type="radio" name="kind" value="${k}" ${data.kind === k ? 'checked' : ''}>
+              <span class="kind-card"><b>${v.label}</b><small>${v.blurb}</small></span></label>`).join('')}</div></div>
         <label class="field"><span>Trip name</span><input name="name" required maxlength="120" value="${esc(data.name || (data.destination ? `${data.destination} trip` : ''))}"></label>
         <label class="field"><span>Your name</span><input name="organizer" required maxlength="80" value="${esc(data.organizer)}" placeholder="So your friends know who invited them" autocomplete="given-name"></label>
       </div>`,
@@ -94,7 +99,9 @@ export function render(root) {
     form.querySelector('[data-back]')?.addEventListener('click', () => { step--; draw(); });
     form.onsubmit = async (e) => {
       e.preventDefault();
-      for (const el of form.querySelectorAll('input')) data[el.name] = el.value.trim();
+      for (const el of form.querySelectorAll('input:not([type=radio])')) data[el.name] = el.value.trim();
+      const kind = form.querySelector('[name=kind]:checked');
+      if (kind) data.kind = kind.value;
       if (step === 0 && !data.destination) return toast('Where are you headed?', { error: true });
       if (step === 1 && data.endDate && data.startDate && data.endDate < data.startDate) return toast('The end date is before the start date', { error: true });
       if (step < STEPS - 1) { step++; draw(); return; }
