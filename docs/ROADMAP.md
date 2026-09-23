@@ -33,7 +33,8 @@
 - ✅ Shared photo album with full-screen viewer; photos shrunk on-device before upload
 
 ## v1.9 — plan map (2026-09-22)
-- ✅ Calendar map always open; each plan with a found place gets a numbered pin
+- ✅ Calendar map always open (Google); each plan with a place gets a numbered pin
+- Next: add a Google Maps key so all pins show at once
 - ✅ Pin card: plan, place, date, time, notes, directions
 
 ## Ideas next

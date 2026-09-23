@@ -27,10 +27,18 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
    lead image + Openverse (openly licensed). The organizer picks from a grid;
    the choice and its credit are stored on the trip. Wikimedia only serves
    standard widths (500, 960, 1280…) — other sizes return 400.
-   Plans' places are geocoded too (`findPlace`, biased to ~40 miles around the
-   trip) when they're added, and pinned on the Calendar map (`views/tripmap.js`:
-   Leaflet + standard OpenStreetMap tiles — CARTO tiles now need a key).
    Nominatim allows 1 request/second; `places.js` queues requests.
+4. Calendar map is Google (owner: "OpenStreetMap doesn't work — use Google",
+   2026-09-22). `views/tripmap.js` has two modes:
+   - No key (today): Google's free embed (`maps.google.com/maps?q=…&output=embed`),
+     one plan at a time. That embed centers on the place but draws NO marker,
+     so we overlay our numbered pin at the center and hide it once the map is
+     panned. Numbered chips switch plans and show the plan's card.
+   - With `GOOGLE_MAPS_KEY` in `app/config.js`: Maps JavaScript API with a
+     numbered AdvancedMarker per plan + info-window cards, and Google Places
+     text search finds plan places when they're added (saved as lat/lon);
+     older plans get pinned by the organizer's device. Key must be restricted
+     to the site's URLs in Google Cloud. Untested until a key exists.
 
 ## Architecture
 - `app/` — no-build static web app (plain HTML/CSS/JS modules, no npm),

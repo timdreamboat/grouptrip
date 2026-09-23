@@ -3,3 +3,11 @@
 // Everything the app shows comes from this one database.
 export const SUPABASE_URL = 'https://fnedxcktddvioxseogng.supabase.co';
 export const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZuZWR4Y2t0ZGR2aW94c2VvZ25nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAxMDQ0MTYsImV4cCI6MjEwNTY4MDQxNn0.kVwfVuX0nW9ZeUasXnQztVbxoE8uSl-Gu1aU7vp82qY';
+
+// Google Maps (optional). With a browser key (restricted to this site in
+// Google Cloud), the Calendar map shows every plan as a numbered pin and
+// Google finds the places. Without one, it uses Google's free embedded map,
+// one place at a time. Map ID: create one under Google Maps Platform →
+// Map management (free); 'DEMO_MAP_ID' works for testing.
+export const GOOGLE_MAPS_KEY = '';
+export const GOOGLE_MAP_ID = 'DEMO_MAP_ID';

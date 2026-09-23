@@ -6,8 +6,7 @@ import * as store from '../store.js';
 import * as embed from '../embeds.js';
 import { going, organizer, firstName, nameOf } from './common.js';
 import { handleStayClick } from './stays.js';
-import { mountTripMap, focusPin, pinned } from './tripmap.js';
-import { findPlace } from '../places.js';
+import { mountTripMap, focusPin, pinned, hasGoogleKey, googleFindPlace, placeQuery } from './tripmap.js';
 
 export function render(el, ctx) {
   const { trip, isOrg } = ctx;
@@ -65,8 +64,8 @@ export function render(el, ctx) {
         <div class="tl">${undated.map((e) => entry(e, ctx)).join('')}</div></section>` : ''}`;
 
   const mapEl = el.querySelector('#trip-map');
-  if (mapEl) mountTripMap(mapEl, trip);
-  if (isOrg) pinOlderPlans(ctx);
+  if (mapEl) mountTripMap(mapEl, el.querySelector('#map-detail'), trip);
+  if (isOrg && hasGoogleKey) pinOlderPlans(ctx);
 
   el.onclick = async (e) => {
     if (await handleStayClick(e, ctx)) return;
@@ -88,11 +87,8 @@ export function render(el, ctx) {
         { covers: Math.max(going(trip).length, 1), day: it.day, time: it.time }));
     }
     if (t.dataset.map) {
-      if (it.lat != null) {
-        el.querySelector('#trip-map')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        return focusPin(it.id);
-      }
-      return embedSheet(it.place, embed.mapEmbed(it.place));
+      if (focusPin(it.id)) return el.querySelector('#trip-map')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return embedSheet(it.place, embed.mapEmbed(placeQuery(it, trip)));
     }
     if (t.dataset.del) {
       const ok = await confirmSheet({ title: `Remove "${it.title}"?`, message: 'It will be removed from everyone\'s plan.', confirm: 'Remove', danger: true });
@@ -213,15 +209,23 @@ export function openAddItem(ctx, day, preset = {}) {
       let timer;
       const lookup = async (q) => {
         if (!q) { found = { q, hit: null }; status.className = 'place-status'; status.textContent = ''; return found; }
+        if (!hasGoogleKey) {
+          // No key: show Google's own map of what they typed, so they can check it.
+          found = { q, hit: null };
+          status.className = 'place-status';
+          status.innerHTML = `<iframe class="place-preview" title="Map preview" loading="lazy"
+            src="${esc(embed.mapEmbed(placeQuery({ place: q }, trip)))}"></iframe>`;
+          return found;
+        }
         status.className = 'place-status';
-        status.textContent = 'Looking it up on the map…';
-        const hit = await findPlace(q, trip).catch(() => null);
+        status.textContent = 'Looking it up on Google Maps…';
+        const hit = await googleFindPlace(placeQuery({ place: q }, trip), trip).catch(() => null);
         if (form.elements.place.value.trim() !== q) return found; // they kept typing
         found = { q, hit };
         status.className = `place-status ${hit ? 'found' : 'missing'}`;
         status.innerHTML = hit
-          ? `${icon('pin', 'tiny')}On the map: ${esc(hit.label)}`
-          : `${icon('info', 'tiny')}Couldn't find that on the map — add a street or town to pin it`;
+          ? `${icon('pin', 'tiny')}On Google Maps: ${esc(hit.label)}`
+          : `${icon('info', 'tiny')}Google couldn't find that — add a street or town to pin it`;
         return found;
       };
       form.elements.place.addEventListener('input', () => {
@@ -245,7 +249,7 @@ export function openAddItem(ctx, day, preset = {}) {
             opentableRid: rid ?? '', bookingUrl, lat: hit?.lat ?? '', lon: hit?.lon ?? '',
           });
         });
-        if (ok) { close(); ctx.refresh(found.hit ? 'Added to the plan and the map' : 'Added to the plan'); }
+        if (ok) { close(); ctx.refresh(found.hit || (!hasGoogleKey && f.place.trim()) ? 'Added to the plan and the map' : 'Added to the plan'); }
       };
       setTimeout(() => form.elements.title.focus(), 50);
     },
@@ -254,18 +258,16 @@ export function openAddItem(ctx, day, preset = {}) {
 
 function mapCard(trip) {
   const pins = pinned(trip);
-  const unpinned = trip.itinerary.filter((i) => i.place && i.lat == null).length;
-  if (trip.lat == null && !pins.length) {
-    // No coordinates yet — fall back to the embedded map of the destination.
-    return trip.destination ? `<div class="card trip-map-card">
-      <iframe class="map-frame" style="border-radius:0;height:300px" loading="lazy" title="Map of ${esc(trip.destination)}"
-        src="${esc(embed.mapEmbed(trip.destination))}"></iframe></div>` : '';
-  }
+  if (!trip.destination && !pins.length) return '';
+  const unpinned = hasGoogleKey ? trip.itinerary.filter((i) => i.place && i.lat == null).length : 0;
   return `
     <div class="card trip-map-card">
       <div id="trip-map" class="trip-map" role="region" aria-label="Map of the plans"></div>
+      <div id="map-detail"></div>
       <div class="map-foot">${icon('pin', 'tiny')}
-        ${pins.length ? `${pins.length} plan${pins.length === 1 ? '' : 's'} on the map · tap a pin for details` : 'Plans with a place show up here as pins'}
+        ${pins.length
+          ? (hasGoogleKey ? `${pins.length} plan${pins.length === 1 ? '' : 's'} on the map · tap a pin for details` : 'Tap a number to see that plan on the map')
+          : 'Plans with a place show up on the map'}
         ${unpinned ? ` · ${unpinned} not found` : ''}</div>
     </div>`;
 }
@@ -279,7 +281,7 @@ async function pinOlderPlans(ctx) {
   let added = 0;
   for (const it of todo) {
     tried.add(it.id);
-    const hit = await findPlace(it.place, ctx.trip).catch(() => null);
+    const hit = await googleFindPlace(placeQuery(it, ctx.trip), ctx.trip).catch(() => null);
     if (hit) { await store.setItemLocation(ctx.trip.id, it.id, hit.lat, hit.lon).catch(() => {}); added++; }
   }
   if (added && !document.querySelector('dialog[open]')) ctx.refresh();

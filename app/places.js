@@ -20,27 +20,6 @@ export async function locate(destination) {
   return hit ? { lat: Number(hit.lat), lon: Number(hit.lon) } : null;
 }
 
-// A plan's place ("Carbone", "Emerald Bay State Park", an address), preferring
-// matches near the trip so "Carbone" finds the one in Miami, not New York.
-export async function findPlace(place, trip) {
-  const q = place?.trim();
-  if (!q) return null;
-  const tries = [];
-  if (trip?.lat != null) {
-    const d = 0.6; // about 40 miles around the destination
-    tries.push({ q, viewbox: `${trip.lon - d},${trip.lat + d},${trip.lon + d},${trip.lat - d}`, bounded: '1' });
-  }
-  if (trip?.destination && !q.toLowerCase().includes(trip.destination.toLowerCase())) tries.push({ q: `${q}, ${trip.destination}` });
-  tries.push({ q });
-  for (const params of tries) {
-    const hit = await nominatim(params).catch(() => null);
-    if (hit) {
-      return { lat: Number(hit.lat), lon: Number(hit.lon), label: hit.display_name.split(', ').slice(0, 3).join(', ') };
-    }
-  }
-  return null;
-}
-
 const NOT_A_PHOTO = /\b(map|flag|seal|coat of arms|logo|locator|diagram|chart|emblem|svg)\b/i;
 
 async function wikipediaPhoto(destination) {
