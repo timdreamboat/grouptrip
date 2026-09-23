@@ -28,10 +28,6 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
    the choice and its credit are stored on the trip. Wikimedia only serves
    standard widths (500, 960, 1280…) — other sizes return 400.
    Nominatim allows 1 request/second; `places.js` queues requests.
-5. Exchange rates (owner asked for multi-currency, 2026-09-22): `rateTo()` in
-   `app/money.js` fetches today's rate from Frankfurter (free, keyless). An
-   expense in another currency is stored converted to the trip currency, with
-   the original amount, currency and rate kept for display and editing.
 4. Calendar map is Google (owner: "OpenStreetMap doesn't work — use Google",
    2026-09-22). `views/tripmap.js` has two modes:
    - No key (today): Google's free embed (`maps.google.com/maps?q=…&output=embed`),
@@ -43,6 +39,10 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
      text search finds plan places when they're added (saved as lat/lon);
      older plans get pinned by the organizer's device. Key must be restricted
      to the site's URLs in Google Cloud. Untested until a key exists.
+5. Exchange rates (owner asked for multi-currency, 2026-09-22): `rateTo()` in
+   `app/money.js` fetches today's rate from Frankfurter (free, keyless). An
+   expense in another currency is stored converted to the trip currency, with
+   the original amount, currency and rate kept for display and editing.
 
 ## Architecture
 - `app/` — no-build static web app (plain HTML/CSS/JS modules, no npm),
