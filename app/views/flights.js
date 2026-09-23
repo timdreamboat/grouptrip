@@ -1,9 +1,11 @@
-// Flights: boarding-pass cards sorted by who lands first, a live map per
-// flight (embedded), and "add my flight" with automatic time lookup.
+// Travel: where we're staying, then flights — boarding-pass cards sorted by
+// who lands first, a live map per flight (embedded), and "add my flight"
+// with automatic time lookup.
 import { esc, icon, avatar, fmtDay, fmtTime, sheet, embedSheet, confirmSheet, busy, toast, emptyState } from '../ui.js';
 import * as store from '../store.js';
 import * as embed from '../embeds.js';
 import { going, flightsOf, memberById, firstName } from './common.js';
+import { staysSection, handleStayClick } from './stays.js';
 
 const arrivalKey = (f) => `${f.arrDate || f.date}T${f.arrTime || '99:99'}`;
 
@@ -25,12 +27,17 @@ export function render(el, ctx) {
   el.innerHTML = `
     <header class="page-head">
       <div>
-        <h1 class="display">Flights</h1>
-        <div class="sub">${g.length ? `${g.length - missing.length} of ${g.length} going have added a flight` : 'Who lands when'}</div>
+        <h1 class="display">Travel</h1>
+        <div class="sub">Where we're staying and who lands when</div>
       </div>
       <button class="btn page-action" data-action="add">${icon('plus')}${iNeed || !trip.me ? 'Add my flight' : 'Add flight'}</button>
     </header>
 
+    <div class="stack-lg">
+    ${staysSection(ctx)}
+
+    <section>
+    <div class="section-head"><h2>Flights</h2><span class="sub">${g.length ? `${g.length - missing.length} of ${g.length} added` : ''}</span></div>
     ${iNeed && flights.length ? `
       <button class="card row-link" data-action="add" style="display:flex;gap:14px;align-items:center;width:100%;text-align:left;margin-bottom:20px;border-style:dashed;cursor:pointer">
         <div class="tl-icon">${icon('plane')}</div>
@@ -39,8 +46,8 @@ export function render(el, ctx) {
       </button>` : ''}
 
     ${flights.length ? groups.map((grp) => `
-      <section style="margin-bottom:24px">
-        <div class="day-head"><h3>${esc(fmtDay(grp.day, { weekday: 'long', month: 'short', day: 'numeric' }))}</h3>
+      <section style="margin-bottom:20px">
+        <div class="day-head"><h3 class="muted" style="font-size:14px">Landing ${esc(fmtDay(grp.day, { weekday: 'long', month: 'short', day: 'numeric' }))}</h3>
           <span class="small muted">${grp.items.length} arriving</span></div>
         <div class="stack">${grp.items.map((f) => pass(f, ctx)).join('')}</div>
       </section>`).join('')
@@ -48,7 +55,7 @@ export function render(el, ctx) {
         `<button class="btn btn-primary" data-action="add">${icon('plus')}Add my flight</button>`)}</div>`}
 
     ${missing.length && flights.length ? `
-      <section>
+      <section style="margin-top:8px">
         <div class="section-head"><h2>Still missing</h2><span class="sub">${missing.length}</span></div>
         <div class="card card-tight rows">
           ${missing.map((m) => `
@@ -57,9 +64,12 @@ export function render(el, ctx) {
               ${ctx.isOrg || m.id === trip.me?.id ? `<button class="btn btn-xs btn-secondary" data-add-for="${m.id}">${icon('plus')}Add</button>` : ''}
             </div>`).join('')}
         </div>
-      </section>` : ''}`;
+      </section>` : ''}
+    </section>
+    </div>`;
 
   el.onclick = async (e) => {
+    if (await handleStayClick(e, ctx)) return;
     const t = e.target.closest('[data-action],[data-add-for],[data-live],[data-del]');
     if (!t) return;
     if (t.dataset.action === 'add') return openAddFlight(ctx);

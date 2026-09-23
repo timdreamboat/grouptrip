@@ -1,27 +1,34 @@
 // The trip shell: sidebar on desktop, top bar + floating tab bar on phones.
 // Renders the active tab into <main>.
-import { esc, icon, avatar, cover, fmtRange, toast } from '../ui.js';
-import { memberById } from './common.js';
+import { esc, icon, avatar, fmtRange, toast } from '../ui.js';
+import { memberById, tripCover } from './common.js';
 import { openMe } from './me.js';
 import * as overview from './overview.js';
 import * as plan from './plan.js';
 import * as flights from './flights.js';
 import * as wallet from './wallet.js';
 import * as people from './people.js';
+import * as lists from './lists.js';
 
+// `bar: false` = sidebar only on desktop; on phones it's reached from Home.
 export const TABS = [
   { id: 'home', label: 'Home', icon: 'home', view: overview },
-  { id: 'plan', label: 'Plan', icon: 'calendar', view: plan },
-  { id: 'flights', label: 'Flights', icon: 'plane', view: flights },
+  { id: 'plan', label: 'Calendar', icon: 'calendar', view: plan },
+  { id: 'travel', label: 'Travel', icon: 'luggage', view: flights },
   { id: 'money', label: 'Money', icon: 'wallet', view: wallet },
-  { id: 'people', label: 'People', icon: 'users', view: people },
+  { id: 'lists', label: 'Lists', icon: 'list', view: lists },
+  { id: 'people', label: 'People', icon: 'users', view: people, bar: false },
 ];
+const ALIASES = { flights: 'travel' };
 
 export function render(root, ctx, tabId) {
   const { trip, isOrg } = ctx;
-  const tab = TABS.find((t) => t.id === tabId) ?? TABS[0];
+  const tab = TABS.find((t) => t.id === (ALIASES[tabId] ?? tabId)) ?? TABS[0];
   const me = memberById(trip, trip.me.id);
-  const counts = { plan: trip.itinerary.length, flights: trip.flights.length, money: trip.expenses.length, people: trip.members.length };
+  const counts = {
+    plan: trip.itinerary.length, travel: trip.flights.length + trip.stays.length, money: trip.expenses.length,
+    lists: trip.lists.filter((l) => !l.personal && !l.claimedBy).length, people: trip.members.length,
+  };
   const href = (t) => `#/t/${trip.id}/${t.id}`;
   document.title = `${tab.id === 'home' ? '' : `${tab.label} · `}${trip.name}`;
 
@@ -30,7 +37,7 @@ export function render(root, ctx, tabId) {
       <aside class="sidebar">
         <a class="brand" href="#/"><span class="brand-mark">${icon('plane')}</span>GroupTrip</a>
         <a class="side-trip" href="${href(TABS[0])}" style="text-decoration:none">
-          <span class="thumb" style="background:${cover(trip.destination || trip.name)}"></span>
+          <span class="thumb" style="background:${esc(tripCover(trip))}"></span>
           <span style="min-width:0"><div class="name">${esc(trip.name)}</div><div class="small muted">${esc(fmtRange(trip.startDate, trip.endDate))}</div></span>
         </a>
         <nav class="side-nav">
@@ -56,7 +63,7 @@ export function render(root, ctx, tabId) {
       </div>
 
       <nav class="tabbar" aria-label="Trip sections">
-        ${TABS.map((t) => `<a href="${href(t)}" class="${t === tab ? 'on' : ''}" ${t === tab ? 'aria-current="page"' : ''}>${icon(t.icon)}${t.label}</a>`).join('')}
+        ${TABS.filter((t) => t.bar !== false).map((t) => `<a href="${href(t)}" class="${t === tab ? 'on' : ''}" ${t === tab ? 'aria-current="page"' : ''}>${icon(t.icon)}${t.label}</a>`).join('')}
       </nav>
     </div>`;
 

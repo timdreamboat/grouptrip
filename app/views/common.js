@@ -1,5 +1,5 @@
 // Pieces shared by several trip screens.
-import { esc, icon, cover, avatarStack, fmtRange, countdown, daysUntil } from '../ui.js';
+import { esc, icon, coverBg, avatarStack, fmtRange, countdown, daysUntil } from '../ui.js';
 import { balances } from '../money.js';
 
 export const going = (trip) => trip.members.filter((m) => m.rsvp === 'going');
@@ -25,7 +25,8 @@ export function heroHTML(trip, { top = '', size = 'lg' } = {}) {
   const cd = countdown(trip);
   const people = going(trip);
   return `
-  <section class="hero" style="background:${cover(trip.destination || trip.name)}">
+  <section class="hero" style="background:${esc(coverBg(trip.destination || trip.name, trip.cover?.url))}">
+    ${trip.cover?.credit ? `<a class="hero-credit" href="${esc(trip.cover.link || '#')}" target="_blank" rel="noopener">${esc(trip.cover.credit)}</a>` : ''}
     <div class="hero-top">${top}</div>
     <div>
       <h1 class="display" style="${size === 'sm' ? 'font-size:clamp(40px,9vw,56px)' : ''}">${esc(trip.name)}</h1>
@@ -50,3 +51,5 @@ export function statusPill(m, trip) {
 
 // Days from today, for sorting "happening soon" first.
 export const soon = (iso) => (iso ? daysUntil(iso) : 9999);
+
+export const tripCover = (trip) => coverBg(trip.destination || trip.name, trip.cover?.url ?? trip.cover);

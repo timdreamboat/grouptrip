@@ -336,3 +336,186 @@ begin
     and (created_by = a.id or paid_by = a.id or a.is_organizer);
   if not found then raise exception 'Only the person who added or paid this expense can remove it'; end if;
 end $$;
+
+-- ======================================================================
+-- v3 (2026-09-22): cover photo, map location, "good to know" notes,
+-- stays, and lists. get_trip / update_trip below replace the versions above.
+-- ======================================================================
+alter table trips
+  add column lat          double precision,
+  add column lon          double precision,
+  add column cover_url    text,
+  add column cover_credit text,
+  add column cover_link   text,
+  add column notes        text check (length(notes) <= 4000);
+
+create table stays (
+  id             uuid primary key default gen_random_uuid(),
+  trip_id        uuid not null references trips(id) on delete cascade,
+  name           text not null check (length(name) between 1 and 200),
+  address        text,
+  check_in       date,
+  check_in_time  text,
+  check_out      date,
+  check_out_time text,
+  booking_url    text,
+  confirmation   text,
+  notes          text,
+  created_at     timestamptz not null default now()
+);
+
+create table list_items (
+  id          uuid primary key default gen_random_uuid(),
+  trip_id     uuid not null references trips(id) on delete cascade,
+  text        text not null check (length(text) between 1 and 200),
+  owner_id    uuid references members(id) on delete cascade,     -- set = private packing item
+  claimed_by  uuid references members(id) on delete set null,    -- shared item: who's bringing it
+  created_by  uuid references members(id) on delete set null,
+  done        boolean not null default false,
+  created_at  timestamptz not null default now()
+);
+
+create index on stays (trip_id);
+create index on list_items (trip_id);
+create index on list_items (owner_id);
+create index on list_items (claimed_by);
+create index on list_items (created_by);
+
+alter table stays      enable row level security;
+alter table list_items enable row level security;
+revoke all on stays, list_items from anon, authenticated;
+
+create or replace function get_trip(p_code text, p_token text default null) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare t trips; tid uuid := _trip(p_code); me members;
+begin
+  select * into t from trips where id = tid;
+  if p_token is not null then
+    select * into me from members where trip_id = tid and token = p_token and joined_at is not null;
+  end if;
+  return jsonb_build_object(
+    'id', t.share_code, 'name', t.name, 'destination', t.destination,
+    'startDate', t.start_date, 'endDate', t.end_date, 'currency', t.currency,
+    'lat', t.lat, 'lon', t.lon, 'notes', t.notes,
+    'cover', case when t.cover_url is null then null
+                  else jsonb_build_object('url', t.cover_url, 'credit', t.cover_credit, 'link', t.cover_link) end,
+    'me', case when me.id is null then null
+               else jsonb_build_object('id', me.id, 'isOrganizer', me.is_organizer) end,
+    'members', coalesce((select jsonb_agg(jsonb_build_object(
+                           'id', m.id, 'name', m.name, 'isOrganizer', m.is_organizer, 'rsvp', m.rsvp,
+                           'joined', m.joined_at is not null, 'venmo', m.venmo)
+                         order by m.is_organizer desc, m.created_at)
+                         from members m where m.trip_id = tid), '[]'),
+    'itinerary', coalesce((select jsonb_agg(jsonb_build_object(
+                             'id', i.id, 'day', i.day, 'time', i.time, 'title', i.title, 'notes', i.notes,
+                             'place', i.place, 'opentableRid', i.opentable_rid, 'bookingUrl', i.booking_url)
+                           order by i.day nulls last, i.time nulls first, i.created_at)
+                           from itinerary_items i where i.trip_id = tid), '[]'),
+    'flights', coalesce((select jsonb_agg(jsonb_build_object(
+                           'id', f.id, 'memberId', f.member_id, 'flightNumber', f.flight_number, 'date', f.flight_date,
+                           'depAirport', f.dep_airport, 'depTime', f.dep_time,
+                           'arrAirport', f.arr_airport, 'arrTime', f.arr_time, 'arrDate', f.arr_date)
+                         order by f.created_at)
+                         from flights f where f.trip_id = tid), '[]'),
+    'stays', coalesce((select jsonb_agg(jsonb_build_object(
+                         'id', s.id, 'name', s.name, 'address', s.address,
+                         'checkIn', s.check_in, 'checkInTime', s.check_in_time,
+                         'checkOut', s.check_out, 'checkOutTime', s.check_out_time,
+                         'bookingUrl', s.booking_url, 'confirmation', s.confirmation, 'notes', s.notes)
+                       order by s.check_in nulls last, s.created_at)
+                       from stays s where s.trip_id = tid), '[]'),
+    -- Shared items for everyone; private packing items only for their owner.
+    'lists', coalesce((select jsonb_agg(jsonb_build_object(
+                         'id', l.id, 'text', l.text, 'personal', l.owner_id is not null,
+                         'claimedBy', l.claimed_by, 'createdBy', l.created_by, 'done', l.done)
+                       order by l.created_at)
+                       from list_items l
+                       where l.trip_id = tid and (l.owner_id is null or l.owner_id = me.id)), '[]'),
+    'expenses', coalesce((select jsonb_agg(jsonb_build_object(
+                            'id', e.id, 'description', e.description, 'amount', e.amount_cents,
+                            'paidBy', e.paid_by, 'createdBy', e.created_by, 'spentOn', e.spent_on,
+                            'splits', (select jsonb_agg(jsonb_build_object('memberId', s.member_id, 'share', s.share_cents))
+                                       from expense_splits s where s.expense_id = e.id))
+                          order by e.created_at desc)
+                          from expenses e where e.trip_id = tid), '[]')
+  );
+end $$;
+
+create or replace function update_trip(p_code text, p_token text, p_trip jsonb) returns void
+language plpgsql security definer set search_path = public as $$
+declare o members := _organizer(p_code, p_token);
+begin
+  update trips set
+    name         = coalesce(nullif(trim(p_trip->>'name'), ''), name),
+    destination  = case when p_trip ? 'destination' then nullif(trim(p_trip->>'destination'), '') else destination end,
+    start_date   = case when p_trip ? 'startDate' then nullif(p_trip->>'startDate', '')::date else start_date end,
+    end_date     = case when p_trip ? 'endDate' then nullif(p_trip->>'endDate', '')::date else end_date end,
+    lat          = case when p_trip ? 'lat' then (p_trip->>'lat')::double precision else lat end,
+    lon          = case when p_trip ? 'lon' then (p_trip->>'lon')::double precision else lon end,
+    notes        = case when p_trip ? 'notes' then nullif(trim(p_trip->>'notes'), '') else notes end,
+    cover_url    = case when p_trip ? 'cover' then nullif(p_trip->'cover'->>'url', '') else cover_url end,
+    cover_credit = case when p_trip ? 'cover' then nullif(p_trip->'cover'->>'credit', '') else cover_credit end,
+    cover_link   = case when p_trip ? 'cover' then nullif(p_trip->'cover'->>'link', '') else cover_link end
+  where id = o.trip_id;
+end $$;
+
+-- ---------- stays (organizer) ----------
+create function add_stay(p_code text, p_token text, p_stay jsonb) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare o members := _organizer(p_code, p_token); new_id uuid;
+begin
+  insert into stays (trip_id, name, address, check_in, check_in_time, check_out, check_out_time, booking_url, confirmation, notes)
+  values (o.trip_id, trim(p_stay->>'name'), nullif(trim(p_stay->>'address'), ''),
+          nullif(p_stay->>'checkIn', '')::date, nullif(p_stay->>'checkInTime', ''),
+          nullif(p_stay->>'checkOut', '')::date, nullif(p_stay->>'checkOutTime', ''),
+          nullif(trim(p_stay->>'bookingUrl'), ''), nullif(trim(p_stay->>'confirmation'), ''), nullif(trim(p_stay->>'notes'), ''))
+  returning id into new_id;
+  return new_id;
+end $$;
+
+create function remove_stay(p_code text, p_token text, p_id uuid) returns void
+language plpgsql security definer set search_path = public as $$
+declare o members := _organizer(p_code, p_token);
+begin
+  delete from stays where id = p_id and trip_id = o.trip_id;
+end $$;
+
+-- ---------- lists (anyone on the trip) ----------
+create function add_list_item(p_code text, p_token text, p_text text, p_personal boolean) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare a members := _actor(p_code, p_token); new_id uuid;
+begin
+  insert into list_items (trip_id, text, owner_id, created_by)
+  values (a.trip_id, trim(p_text), case when p_personal then a.id end, a.id)
+  returning id into new_id;
+  return new_id;
+end $$;
+
+-- p_change: {"done": true|false} and/or {"claim": true|false} (claim = I'm bringing it)
+create function update_list_item(p_code text, p_token text, p_id uuid, p_change jsonb) returns void
+language plpgsql security definer set search_path = public as $$
+declare a members := _actor(p_code, p_token); l list_items;
+begin
+  select * into l from list_items where id = p_id and trip_id = a.trip_id;
+  if l.id is null or (l.owner_id is not null and l.owner_id <> a.id) then raise exception 'Item not found'; end if;
+  if l.owner_id is null and p_change ? 'claim' and l.claimed_by is not null and l.claimed_by <> a.id
+     and not a.is_organizer then
+    raise exception 'Someone else is already bringing that';
+  end if;
+  update list_items set
+    done       = case when p_change ? 'done' then (p_change->>'done')::boolean else done end,
+    claimed_by = case when p_change ? 'claim' and l.owner_id is null
+                      then case when (p_change->>'claim')::boolean then a.id else null end
+                      else claimed_by end
+  where id = l.id;
+end $$;
+
+create function remove_list_item(p_code text, p_token text, p_id uuid) returns void
+language plpgsql security definer set search_path = public as $$
+declare a members := _actor(p_code, p_token);
+begin
+  delete from list_items
+  where id = p_id and trip_id = a.trip_id
+    and (owner_id = a.id or (owner_id is null and (created_by = a.id or a.is_organizer)));
+  if not found then raise exception 'Only the person who added it can remove it'; end if;
+end $$;

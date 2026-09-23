@@ -3,6 +3,8 @@
 import { esc, icon, avatar, sheet, confirmSheet, busy, copy, toast } from '../ui.js';
 import * as store from '../store.js';
 import { memberById } from './common.js';
+import { locate } from '../places.js';
+import { mountCoverPicker } from './cover.js';
 
 export function openMe(ctx) {
   const { trip, isOrg } = ctx;
@@ -76,6 +78,7 @@ export function openEditTrip(ctx) {
           <label class="field"><span>Start</span><input type="date" name="startDate" value="${esc(trip.startDate || '')}"></label>
           <label class="field"><span>End</span><input type="date" name="endDate" value="${esc(trip.endDate || '')}"></label>
         </div>
+        <div class="field"><span>Cover photo</span><div id="photos"></div></div>
         <button class="btn btn-primary btn-lg">Save changes</button>
       </form>
       <div style="margin-top:28px;padding-top:18px;border-top:1px solid var(--line)">
@@ -85,11 +88,27 @@ export function openEditTrip(ctx) {
       </div>`,
     onMount(dlg, close) {
       const form = dlg.querySelector('#trip-form');
+      const photos = dlg.querySelector('#photos');
+      let cover = trip.cover ?? null;
+      let coverFor = trip.destination || '';
+      const pick = (dest, first) => {
+        coverFor = dest;
+        mountCoverPicker(photos, dest, { selected: first ? cover?.url : null, autoPick: !first, onPick: (p) => { cover = p; } });
+      };
+      if (coverFor) pick(coverFor, true); else photos.innerHTML = '<p class="hint">Add a destination to pick a photo.</p>';
+      form.elements.destination.addEventListener('change', () => {
+        const dest = form.elements.destination.value.trim();
+        if (dest && dest !== coverFor) pick(dest, false);
+      });
       form.onsubmit = async (e) => {
         e.preventDefault();
         const f = Object.fromEntries(new FormData(form));
         if (f.startDate && f.endDate && f.endDate < f.startDate) return toast('The end date is before the start date', { error: true });
-        const ok = await busy(form.querySelector('.btn-primary'), () => store.updateTrip(trip.id, f));
+        const ok = await busy(form.querySelector('.btn-primary'), async () => {
+          const moved = f.destination.trim() !== (trip.destination || '');
+          const where = moved && f.destination.trim() ? await locate(f.destination).catch(() => null) : null;
+          return store.updateTrip(trip.id, { ...f, cover: cover ?? { url: '' }, ...(where ?? {}) });
+        });
         if (ok) { close(); ctx.refresh('Trip updated'); }
       };
       dlg.querySelector('[data-delete]').onclick = async () => {
@@ -99,6 +118,30 @@ export function openEditTrip(ctx) {
         const done = await busy(null, () => store.deleteTrip(trip.id));
         if (done) { toast('Trip deleted'); location.hash = '#/'; }
       };
+    },
+  });
+}
+
+// Organizer's "Good to know": door codes, Wi-Fi, parking, emergency contacts…
+export function openNotes(ctx) {
+  const { trip } = ctx;
+  sheet({
+    title: 'Good to know',
+    body: `
+      <form class="form" id="notes-form">
+        <p class="hint">Everything the group should have handy. Everyone on the trip can see this.</p>
+        <label class="field"><span>Notes</span><textarea name="notes" rows="9" maxlength="4000"
+          placeholder="Door code: 4821&#10;Wi-Fi: LakeHouse / sunset2026&#10;Parking: two spots in the driveway&#10;Emergency: Tim 555-0100">${esc(trip.notes || '')}</textarea></label>
+        <button class="btn btn-primary btn-lg">Save</button>
+      </form>`,
+    onMount(dlg, close) {
+      const form = dlg.querySelector('#notes-form');
+      form.onsubmit = async (e) => {
+        e.preventDefault();
+        const ok = await busy(form.querySelector('.btn-primary'), () => store.updateTrip(trip.id, { notes: form.elements.notes.value }));
+        if (ok) { close(); ctx.refresh('Saved'); }
+      };
+      setTimeout(() => form.elements.notes.focus(), 50);
     },
   });
 }

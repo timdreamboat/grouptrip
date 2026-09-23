@@ -1,9 +1,9 @@
 // What someone sees when they open an invite link and haven't joined yet:
 // a Partiful-style invite card — "Tim invited you" — then tap your name or
 // type it to join.
-import { esc, icon, avatarStack, avatar, cover, busy, toast } from '../ui.js';
+import { esc, icon, avatarStack, avatar, busy, toast } from '../ui.js';
 import * as store from '../store.js';
-import { heroHTML, going, organizer, firstName } from './common.js';
+import { heroHTML, going, organizer, firstName, tripCover } from './common.js';
 
 export function render(root, trip, onJoined) {
   const org = organizer(trip);
@@ -12,7 +12,7 @@ export function render(root, trip, onJoined) {
   document.title = `You're invited · ${trip.name}`;
 
   root.innerHTML = `
-    <main class="invite" style="--cover:${cover(trip.destination || trip.name)}">
+    <main class="invite" style="--cover:${esc(tripCover(trip))}">
       <div class="invite-card">
         ${heroHTML(trip, { size: 'sm', top: `<span class="chip glass">${icon('sparkle')}You're invited</span>` })}
         <div class="invite-body">

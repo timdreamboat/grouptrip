@@ -19,7 +19,7 @@ inside GroupTrip-style frames to check.
 | **Flight tracking (ADS-B Exchange)** | ✅ Yes | Same kind of map, but with ads and a "Join" prompt. adsb.fi is cleaner. | — |
 | **Map** (OpenStreetMap) | ✅ Yes | `openstreetmap.org/export/embed.html` | Location |
 | **Map** (Google Maps) | ✅ Yes | `maps.google.com/maps?q=…&output=embed` (no key needed) or the official Maps Embed API (free, unlimited) | Place name / address |
-| **Weather** (Windy) | ✅ Yes, official | `embed.windy.com/embed2.html?lat=…&lon=…` | Destination location |
+| **Weather** (Windy) | ✅ Yes, official | `embed.windy.com/embed2.html?lat=…&lon=…&detail=true` — map + hour-by-hour forecast | Destination lat/lon (from OpenStreetMap Nominatim) |
 | **Calendar** (Google Calendar) | ✅ Yes, official | `calendar.google.com/calendar/embed?src=…` for a shared trip calendar | Calendar ID |
 | TripIt | ✅ Loads | Its marketing page loads, but a person's own trips need them signed in, and the browser may block that. | — |
 | Booking.com, Yelp | ⚠️ Works today | Both send a "planning to block" warning (report-only rules), so embeds could stop working at any time. Treat them as open-in-new-tab. | Link |
@@ -48,6 +48,15 @@ ticket (UA) becomes the code the map uses (UAL), for example "UA 1" → `UAL1`.
   OpenTable ID, and the group sees and uses OpenTable's own booking screen
   inside GroupTrip. No partner approval or API key is needed.
 - **Resy/Tock and others:** a "Reserve on Resy" button that opens their page.
+
+## Cover photos & calendar (added 2026-09-22)
+- **Photos:** Wikipedia page summary (lead image; great for cities, but states
+  return flags — filtered out) + Openverse search (CC0/CC-BY photos; Florida →
+  beaches). Both keyless with open CORS. Organizer picks; credit is shown.
+- **Calendar:** our own .ics feed (Supabase Edge Function), subscribable from
+  Apple (`webcal://`), Google (`calendar.google.com/calendar/render?cid=`) and
+  Outlook (`outlook.live.com/calendar/0/addfromweb?url=`). Google Calendar's
+  own embed needs a public Google calendar per trip, so we don't use it.
 
 ## Not using (and why)
 - **Amadeus.** Its self-service APIs shut down July 17, 2026.

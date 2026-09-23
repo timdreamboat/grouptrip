@@ -9,6 +9,7 @@ import * as home from './views/home.js';
 import * as create from './views/create.js';
 import * as invite from './views/invite.js';
 import * as tripView from './views/trip.js';
+import { locate, coverOptions } from './places.js';
 
 const root = document.getElementById('app');
 let current = { code: null, tab: null, trip: null };
@@ -77,6 +78,23 @@ async function openTrip(code, tab, { animate = true, keepScroll = false } = {}) 
     window.scrollTo(0, keepScroll ? scroll : 0);
     tripView.flash();
   }, { animate: animate && !keepScroll });
+  enrich(ctx);
+}
+
+// Trips made before photos/weather existed: the organizer's device fills in a
+// cover photo and map location once, in the background.
+const enriched = new Set();
+async function enrich({ trip, isOrg, refresh }) {
+  if (!isOrg || !trip.destination || enriched.has(trip.id) || (trip.lat != null && trip.cover)) return;
+  enriched.add(trip.id);
+  const [where, photos] = await Promise.all([
+    trip.lat == null ? locate(trip.destination).catch(() => null) : null,
+    trip.cover ? [] : coverOptions(trip.destination).catch(() => []),
+  ]);
+  const change = { ...(where ?? {}), ...(photos[0] ? { cover: photos[0] } : {}) };
+  if (!Object.keys(change).length) return;
+  try { await store.updateTrip(trip.id, change); } catch { return; }
+  if (current.code === trip.id && !document.querySelector('dialog[open]')) refresh();
 }
 
 window.addEventListener('hashchange', route);

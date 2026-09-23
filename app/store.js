@@ -37,6 +37,7 @@ function remember(trip) {
     id: trip.id, name: trip.name, destination: trip.destination, startDate: trip.startDate, endDate: trip.endDate,
     role: trip.me ? (trip.me.isOrganizer ? 'organizer' : 'guest') : 'invited',
     going: trip.members.filter((m) => m.rsvp === 'going').map((m) => ({ name: m.name })),
+    cover: trip.cover?.url ?? null,
     myName: me?.name,
   };
   write(TRIPS, [summary, ...listTrips().filter((t) => t.id !== trip.id)].slice(0, 40));
@@ -89,6 +90,11 @@ export const addExpense = (code, e) => act('add_expense', code, {
   p_description: e.description, p_amount: e.amount, p_paid_by: e.paidBy, p_splits: e.splits,
 });
 export const removeExpense = (code, id) => act('remove_expense', code, { p_id: id });
+export const addStay = (code, stay) => act('add_stay', code, { p_stay: stay });
+export const removeStay = (code, id) => act('remove_stay', code, { p_id: id });
+export const addListItem = (code, text, personal) => act('add_list_item', code, { p_text: text, p_personal: personal });
+export const updateListItem = (code, id, change) => act('update_list_item', code, { p_id: id, p_change: change });
+export const removeListItem = (code, id) => act('remove_list_item', code, { p_id: id });
 
 export async function lookupFlight(number, date) {
   const res = await fetch(`${SUPABASE_URL}/functions/v1/flight-lookup?number=${encodeURIComponent(number)}&date=${date}`, {
@@ -104,3 +110,6 @@ const base = () => location.origin + location.pathname;
 export const inviteLink = (code) => `${base()}#/t/${code}`;
 // Opens the trip as this person on another device. Private — it signs in as them.
 export const personalLink = (code) => `${base()}#/me/${code}/${tokenFor(code)}`;
+
+// Subscribable calendar feed (Apple/Google/Outlook keep it in sync).
+export const calendarFeed = (code) => `${SUPABASE_URL}/functions/v1/calendar?trip=${code}`;

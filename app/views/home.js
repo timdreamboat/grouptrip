@@ -1,5 +1,5 @@
 // Trips list. First visit: a landing page that explains GroupTrip.
-import { esc, icon, cover, avatarStack, fmtRange, countdown } from '../ui.js';
+import { esc, icon, coverBg, avatarStack, fmtRange, countdown } from '../ui.js';
 import * as store from '../store.js';
 
 export function render(root) {
@@ -22,7 +22,7 @@ export function render(root) {
             const cd = countdown(t);
             return `
             <a class="trip-card" href="#/t/${esc(t.id)}">
-              <div class="cover" style="background:${cover(t.destination || t.name)}">
+              <div class="cover" style="background:${esc(coverBg(t.destination || t.name, t.cover))}">
                 <div style="display:flex;justify-content:space-between;gap:8px">
                   <span class="chip glass">${t.role === 'organizer' ? `${icon('crown')}Organizer` : 'Guest'}</span>
                   ${cd ? `<span class="chip glass">${esc(cd)}</span>` : ''}

@@ -16,12 +16,20 @@
 - ✅ OpenTable booking embedded in itinerary items; other booking sites as links
 - ✅ Embedded maps for the destination and each place
 - ✅ Venmo buttons on Settle up
-- Next: weather (Windy embed), shared Google Calendar embed
+
 
 ## v1.6 — redesign (2026-09-22)
 - ✅ Organizer vs guest roles; Partiful-style invite page; claim a pre-added name
 - ✅ New design system, mobile tab bar + bottom sheets, desktop sidebar, dark mode
 - ✅ Venmo buttons go straight to the person when they've added their username
+
+## v1.7 — everything for the trip (2026-09-22)
+- ✅ Destination cover photos (pick from a grid), weather (Windy embed with forecast)
+- ✅ Calendar tab merging plans, flights and check-ins; subscribe in Apple/Google/Outlook
+- ✅ Where we're staying; "Good to know" notes; who's bringing what; private packing lists
+
+## Ideas next
+- Polls (dates, activities), photo sharing after the trip, local time + currency on Home
 
 ## v2 — nicer splitting
 - Uneven splits (by amount / by shares), multiple currencies

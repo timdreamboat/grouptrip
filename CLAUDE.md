@@ -21,6 +21,12 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
 1. Flight times: look up scheduled departure/arrival from the flight number
    (AeroDataBox via a Supabase Edge Function; key never in `app/`).
 2. Expense splitting and settle-up math (`app/money.js`).
+3. Destination lookups (owner asked for location photos, 2026-09-22), in
+   `app/places.js`: OpenStreetMap Nominatim geocodes the destination once (to
+   position the Windy weather embed), and cover photos come from Wikipedia's
+   lead image + Openverse (openly licensed). The organizer picks from a grid;
+   the choice and its credit are stored on the trip. Wikimedia only serves
+   standard widths (500, 960, 1280…) — other sizes return 400.
 
 ## Architecture
 - `app/` — no-build static web app (plain HTML/CSS/JS modules, no npm),
@@ -30,8 +36,11 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
     covers, sheets, toasts) · `money.js` split math · `embeds.js` partner URLs
   - `views/` one file per screen: `home` (trips list/landing), `create`,
     `invite` (what someone sees before joining), `trip` (shell), and the
-    tabs `overview`, `plan`, `flights`, `wallet` (money), `people`, plus `me`
-    (settings + organizer trip editor).
+    tabs `overview` (Home), `plan` (Calendar: plans + flights + check-ins),
+    `flights` (Travel: stays + flights), `wallet` (Money), `lists` (who's
+    bringing what + private packing list), `people` (sidebar/Home only), plus
+    `me` (settings, trip editor, "Good to know"), `stays`, `cover` (photo
+    picker).
   - `style.css` is the design system (tokens, light/dark, mobile tab bar +
     bottom sheets, desktop sidebar + dialogs). Reuse its components.
 - Data: Supabase project `grouptrip` (ref fnedxcktddvioxseogng, ca-central-1,
@@ -44,6 +53,9 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
   device. Tables are locked (RLS, no policies); everything goes through the
   functions in `supabase/schema.sql` (Supabase advisor warnings about public
   SECURITY DEFINER functions are expected — that IS the access model).
+- Edge Function `calendar` (verify_jwt OFF — calendar apps can't send auth)
+  serves a subscribable .ics feed at `/functions/v1/calendar?trip=<share_code>`.
+  Same access as the invite link; never include private lists, tokens or money.
 - Edge Function `flight-lookup` is deployed and working; its `AERODATABOX_KEY`
   secret (RapidAPI, AeroDataBox free Basic plan) is set in the Supabase dashboard.
 - Money is stored in integer cents everywhere. Never use floats for totals.

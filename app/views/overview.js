@@ -1,11 +1,13 @@
 // Trip home. Organizers get a planning dashboard (invite, readiness, who
 // we're waiting on). Guests get "your trip": RSVP, to-dos, balance, next up.
-import { esc, icon, avatar, fmtDay, fmtTime, share, copy } from '../ui.js';
+import { esc, icon, avatar, avatarStack, fmtDay, fmtTime, share, copy } from '../ui.js';
 import { fmt } from '../money.js';
 import * as store from '../store.js';
 import { heroHTML, going, flightsOf, organizer, firstName, myBalance, nextUp, memberById } from './common.js';
 import { openAddFlight } from './flights.js';
-import { openEditTrip, openMe } from './me.js';
+import { openEditTrip, openMe, openNotes } from './me.js';
+import { stayCard, handleStayClick } from './stays.js';
+import { weatherEmbed } from '../places.js';
 
 export function render(el, ctx) {
   el.innerHTML = ctx.isOrg ? organizerHome(ctx) : guestHome(ctx);
@@ -37,7 +39,8 @@ function organizerHome(ctx) {
   const steps = [
     { done: Boolean(trip.startDate), title: 'Set the dates', sub: trip.startDate ? 'Dates are set' : 'So everyone can book flights', action: 'edit-trip' },
     { done: joined.length > 1, title: 'Get your crew in', sub: `${joined.length} of ${people.length} joined`, href: 'people' },
-    { done: g.length > 0 && withFlights.length === g.length, title: 'Collect flights', sub: `${withFlights.length} of ${g.length} added`, href: 'flights' },
+    { done: g.length > 0 && withFlights.length === g.length, title: 'Collect flights', sub: `${withFlights.length} of ${g.length} added`, href: 'travel' },
+    { done: trip.stays.length > 0, title: 'Add where you\'re staying', sub: trip.stays.length ? trip.stays[0].name : 'Address, check-in, confirmation', href: 'travel' },
     { done: trip.itinerary.length > 0, title: 'Start the plan', sub: trip.itinerary.length ? `${trip.itinerary.length} plans` : 'Dinners, activities, anything', href: 'plan' },
   ];
   const pct = Math.round((steps.filter((s) => s.done).length / steps.length) * 100);
@@ -102,7 +105,46 @@ function organizerHome(ctx) {
         <a class="stat" href="#/t/${trip.id}/people" style="text-decoration:none"><div class="num">${g.length}</div><div class="lbl">Going</div></a>
       </div>
     </section>
+    ${extras(ctx)}
   </div>`;
+}
+
+// Shared by both homes: stay, good-to-know, weather, who's going.
+function extras(ctx) {
+  const { trip, isOrg } = ctx;
+  const g = going(trip);
+  return `
+    ${trip.stays.length ? `<section><div class="section-head"><h2>Where we're staying</h2>
+      <a class="btn btn-xs btn-ghost" href="#/t/${trip.id}/travel">All travel</a></div>
+      <div class="stack">${trip.stays.map((s) => stayCard(s, { isOrg: false })).join('')}</div></section>` : ''}
+
+    ${trip.notes || isOrg ? `
+    <section>
+      <div class="section-head"><h2>Good to know</h2>
+        ${isOrg ? `<button class="btn btn-xs btn-secondary" data-action="notes">${icon('pencil')}${trip.notes ? 'Edit' : 'Add'}</button>` : ''}</div>
+      <div class="card">${trip.notes
+        ? `<div class="notes">${esc(trip.notes)}</div>`
+        : `<button class="row row-link" data-action="notes" style="width:100%;background:none;border:0;text-align:left;cursor:pointer;padding:0;min-height:0">
+            <div class="tl-icon">${icon('info')}</div>
+            <div class="grow"><div class="title">Door codes, Wi-Fi, parking…</div><div class="sub">Everything the group should have handy</div></div>${icon('chevron')}</button>`}
+      </div>
+    </section>` : ''}
+
+    ${trip.lat != null ? `
+    <section>
+      <div class="section-head"><h2>Weather</h2><span class="sub">${esc(trip.destination || '')} · by Windy</span></div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <iframe class="weather-frame" loading="lazy" title="Weather forecast" src="${esc(weatherEmbed(trip, trip.currency === 'USD'))}"></iframe>
+      </div>
+      <p class="hint" style="margin:8px 4px 0">Forecasts get reliable about 10 days before the trip.</p>
+    </section>` : ''}
+
+    <a class="card row-link" href="#/t/${trip.id}/people" style="display:flex;align-items:center;gap:14px;text-decoration:none">
+      ${avatarStack(g.length ? g : trip.members, 5, 34)}
+      <div style="flex:1;min-width:0"><div style="font-weight:600">Who's going</div>
+        <div class="small muted">${g.length} going${trip.members.length > g.length ? ` · ${trip.members.length - g.length} more invited` : ''}</div></div>
+      ${icon('chevron')}
+    </a>`;
 }
 
 // ---------- guest ----------
@@ -112,9 +154,13 @@ function guestHome(ctx) {
   const org = organizer(trip);
   const myFlights = flightsOf(trip, me.id);
   const bal = myBalance(trip);
+  const myList = trip.lists.filter((l) => l.personal);
+  const unclaimed = trip.lists.filter((l) => !l.personal && !l.claimedBy).length;
   const todos = [
     { done: myFlights.length > 0, title: 'Add your flight', sub: myFlights.length ? `${myFlights[0].flightNumber} · ${fmtDay(myFlights[0].date)}` : 'So we know when you land', action: 'add-flight', hide: me.rsvp === 'declined' },
     { done: Boolean(me.venmo), title: 'Add your Venmo', sub: me.venmo ? `@${me.venmo}` : 'So friends can pay you back in one tap', action: 'me' },
+    { done: myList.length > 0 && myList.every((l) => l.done), title: 'Pack your bag', sub: myList.length ? `${myList.filter((l) => l.done).length} of ${myList.length} packed` : 'Your private packing list', href: 'lists', hide: me.rsvp === 'declined' },
+    ...(unclaimed ? [{ done: false, title: 'Help cover the group list', sub: `${unclaimed} thing${unclaimed === 1 ? '' : 's'} nobody's bringing yet`, href: 'lists' }] : []),
     ...(bal < 0 ? [{ done: false, title: 'Settle up', sub: `You owe ${fmt(-bal, trip.currency)}`, href: 'money' }] : []),
   ].filter((t) => !t.hide);
   const left = todos.filter((t) => !t.done).length;
@@ -157,9 +203,11 @@ function guestHome(ctx) {
       </div>
     </section>
 
+    ${extras(ctx)}
+
     ${arrivals.length ? `
     <section>
-      <div class="section-head"><h2>Arrivals</h2><a class="btn btn-xs btn-ghost" href="#/t/${trip.id}/flights">See all</a></div>
+      <div class="section-head"><h2>Arrivals</h2><a class="btn btn-xs btn-ghost" href="#/t/${trip.id}/travel">See all</a></div>
       <div class="card card-tight rows">
         ${arrivals.map(({ f }) => {
           const m = memberById(trip, f.memberId);
@@ -176,6 +224,7 @@ function guestHome(ctx) {
 function bind(el, ctx) {
   const { trip } = ctx;
   el.onclick = async (e) => {
+    if (await handleStayClick(e, ctx)) return;
     const t = e.target.closest('[data-action],[data-rsvp],[data-nudge]');
     if (!t) return;
     if (t.dataset.rsvp) {
@@ -198,6 +247,7 @@ function bind(el, ctx) {
       case 'edit-trip': openEditTrip(ctx); break;
       case 'add-flight': openAddFlight(ctx); break;
       case 'me': openMe(ctx); break;
+      case 'notes': openNotes(ctx); break;
     }
   };
 }

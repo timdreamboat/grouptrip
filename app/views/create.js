@@ -1,21 +1,28 @@
 // Create a trip in three quick questions: where, when, who's organizing.
-import { esc, icon, cover, busy, toast } from '../ui.js';
+import { esc, icon, coverBg, busy, toast } from '../ui.js';
 import * as store from '../store.js';
+import { locate } from '../places.js';
+import { mountCoverPicker } from './cover.js';
 
 const STEPS = 3;
 
 export function render(root) {
   document.title = 'New trip · GroupTrip';
-  const data = { destination: '', name: '', startDate: '', endDate: '', organizer: '' };
+  const data = { destination: '', name: '', startDate: '', endDate: '', organizer: '', cover: null };
+  let photosFor = null; // destination the photo picker last searched
+  let searchTimer;
   let step = 0;
 
   const views = [
     () => `
       <div class="eyebrow">Step 1 of ${STEPS}</div>
       <h1 class="display">Where are you going?</h1>
-      <div class="cover-preview" style="background:${cover(data.destination || 'trip')}"></div>
-      <input class="input input-xl" name="destination" placeholder="Lake Tahoe" value="${esc(data.destination)}" autocomplete="off" required>
-      <p class="hint" style="margin-top:10px">A city, a region, a cabin — anything.</p>`,
+      <div class="cover-preview" style="background:${esc(coverBg(data.destination || 'trip', data.cover?.url))}"></div>
+      <input class="input input-xl" name="destination" placeholder="Las Vegas" value="${esc(data.destination)}" autocomplete="off" required>
+      <p class="hint" style="margin-top:10px">A city, a region, a beach — anything.</p>
+      <div id="photos-wrap" style="margin-top:18px" ${data.destination ? '' : 'hidden'}>
+        <div class="field"><span>Pick a cover photo</span><div id="photos"></div></div>
+      </div>`,
     () => `
       <div class="eyebrow">Step 2 of ${STEPS}</div>
       <h1 class="display">When?</h1>
@@ -53,9 +60,35 @@ export function render(root) {
     const first = form.querySelector('input');
     setTimeout(() => first?.focus(), 30);
 
+    const preview = () => { form.querySelector('.cover-preview').style.background = coverBg(data.destination || 'trip', data.cover?.url); };
+    const searchPhotos = () => {
+      const dest = data.destination.trim();
+      const wrap = form.querySelector('#photos-wrap');
+      if (!wrap) return;
+      wrap.hidden = !dest;
+      if (!dest || dest === photosFor) return;
+      photosFor = dest;
+      data.cover = null;
+      mountCoverPicker(form.querySelector('#photos'), dest, {
+        autoPick: true, onPick: (p) => { data.cover = p; preview(); },
+      });
+    };
+    if (step === 0 && data.destination) {
+      photosFor = null;
+      const keep = data.cover;
+      mountCoverPicker(form.querySelector('#photos'), data.destination, {
+        selected: keep?.url, onPick: (p) => { data.cover = p; preview(); },
+      });
+      photosFor = data.destination.trim();
+    }
+
     form.addEventListener('input', (e) => {
       data[e.target.name] = e.target.value;
-      if (e.target.name === 'destination') form.querySelector('.cover-preview').style.background = cover(data.destination || 'trip');
+      if (e.target.name === 'destination') {
+        preview();
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(searchPhotos, 600);
+      }
       if (step === 1) form.querySelector('.btn-primary').innerHTML = data.startDate ? `Continue ${icon('arrow')}` : 'Skip for now';
     });
     form.querySelector('[data-back]')?.addEventListener('click', () => { step--; draw(); });
@@ -66,7 +99,13 @@ export function render(root) {
       if (step === 1 && data.endDate && data.startDate && data.endDate < data.startDate) return toast('The end date is before the start date', { error: true });
       if (step < STEPS - 1) { step++; draw(); return; }
       if (!data.name || !data.organizer) return toast('Add a trip name and your name', { error: true });
-      const code = await busy(form.querySelector('.btn-primary'), () => store.createTrip(data));
+      const code = await busy(form.querySelector('.btn-primary'), async () => {
+        const c = await store.createTrip(data);
+        // Cover photo + map location (for the weather). Nice-to-have: never block creating the trip.
+        const where = await locate(data.destination).catch(() => null);
+        await store.updateTrip(c, { ...(where ?? {}), ...(data.cover ? { cover: data.cover } : {}) }).catch(() => {});
+        return c;
+      });
       if (code) { sessionStorage.setItem('grouptrip.flash', 'Trip created — now invite your crew'); location.hash = `#/t/${code}`; }
     };
   };
