@@ -51,10 +51,12 @@ export function openTableRid(text) {
 export const openTableSearch = (destination) =>
   `https://www.opentable.com/s?term=${encodeURIComponent(destination || '')}`;
 
-// Venmo pay link (opens their app or a new tab). With the recipient's
-// username it goes straight to them; without, Venmo asks who to pay.
+// Venmo pay link (opens their app, or Venmo's own login page on the web —
+// tested 2026-09-24; the old venmo.com/?txn=pay link now dead-ends). Venmo
+// signs the person in and shows who they're paying before anything is sent.
+// With the recipient's username it goes straight to them; without, Venmo asks.
 export function venmoLink(amountCents, note, recipient) {
   const p = new URLSearchParams({ txn: 'pay', amount: (amountCents / 100).toFixed(2), note });
   if (recipient) p.set('recipients', recipient);
-  return `https://venmo.com/?${p}`;
+  return `https://account.venmo.com/pay?${p}`;
 }

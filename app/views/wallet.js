@@ -12,7 +12,10 @@ import * as biz from './bizexpenses.js';
 // A Venmo handle changed in the last 3 days gets a warning next to the pay button.
 const freshVenmo = (m) => m.venmoChangedAt && Date.now() - new Date(m.venmoChangedAt) < 3 * 86400000;
 const ago = (iso) => {
-  const h = Math.max(1, Math.round((Date.now() - new Date(iso)) / 3600000));
+  const min = Math.round((Date.now() - new Date(iso)) / 60000);
+  if (min < 2) return 'just now';
+  if (min < 60) return `${min} minutes ago`;
+  const h = Math.round(min / 60);
   return h < 24 ? `${h} hour${h === 1 ? '' : 's'} ago` : `${Math.round(h / 24)} day${h < 36 ? '' : 's'} ago`;
 };
 
