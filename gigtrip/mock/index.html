@@ -15,7 +15,7 @@
   --surface-3: #dcdcd5;
   --text: #131316;
   --muted: #61616a;
-  --faint: #9c9ca4;
+  --faint: #85858e;
   --line: rgba(19, 19, 22, .08);
   --line-strong: rgba(19, 19, 22, .16);
   --tape: #ffcc1a;
@@ -37,7 +37,7 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #0e0e10; --surface: #18181b; --surface-2: #222226; --surface-3: #2d2d32;
-    --text: #f2f2f4; --muted: #a2a2ab; --faint: #6b6b73;
+    --text: #f2f2f4; --muted: #a8a8b1; --faint: #7f7f89;
     --line: rgba(255, 255, 255, .07); --line-strong: rgba(255, 255, 255, .15);
     --tape: #ffd23a; --tape-ink: #141414; --accent-ink: #ffd23a;
     --good: #3ccf91; --good-soft: #10291f; --hold: #86a6ff; --hold-soft: #172042;
@@ -49,7 +49,7 @@
 }
 :root[data-theme="dark"] {
   --bg: #0e0e10; --surface: #18181b; --surface-2: #222226; --surface-3: #2d2d32;
-  --text: #f2f2f4; --muted: #a2a2ab; --faint: #6b6b73;
+  --text: #f2f2f4; --muted: #a8a8b1; --faint: #7f7f89;
   --line: rgba(255, 255, 255, .07); --line-strong: rgba(255, 255, 255, .15);
   --tape: #ffd23a; --tape-ink: #141414; --accent-ink: #ffd23a;
   --good: #3ccf91; --good-soft: #10291f; --hold: #86a6ff; --hold-soft: #172042;
@@ -348,7 +348,7 @@ textarea.csv { font: 13px/1.5 var(--font-mono); min-height: 180px; }
 .acard .grow > div { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .acard .cnt { min-width: 24px; height: 24px; border-radius: 12px; background: var(--bad); color: #fff; font-size: 12px; font-weight: 700; display: grid; place-items: center; padding: 0 6px; flex: none; }
 @media (max-width: 560px) {
-  .viewas .vl { display: none; }
+  .viewas .vl, .demo .vl { display: none; }
   .top .brand b { display: none; }
   .top { gap: 8px; }
   #role { max-width: 104px; }
@@ -357,6 +357,54 @@ textarea.csv { font: 13px/1.5 var(--font-mono); min-height: 180px; }
   .head { align-items: flex-start; }
   .head > div:first-child { min-width: 0; }
 }
+
+/* ---- review pass: navigation groups, demo control, theme, help, onboarding, import wizard ---- */
+.side nav .grp { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); padding: 14px 10px 4px; }
+.side nav .grp:first-child { padding-top: 0; }
+.demo { display: flex; align-items: center; gap: 6px; white-space: nowrap; font-size: 12px; color: var(--muted); }
+.demo select { height: 34px; border-radius: 999px; border: 1.5px dashed var(--line-strong); background: transparent; padding: 0 8px; font-weight: 600; font-size: 13px; color: var(--text); }
+.demo .dl { font-weight: 700; letter-spacing: .06em; text-transform: uppercase; font-size: 10.5px; }
+.helpbtn { width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid var(--line-strong); background: var(--surface); color: var(--muted); font-weight: 700; font-size: 13px; cursor: pointer; flex: none; display: inline-grid; place-items: center; }
+.helpbtn:hover { color: var(--text); border-color: var(--text); }
+.titlerow { display: flex; align-items: center; gap: 10px; }
+.tips { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.start { border-color: color-mix(in srgb, var(--tape) 55%, var(--line)); background: color-mix(in srgb, var(--tape) 7%, var(--surface)); }
+.steps { list-style: none; margin: 8px 0 0; padding: 0; display: grid; }
+.steps li button { all: unset; display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 4px; border-top: 1px solid var(--line); cursor: pointer; color: var(--text); box-sizing: border-box; }
+.steps li:first-child button { border-top: 0; }
+.steps li button:hover { background: color-mix(in srgb, var(--surface-2) 60%, transparent); }
+.steps li button:focus-visible { outline: 3px solid var(--ring); border-radius: 10px; }
+.steps .n { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--line-strong); display: grid; place-items: center; font-size: 13px; font-weight: 700; flex: none; color: var(--good); }
+.steps li.done .n { background: var(--good-soft); border-color: var(--good); }
+.steps li.done b { text-decoration: line-through; color: var(--muted); }
+.steps .grow { flex: 1; min-width: 0; display: grid; }
+.wsteps { list-style: none; margin: 0; padding: 0; display: flex; gap: 4px; font-size: 12px; font-weight: 600; color: var(--faint); overflow-x: auto; }
+.wsteps li { display: flex; align-items: center; gap: 6px; padding: 4px 10px 4px 4px; border-radius: 999px; white-space: nowrap; }
+.wsteps li span { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-2); color: var(--muted); font-size: 11px; }
+.wsteps li.now { color: var(--text); background: var(--surface-2); }
+.wsteps li.now span { background: var(--tape); color: var(--tape-ink); }
+.wsteps li.past { color: var(--muted); }
+.wsteps li.past span { background: var(--good-soft); color: var(--good); }
+.srcgrid { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+.srccard { display: grid; gap: 4px; text-align: left; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--text); cursor: pointer; font: inherit; }
+.srccard:hover { border-color: var(--text); }
+.srccard[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--tape); }
+.srccard .small { line-height: 1.35; }
+.maprows { display: grid; gap: 6px; }
+.maprow { display: grid; grid-template-columns: 130px 1fr; gap: 4px 10px; align-items: center; font-size: 13.5px; }
+.maprow select { height: 36px; border-radius: 10px; border: 1px solid var(--line-strong); background: var(--surface); padding: 0 8px; font-size: 13.5px; color: var(--text); min-width: 0; }
+.maprow .eg { grid-column: 2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-height: 1em; }
+.maprow .req { font-size: 10.5px; color: var(--warn); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+@media (max-width: 480px) { .maprow { grid-template-columns: 1fr; } .maprow .eg { grid-column: 1; } }
+.donelist { display: grid; gap: 6px; }
+.donelist a { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); text-decoration: none; color: var(--text); }
+.donelist a:hover { background: var(--surface-3); }
+.donelist .grow { flex: 1; min-width: 0; display: grid; }
+.cnt2 { min-width: 34px; height: 34px; border-radius: 10px; background: var(--tape); color: var(--tape-ink); font: 800 16px/1 var(--font-display); display: grid; place-items: center; padding: 0 8px; flex: none; }
+.st-imported { background: var(--hold-soft); color: var(--hold); }
+.chip.st-imported::before { display: none; }
+dialog.sheet .field select, dialog.sheet .field input { max-width: 100%; }
+.seg.themeseg button[aria-pressed="true"] { background: var(--tape); color: var(--tape-ink); border-color: var(--tape); }
 </style>
 
 <div class="shell">
@@ -364,7 +412,7 @@ textarea.csv { font: 13px/1.5 var(--font-mono); min-height: 180px; }
     <a class="brand" href="#about"><span class="logo">G</span><b>GigTrip</b></a>
     <nav id="sidenav"></nav>
     <div class="foot">
-      <span>Prototype V1 · sample data</span>
+      <span>Prototype · sample data</span><button class="btn btn-outline btn-sm" data-act="help" data-id="__page" style="justify-content:flex-start">? What is this page</button>
       <a href="https://timdreamboat.github.io/grouptrip/" target="_blank" rel="noopener">Made by GroupTrip ↗</a>
     </div>
   </aside>
@@ -373,7 +421,8 @@ textarea.csv { font: 13px/1.5 var(--font-mono); min-height: 180px; }
       <a class="brand" href="#about"><span class="logo">G</span><b>GigTrip</b></a>
       <span class="spacer"></span>
       <span id="achipslot" style="min-width:0;display:flex"></span><span id="bellslot"></span>
-      <label class="viewas" for="role"><span class="vl">View as</span>
+      <button class="iconbtn" id="themebtn" type="button" aria-label="Switch theme"></button>
+      <label class="demo" for="role" title="Prototype only: see GigTrip as each kind of user"><span class="dl vl">Demo as</span>
         <select id="role">
           <option value="manager">Manager</option>
           <option value="tm">Tour manager</option>
@@ -512,7 +561,7 @@ function seed() {
     ellie: ['Merch stock (see count sheet)', 'Card readers ×2', 'Display grid + lights'],
   };
   return {
-    v: 2,
+    v: 3,
     artists: [
       { id: 'jv', name: 'Juniper Vale', genre: 'Indie folk', home: 'Toronto, ON', agent: 'Jordan Blake · Fieldhouse', hue: 48, photo: null },
       { id: 'co', name: 'The Coastlines', genre: 'Alt-rock', home: 'Vancouver, BC', agent: 'Jordan Blake · Fieldhouse', hue: 200, photo: null },
@@ -585,6 +634,7 @@ function seed() {
       venue:  { season: 'off',  day: 'view', advance: 'edit', travel: 'off',  guests: 'view', mymoney: 'off',  costs: 'view', profit: 'off' },
       agent:  { season: 'view', day: 'view', advance: 'off',  travel: 'off',  guests: 'off',  mymoney: 'off',  costs: 'view', profit: 'off' },
     },
+    imports: [],
     activity: [
       { at: 'Apr 12, 3:48 pm', who: 'dana', text: 'Moved Juniper Vale soundcheck to 4:30 pm (New York)' },
       { at: 'Apr 12, 2:10 pm', who: 'nico', text: 'Confirmed "USB-C / DisplayPort adapters"' },
@@ -595,10 +645,17 @@ function seed() {
   };
 }
 
+// a company starting from nothing: keep templates, rates and role defaults; drop the sample roster
+function blank() {
+  const d = seed();
+  d.artists = []; d.tours = []; d.shows = []; d.offers = []; d.slots = []; d.tasks = []; d.docs = []; d.contacts = []; d.supply = []; d.guests = []; d.travel = []; d.budget = []; d.showExp = []; d.sheets = {}; d.myexp = []; d.activity = []; d.imports = [];
+  d.people = { rae: d.people.rae, dana: d.people.dana }; d.people.dana.artists = ['*'];
+  return d;
+}
 // ---------- storage (this browser only) ----------
-const KEY = 'gigtrip.v2.db';
+const KEY = 'gigtrip.v3.db';
 const FILES = {};   // uploaded files live in memory for the mock (object URLs)
-function load() { try { const v = JSON.parse(localStorage.getItem(KEY)); return v && v.v === 2 ? v : null; } catch { return null; } }
+function load() { try { const v = JSON.parse(localStorage.getItem(KEY)); return v && v.v === 3 ? v : null; } catch { return null; } }
 function save() { try { localStorage.setItem(KEY, JSON.stringify(DB)); } catch {} }
 let DB = load() || seed();
 
@@ -688,8 +745,8 @@ const ICONS = {
   access: 'M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z M9.5 12l2 2 3.5-4', mymoney: 'M3 7h18v12H3z M3 11h18 M16 15h2',
   artists: 'M12 3a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z M6 11a6 6 0 0 0 12 0 M12 17v4 M9 21h6',
   activity: 'M6 16V11a6 6 0 1 1 12 0v5l2 2H4z M10 21h4', settings: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0-1.2-2.9H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 2.9-1.2V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0 1.2 2.9H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z',
-  more: 'M5 12h.01 M12 12h.01 M19 12h.01', home: 'M4 5h7v7H4z M13 5h7v7h-7z M4 14h7v6H4z M13 14h7v6h-7z', overview: 'M12 3a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z M6 11a6 6 0 0 0 12 0 M12 17v4 M9 21h6', about: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z M12 11v5 M12 8v.01',
-  chev: 'M9 6l6 6-6 6', edit: 'M4 20h4L19 9l-4-4L4 16z M14 6l4 4', plus: 'M12 5v14 M5 12h14', file: 'M6 3h9l4 4v14H6z M14 3v5h5',
+  more: 'M5 12h.01 M12 12h.01 M19 12h.01', overview: 'M12 3a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z M6 11a6 6 0 0 0 12 0 M12 17v4 M9 21h6', about: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z M12 11v5 M12 8v.01',
+  chev: 'M9 6l6 6-6 6', sun: 'M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10z M12 2v2 M12 20v2 M4.9 4.9l1.4 1.4 M17.7 17.7l1.4 1.4 M2 12h2 M20 12h2 M4.9 19.1l1.4-1.4 M17.7 6.3l1.4-1.4', moon: 'M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z', imports: 'M12 16V4 M7 9l5-5 5 5 M4 16v4h16v-4', home: 'M4 5h7v7H4z M13 5h7v7h-7z M4 14h7v6H4z M13 14h7v6h-7z', edit: 'M4 20h4L19 9l-4-4L4 16z M14 6l4 4', plus: 'M12 5v14 M5 12h14', file: 'M6 3h9l4 4v14H6z M14 3v5h5',
   upload: 'M12 16V4 M7 9l5-5 5 5 M4 16v4h16v-4', comment: 'M4 5h16v11H8l-4 4z',
 };
 const icon = (n, cls = '') => `<svg class="i ${cls}" viewBox="0 0 24 24" aria-hidden="true"><path d="${ICONS[n]}"/></svg>`;
@@ -698,8 +755,10 @@ const addBtn = (act, label, id = '', cls = 'btn-secondary') => `<button class="b
 const uploadZone = (target, id, text = 'Drop files here or tap to upload') => `<label class="upload" data-drop="${target}" data-id="${esc(id)}">${icon('upload')}<b>${text}</b><span class="small">Riders, stage plots, contracts, photos, PDFs</span><input type="file" multiple data-upload="${target}" data-id="${esc(id)}" id="up-${target}-${esc(id)}"></label>`;
 
 // ---------- navigation (follows what the viewer may see) ----------
+// sidebar groups: which heading each page sits under
+const GROUPS = [['Overview', ['home', 'overview', 'today', 'activity']], ['Booking', ['board', 'offers', 'tour']], ['Shows', ['show', 'settle', 'guests', 'travel']], ['Money', ['money', 'mymoney']], ['Team', ['party', 'access']], ['Setup', ['settings', 'imports', 'about']]];
 function navFor() {
-  if (isMgr()) return [['home', 'Artists'], ['board', 'Season'], ['tour', 'Tour'], ['show', 'Show']].concat(cur() !== 'all' ? [['overview', 'Artist page']] : []).concat([['money', 'Money'], ['party', 'Party'], ['offers', 'Offers'], ['settle', 'Settle'], ['guests', 'Guests'], ['travel', 'Travel'], ['activity', 'Activity'], ['access', 'Access'], ['settings', 'Settings'], ['about', 'About']]);
+  if (isMgr()) return [['home', 'Artists'], ['board', 'Season'], ['show', 'Show'], ['money', 'Money']].concat(cur() !== 'all' ? [['overview', 'Artist page']] : []).concat([['activity', 'Activity'], ['offers', 'Offers'], ['tour', 'Tours'], ['settle', 'Settle'], ['guests', 'Guests'], ['travel', 'Travel'], ['party', 'Party'], ['access', 'Access'], ['settings', 'Settings'], ['imports', 'Imports'], ['about', 'About']]);
   const n = [];
   if (hasHome()) n.push(['home', 'Artists']);
   if (can('day')) n.push(['today', 'Today']);
@@ -1020,11 +1079,7 @@ function uploadFiles(target, id, files) {
   commit(`${files.length} file${files.length > 1 ? 's' : ''} uploaded`, `Uploaded ${files.length} file${files.length > 1 ? 's' : ''} to ${cityOf(show(id))}`);
 }
 
-// ---------- CSV import / export (Excel parity) ----------
-const CSV_COLS = ['date', 'artist', 'city', 'venue', 'capacity', 'status', 'deal_type', 'guarantee', 'artist_pct', 'deposit', 'deposit_due', 'deposit_paid', 'currency', 'tour'];
-function csvRows() {
-  return DB.shows.slice().sort((a, b) => a.date.localeCompare(b.date)).map(s => [s.date, artist(s.artist).name, s.city, s.venue, s.cap, s.status, s.deal.type, (s.deal.g / 100).toFixed(2), s.deal.pct || '', (s.deal.dep / 100).toFixed(2), s.deal.depDue || '', s.deal.depPaid ? 'yes' : 'no', s.cur, tour(s.tour)?.name || '']);
-}
+// ---------- CSV helpers ----------
 const csvCell = v => /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v);
 function parseCSV(text) {
   const rows = []; let row = [], cell = '', q = false;
@@ -1036,57 +1091,511 @@ function parseCSV(text) {
   if (cell || row.length) { row.push(cell); rows.push(row); }
   return rows.filter(r => r.some(x => x.trim()));
 }
-function openExport() {
-  const text = [CSV_COLS, ...csvRows()].map(r => r.map(csvCell).join(',')).join('\n');
-  openForm({ title: 'Export to Excel', fields: [], extra: `<p class="muted" style="margin:0">Copy this and paste it into Excel or Google Sheets. The real app downloads a .csv file.</p>
-    <textarea class="csv field" id="f-export" readonly style="width:100%;border:1px solid var(--line-strong);border-radius:12px;padding:10px;background:var(--surface-2);color:var(--text)">${esc(text)}</textarea>
-    <button class="btn btn-tape" type="button" id="copycsv">Copy all ${DB.shows.length} shows</button>` });
-  $('#copycsv').addEventListener('click', () => {
-    const ta = $('#f-export');
-    navigator.clipboard?.writeText(ta.value).then(() => toast('Copied — paste into Excel'), () => { ta.select(); toast('Selected — press Copy'); }) ?? (ta.select(), toast('Selected — press Copy'));
-  });
-}
-function openImport() {
-  const sample = `date,artist,city,venue,capacity,status,guarantee,deposit\n2027-07-09,Juniper Vale,Detroit MI,The Crescent,1200,hold,9500,4750\n2027-07-10,Juniper Vale,Cleveland OH,Lakehouse Hall,900,pencil,7000,3500\n2027-07-12,Juniper Vale,Pittsburgh PA,Steel & Sparrow,1000,pencil,8000,4000`;
-  openForm({ title: 'Import from Excel', submit: 'Import shows', fields: [],
-    extra: `<p class="muted" style="margin:0">Paste rows copied from your dates sheet, or choose a .csv file. First row = column names. We match <b>date, artist, city, venue, capacity, status, guarantee, deposit</b> (anything else is ignored).</p>
-      <label class="field" for="f-csvfile">CSV file<input type="file" id="f-csvfile" accept=".csv,text/csv" style="height:auto;padding:10px"></label>
-      <label class="field" for="f-csv">Or paste here<textarea class="csv" id="f-csv" name="csv">${esc(sample)}</textarea></label>
-      <p class="small muted" style="margin:0" id="csvinfo"></p>`,
-    onSave(o, form) {
-      const rows = parseCSV(form.elements.csv.value);
-      if (rows.length < 2) { toast('Nothing to import'); return false; }
-      const head = rows[0].map(h => h.trim().toLowerCase().replace(/\s+/g, '_'));
-      const col = n => head.findIndex(h => h === n || h.startsWith(n));
-      let added = 0;
-      rows.slice(1).forEach(r => {
-        const g = k => (col(k) >= 0 ? (r[col(k)] || '').trim() : '');
-        if (!g('date') || !g('city')) return;
-        let a = DB.artists.find(x => x.name.toLowerCase() === g('artist').toLowerCase());
-        if (!a && g('artist')) { a = { id: uid('ar'), name: g('artist'), genre: '', home: '', agent: '', hue: Math.floor(Math.random() * 360), photo: null }; DB.artists.push(a); }
-        const cents = v => Math.round(parseFloat(String(v).replace(/[^0-9.]/g, '')) * 100) || 0;
-        const st = (g('status') || 'pencil').toLowerCase();
-        const s = { id: uid('sh'), artist: (a || DB.artists[0]).id, tour: '', date: g('date'), city: g('city'), venue: g('venue') || 'TBC', cap: parseInt(g('capacity'), 10) || 0, status: STATUSES.some(x => x[0] === st) ? st : 'pencil', hold: 1, cur: 'USD', address: '', wifi: '', parking: '', hospitality: '', note: 'Imported', guestCap: 24, settled: null,
-          deal: { type: 'vs', g: cents(g('guarantee')), pct: 85, dep: cents(g('deposit')), depDue: '', depPaid: false } };
-        const key = Object.keys(CITIES).find(c => s.city.toLowerCase().startsWith(c)); if (key) s.ll = CITIES[key];
-        DB.shows.push(s);
-        DB.templates.advance.forEach(t => DB.tasks.push({ id: uid('k'), show: s.id, label: t.label, owner: t.owner, due: addDays(s.date, -t.before), status: 'To do', comments: [] }));
-        added++;
-      });
-      log(`Imported ${added} shows from a spreadsheet`); toast(`Imported ${added} shows — they're on the season board`);
-    } });
-  $('#f-csvfile').addEventListener('change', e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => { $('#f-csv').value = r.result; $('#csvinfo').textContent = `Loaded ${f.name}`; }; r.readAsText(f); });
-}
 
 // ---------- views ----------
 const V = {};
 
+// ---------- theme ----------
+const THEMES = [['system', 'Match device'], ['light', 'Light'], ['dark', 'Dark']];
+let THEME = store.get('theme', 'system');
+function applyTheme() {
+  const t = THEME;
+  if (t === 'system') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', t);
+  const dark = t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+  const b = $('#themebtn'); if (b) { b.innerHTML = icon(dark ? 'sun' : 'moon'); b.setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode'); b.title = b.getAttribute('aria-label'); }
+}
+function setTheme(t) { THEME = t; store.set('theme', t); applyTheme(); }
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
+
+// ---------- page help (the ? next to every title) ----------
+const HELP = {
+  home: { what: 'Every artist you work with, one card each. Pick an artist and every other page shows only their shows, money and team.', do: ['Tap an artist to work on them; tap "All artists" to see the whole roster', 'Sort by who needs attention first', 'Management: add an artist or bring in data from Excel'], who: 'Management and tour managers with more than one artist.' },
+  overview: { what: 'One artist at a glance: what is coming up, their tours, their team and anything overdue.', do: ['Tap the picture to change it', 'Add a tour or a one-off show', 'Open any upcoming show'], who: 'Management.' },
+  board: { what: 'Your dates sheet. Every show and open offer, by month or as a sortable table.', do: ['List or Table view; search and filter by status', 'Table: tick rows to change several statuses at once', 'Import a spreadsheet, or export this view back to Excel'], who: 'Management, and anyone given the Season area. Deals show only to people who may see show costs.' },
+  offers: { what: 'Offers from agents and promoters waiting for an answer.', do: ['Accept as hold → a Hold 1 appears on the Season board with your advance tasks', 'Counter or decline', 'Log an offer that came by email'], who: 'Management.' },
+  tour: { what: 'A run of shows for one artist: routing, readiness and money.', do: ['Switch tour with the picker', 'Tap a show to open it', 'Add a show to this tour'], who: 'Management.' },
+  show: { what: 'Everything about one show, in tabs: the deal, advance tasks, who brings what, documents, the day sheet and contacts.', do: ['Tick tasks off or change their status; tap a task to comment', 'Drop files onto Docs to upload riders, plots and contracts', 'Use a template to start the day sheet, then adjust times'], who: 'Each role sees only the tabs they are allowed: crew see the day sheet, the venue sees only its own show.' },
+  settle: { what: 'The night-of settlement. Type the real box-office numbers and the sheet recalculates.', do: ['Add the promoter’s agreed expenses', 'Enter withholding tax if any', 'Mark as settled — it flows into commissions and the budget'], who: 'Management and the tour manager. The venue can view it. Never crew or artist unless you allow it.' },
+  money: { what: 'Money across the roster: deposits due, commission statements and tour budgets.', do: ['Mark deposits received', 'Pick an artist for their commission statement', 'Edit budget lines per tour'], who: 'Management only, unless you give someone the Profit area.' },
+  guests: { what: 'The guest list for one show.', do: ['Approve or decline requests', 'Add someone yourself', 'The venue sees only the approved list'], who: 'Everyone can request; management and the tour manager approve.' },
+  travel: { what: 'Flights, van legs and hotels.', do: ['Each item shows only to the people it applies to', 'Add travel for one person or everyone on the road'], who: 'Crew see only their own. Management and the tour manager see everyone’s.' },
+  mymoney: { what: 'Your own pay, per diems and expenses. Nobody else’s.', do: ['Add an expense with a receipt photo', 'See what is still owed back to you'], who: 'Only you and management.' },
+  party: { what: 'Everyone on this artist’s team and the venue crew for tonight.', do: ['Tap a person to open their card', 'Management: set what they bring and what they can see', 'Each person ticks off their own items'], who: 'Everyone. Phone numbers hide from the venue except the tour manager’s.' },
+  access: { what: 'Who sees what. Defaults for each role; change one person on their card in Party.', do: ['Hidden / View / Edit for every area', 'Money is three separate areas so costs and profit can be hidden separately', '"See it as…" to check the result'], who: 'Management only.' },
+  activity: { what: 'What needs attention, and who changed what.', do: ['Tap an item to go fix it', 'Overdue tasks, deposits, expiring offers and guest requests land here first'], who: 'Anyone who can edit advance tasks.' },
+  settings: { what: 'Templates, rates, appearance and your imports.', do: ['Edit the advance and day-sheet templates once; every new show uses them', 'Import data or see what an earlier import created', 'Light or dark mode'], who: 'Management.' },
+  imports: { what: 'Every import you have done, what it created and where it went.', do: ['Open the shows, tasks or contacts an import created', 'Undo an import if it came in wrong', 'Import another file'], who: 'Management.' },
+  today: { what: 'The day sheet for today, plus the venue, your hotel and who to call.', do: ['Tick off what you are bringing', 'Add the day to your calendar'], who: 'Everyone on the road.' },
+};
+const helpBtn = page => HELP[page] ? `<button class="helpbtn" type="button" data-act="help" data-id="${page}" aria-label="What is this page?">?</button>` : '';
+function openHelp(page) {
+  const h = HELP[page]; if (!h) return;
+  const title = (navFor().find(n => n[0] === page) || [, 'This page'])[1];
+  openForm({ title: `About ${title}`, fields: [], extra: `<p style="margin:0">${esc(h.what)}</p>
+    <div class="minihead">What you can do here</div><ul class="tips">${h.do.map(x => `<li>${esc(x)}</li>`).join('')}</ul>
+    <div class="minihead">Who sees this</div><p class="muted" style="margin:0">${esc(h.who)}</p>` });
+}
+
+// ---------- getting started (managers, dismissible) ----------
+const START = [
+  ['import', 'Bring your data', 'Upload your dates sheet from Excel, or exports from ClickUp, Master Tour or Daysheets.', 'import'],
+  ['team', 'Add your team', 'Tour managers, band, crew and the venue — with a role each.', 'party'],
+  ['access', 'Decide who sees what', 'Costs and profit stay with management unless you say otherwise.', 'access'],
+  ['share', 'Share the day sheet', 'Everyone gets a link; they see only their part.', 'party'],
+];
+function startCard() {
+  if (!isMgr() || store.get('start.hidden', false)) return '';
+  const done = store.get('start.done', {});
+  if (DB.imports.length) done.import = true;
+  const n = START.filter(s => done[s[0]]).length;
+  return `<section class="card start"><div class="row between"><div><h2>Getting started</h2><div class="small muted">${n} of ${START.length} done · takes about ten minutes</div></div><button class="iconbtn" data-act="hideStart" aria-label="Hide getting started">×</button></div>
+    <ol class="steps">${START.map(([k, t, sub, go]) => `<li class="${done[k] ? 'done' : ''}"><button type="button" data-act="startStep" data-id="${k}" data-go="${go}"><span class="n">${done[k] ? '✓' : ''}</span><span class="grow"><b>${t}</b><span class="small muted">${sub}</span></span>${icon('chev')}</button></li>`).join('')}</ol></section>`;
+}
+
+// ---------- import: sources, kinds, matching ----------
+const SOURCES = [
+  { id: 'excel', name: 'Excel, Google Sheets or Numbers', hint: 'Upload the file as it is (.xlsx or .csv). Google Sheets: File → Download → Microsoft Excel. Numbers: File → Export To → Excel.', kinds: ['shows', 'tasks', 'contacts', 'travel', 'guests', 'budget'] },
+  { id: 'clickup', name: 'ClickUp', hint: 'Open the list, then ··· → Export → CSV. Task names, statuses, assignees and due dates become advance tasks on the matching show.', kinds: ['tasks'] },
+  { id: 'mastertour', name: 'Master Tour', hint: 'Tour → Export → Excel: Schedule, Contacts or Personnel. Dates, cities, venues and set times become shows and day sheets.', kinds: ['shows', 'contacts', 'travel'] },
+  { id: 'daysheets', name: 'Daysheets', hint: 'Export the schedule, travel or personnel as CSV from the tour’s settings.', kinds: ['shows', 'travel', 'contacts'] },
+  { id: 'agprism', name: 'Artist Growth, Prism or Gigwell', hint: 'Export events, holds or settlements as CSV from the calendar or a report.', kinds: ['shows', 'budget'] },
+  { id: 'ics', name: 'A calendar (Google, Apple, Outlook)', hint: 'Export the calendar as an .ics file. Each event becomes a show: date, city and venue from the title and location.', kinds: ['shows'] },
+  { id: 'other', name: 'Notion, Airtable or any other CSV', hint: 'Any spreadsheet-style export works. You match the columns on the next step.', kinds: ['shows', 'tasks', 'contacts', 'travel', 'guests', 'budget'] },
+];
+// field: [key, label, header words we recognise, required?]
+const IMPORT_KINDS = {
+  shows: { label: 'Shows and dates', where: 'Season board', go: 'board', fields: [
+    ['date', 'Date', ['date', 'show date', 'event date', 'day', 'start', 'dtstart'], true], ['artist', 'Artist', ['artist', 'act', 'band', 'client', 'talent']],
+    ['city', 'City', ['city', 'market', 'location', 'town', 'city/state']], ['venue', 'Venue', ['venue', 'hall', 'club', 'room', 'place', 'summary']],
+    ['cap', 'Capacity', ['capacity', 'cap', 'tickets', 'size']], ['status', 'Status', ['status', 'state', 'hold status', 'confirmed', 'type']],
+    ['dealType', 'Deal type', ['deal type', 'terms', 'deal structure']], ['g', 'Guarantee', ['guarantee', 'fee', 'gtd', 'amount', 'offer', 'price']],
+    ['pct', 'Artist %', ['%', 'percent', 'split', 'backend', 'artist pct']], ['dep', 'Deposit', ['deposit', 'dep']], ['depDue', 'Deposit due', ['deposit due', 'due date', 'due']],
+    ['depPaid', 'Deposit received', ['deposit paid', 'deposit received', 'paid', 'received']], ['cur', 'Currency', ['currency', 'ccy', 'cur']], ['tour', 'Tour', ['tour', 'run', 'leg']],
+    ['promoter', 'Promoter', ['promoter', 'buyer', 'presenter', 'agency']], ['address', 'Address', ['address', 'street', 'location']], ['note', 'Notes', ['note', 'notes', 'comment', 'memo', 'description']],
+    ['loadin', 'Load-in time', ['load in', 'load-in', 'loadin', 'load']], ['soundcheck', 'Soundcheck', ['soundcheck', 'sound check', 'sc']], ['doors', 'Doors', ['doors', 'door time']],
+    ['set', 'Set time', ['set time', 'show time', 'showtime', 'set', 'performance', 'on stage', 'stage time']], ['curfew', 'Curfew', ['curfew', 'end']],
+  ] },
+  tasks: { label: 'Advance tasks', where: 'Show › Advance', go: 'show', fields: [
+    ['label', 'Task', ['task name', 'task', 'name', 'title', 'item', 'to do'], true], ['status', 'Status', ['status', 'state', 'done', 'complete']],
+    ['owner', 'Owner', ['assignee', 'assignees', 'owner', 'assigned to', 'assigned', 'responsible', 'who']], ['due', 'Due date', ['due date', 'due', 'deadline', 'date']],
+    ['show', 'Show or list', ['list', 'lists', 'folder', 'show', 'event', 'project', 'space', 'city', 'venue']], ['notes', 'Notes', ['task content', 'content', 'description', 'notes', 'comment']],
+  ] },
+  contacts: { label: 'Contacts', where: 'Show › Contacts', go: 'show', fields: [
+    ['name', 'Name', ['name', 'contact', 'full name', 'contact name'], true], ['role', 'Role or title', ['title', 'role', 'position', 'job', 'job title', 'department']],
+    ['company', 'Company or venue', ['company', 'organization', 'organisation', 'org', 'venue', 'promoter']], ['ph', 'Phone', ['phone', 'mobile', 'cell', 'tel', 'telephone', 'phone number']],
+    ['email', 'Email', ['email', 'e-mail', 'mail']], ['show', 'Show', ['show', 'event', 'date', 'city']],
+  ] },
+  travel: { label: 'Travel', where: 'Travel', go: 'travel', fields: [
+    ['date', 'Date', ['date', 'dep date', 'departure date', 'day', 'check in', 'check-in'], true], ['type', 'Type', ['type', 'mode', 'category', 'kind']],
+    ['label', 'Route or hotel', ['route', 'from', 'origin', 'depart from', 'hotel', 'name', 'description', 'title']], ['to', 'To', ['to', 'arrive', 'arrival', 'destination', 'arrive at']],
+    ['time', 'Time', ['time', 'dep', 'departure', 'depart', 'dep time', 'departure time']], ['detail', 'Details', ['flight', 'flight number', 'flight no', 'confirmation', 'conf', 'pnr', 'record locator', 'details', 'notes', 'airline']],
+    ['who', 'Who', ['passenger', 'passengers', 'who', 'traveler', 'traveller', 'travelers', 'name', 'guest']],
+  ] },
+  guests: { label: 'Guest list', where: 'Guest list', go: 'guests', fields: [
+    ['name', 'Guest name', ['name', 'guest', 'guest name', 'full name'], true], ['plus', 'Plus-ones', ['+1', 'plus', 'plus ones', 'plus-ones', 'guests', 'qty', 'quantity', 'tickets']],
+    ['by', 'Requested by', ['requested by', 'for', 'by', 'host', 'contact', 'from']], ['show', 'Show', ['show', 'date', 'event', 'city']], ['status', 'Status', ['status', 'approved', 'type']],
+  ] },
+  budget: { label: 'Budget lines', where: 'Money › Tour budget', go: 'money', fields: [
+    ['cat', 'Category', ['category', 'line', 'line item', 'item', 'description', 'name', 'expense'], true], ['budget', 'Budget', ['budget', 'planned', 'estimate', 'estimated', 'projected']],
+    ['actual', 'Actual', ['actual', 'spent', 'spend', 'to date', 'paid']], ['tour', 'Tour', ['tour', 'run']],
+  ] },
+};
+const norm = h => String(h || '').toLowerCase().replace(/[_\-\/]+/g, ' ').replace(/[^a-z0-9%+ ]/g, '').replace(/\s+/g, ' ').trim();
+function guessMap(kind, head) {
+  const H = head.map(norm), used = new Set(), map = {};
+  for (const [k, , words] of IMPORT_KINDS[kind].fields) {
+    let best = -1;
+    for (const w of words) { const i = H.findIndex((h, j) => !used.has(j) && h === w); if (i >= 0) { best = i; break; } }
+    if (best < 0) for (const w of words) { const i = H.findIndex((h, j) => !used.has(j) && (h.startsWith(w + ' ') || h.endsWith(' ' + w) || (w.length > 3 && h.includes(w)))); if (i >= 0) { best = i; break; } }
+    if (best >= 0) { map[k] = best; used.add(best); }
+  }
+  return map;
+}
+function detectKind(head, source) {
+  const allowed = (SOURCES.find(s => s.id === source) || {}).kinds || Object.keys(IMPORT_KINDS);
+  let bestK = allowed[0], bestScore = -1;
+  for (const k of allowed) {
+    const m = guessMap(k, head);
+    const req = IMPORT_KINDS[k].fields.filter(f => f[3]).every(f => m[f[0]] != null);
+    const score = Object.keys(m).length + (req ? 3 : -5) + (k === 'shows' && m.city != null && m.venue != null ? 2 : 0) + (k === 'tasks' && m.owner != null && m.status != null ? 2 : 0);
+    if (score > bestScore) { bestScore = score; bestK = k; }
+  }
+  return bestK;
+}
+const MONTHS = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, sept: 9, oct: 10, nov: 11, dec: 12 };
+function parseDate(v) {
+  if (v == null || v === '') return '';
+  if (v instanceof Date) return isNaN(v) ? '' : v.toISOString().slice(0, 10);
+  const s = String(v).trim();
+  let m;
+  if ((m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/))) return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
+  if ((m = s.match(/^(\d{8})T?/)) && s.length >= 8 && /^\d{8}/.test(s)) return `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`;
+  if ((m = s.match(/^(\d{1,2})[\/.](\d{1,2})[\/.](\d{2,4})/))) { let y = +m[3]; if (y < 100) y += 2000; return `${y}-${m[1].padStart(2, '0')}-${m[2].padStart(2, '0')}`; }
+  if ((m = s.match(/^(\d{1,2})[ -]([a-z]{3,})[ -,]*(\d{4})/i)) && MONTHS[m[2].slice(0, 3).toLowerCase()]) return `${m[3]}-${String(MONTHS[m[2].slice(0, 3).toLowerCase()]).padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+  if ((m = s.match(/^(?:[a-z]{3,},?\s+)?([a-z]{3,})\.?\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(\d{4})/i)) && MONTHS[m[1].slice(0, 3).toLowerCase()]) return `${m[3]}-${String(MONTHS[m[1].slice(0, 3).toLowerCase()]).padStart(2, '0')}-${m[2].padStart(2, '0')}`;
+  if (/^\d{4,6}(\.\d+)?$/.test(s) && +s > 20000 && +s < 80000) { const d = new Date(Math.round((+s - 25569) * 864e5)); return d.toISOString().slice(0, 10); }   // Excel serial
+  const d = new Date(s); return isNaN(d) ? '' : d.toISOString().slice(0, 10);
+}
+function parseTime(v) {
+  if (v == null || v === '') return '';
+  const s = String(v).trim().toLowerCase(); let m;
+  if ((m = s.match(/^(\d{1,2}):(\d{2})\s*(am|pm)?/))) { let h = +m[1]; if (m[3] === 'pm' && h < 12) h += 12; if (m[3] === 'am' && h === 12) h = 0; return `${String(h).padStart(2, '0')}:${m[2]}`; }
+  if ((m = s.match(/^(\d{1,2})\s*(am|pm)$/))) { let h = +m[1]; if (m[2] === 'pm' && h < 12) h += 12; if (m[2] === 'am' && h === 12) h = 0; return `${String(h).padStart(2, '0')}:00`; }
+  if (/^0?\.\d+$/.test(s)) { const mins = Math.round(+s * 1440); return `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`; }   // Excel time fraction
+  if ((m = s.match(/^(\d{3,4})$/))) return `${m[1].slice(0, -2).padStart(2, '0')}:${m[1].slice(-2)}`;
+  return '';
+}
+const cents = v => { if (v == null || v === '') return 0; const n = parseFloat(String(v).replace(/[^0-9.\-]/g, '')); return Number.isFinite(n) ? Math.round(n * 100) : 0; };
+function mapStatus(v) {
+  const s = norm(v);
+  if (!s) return 'pencil';
+  if (/cancel|canx|dropped|declined/.test(s)) return 'cancelled';
+  if (/confirm|booked|contracted|signed|settled|played|complete|done/.test(s)) return 'confirmed';
+  if (/offer|pending offer/.test(s)) return 'offer';
+  if (/hold|tentative|hc|h1|h2|h3/.test(s)) return 'hold';
+  if (/pencil|avail|option|inquiry|tbc|tentative/.test(s)) return 'pencil';
+  return 'pencil';
+}
+function mapTaskStatus(v) {
+  const s = norm(v);
+  if (/done|complete|closed|finished|yes|true|✓|x$/.test(s)) return 'Done';
+  if (/progress|doing|working|active|started/.test(s)) return 'In progress';
+  if (/wait|blocked|review|pending|hold/.test(s)) return 'Waiting';
+  return 'To do';
+}
+function findPerson(name) {
+  const n = norm(name); if (!n) return null;
+  const ids = Object.keys(DB.people);
+  return ids.find(k => norm(DB.people[k].name) === n) || ids.find(k => norm(DB.people[k].name).split(' ')[0] === n.split(' ')[0]) || ids.find(k => n.includes(norm(DB.people[k].name).split(' ')[0])) || null;
+}
+function findShow(text, date) {
+  const t = norm(text);
+  const pool = DB.shows.filter(s => s.status !== 'cancelled');
+  if (date) { const byDate = pool.filter(s => s.date === date); if (byDate.length === 1) return byDate[0]; if (byDate.length > 1 && t) return byDate.find(s => t.includes(norm(cityOf(s))) || t.includes(norm(s.venue))) || byDate[0]; if (byDate.length) return byDate[0]; }
+  if (!t) return null;
+  const isoInText = parseDate(t.match(/\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{2,4}|[a-z]{3,}\s+\d{1,2}(?:,?\s+\d{4})?/i)?.[0] || '');
+  return pool.find(s => t.includes(norm(s.venue)) && (!isoInText || s.date === isoInText)) || pool.find(s => t.includes(norm(cityOf(s))) && (!isoInText || s.date === isoInText)) || (isoInText ? pool.find(s => s.date === isoInText) : null) || null;
+}
+function findArtist(name, create, impId) {
+  const n = norm(name); if (!n) return null;
+  let a = DB.artists.find(x => norm(x.name) === n) || DB.artists.find(x => norm(x.name).includes(n) || n.includes(norm(x.name)));
+  if (!a && create) { a = { id: uid('ar'), name: String(name).trim(), genre: '', home: '', agent: '', hue: Math.floor(Math.random() * 360), photo: null, src: impId }; DB.artists.push(a); }
+  return a;
+}
+
+// ---------- file reading: CSV, Excel (SheetJS from cdnjs, loaded when needed), .ics ----------
+function loadXLSX() {
+  if (window.XLSX) return Promise.resolve();
+  return new Promise((ok, fail) => { const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'; s.onload = ok; s.onerror = () => fail(new Error('Could not load the Excel reader')); document.head.appendChild(s); });
+}
+function parseICS(text) {
+  const rows = [['date', 'summary', 'location', 'description']];
+  text.replace(/\r?\n[ \t]/g, '').split(/\r?\n/).reduce((ev, line) => {
+    if (line === 'BEGIN:VEVENT') return {};
+    if (line === 'END:VEVENT') { if (ev) rows.push([ev.date || '', ev.summary || '', ev.location || '', ev.description || '']); return null; }
+    if (!ev) return ev;
+    const i = line.indexOf(':'); if (i < 0) return ev;
+    const key = line.slice(0, i).split(';')[0].toUpperCase(), val = line.slice(i + 1).replace(/\\,/g, ',').replace(/\\n/g, ' ');
+    if (key === 'DTSTART') ev.date = parseDate(val); else if (key === 'SUMMARY') ev.summary = val; else if (key === 'LOCATION') ev.location = val; else if (key === 'DESCRIPTION') ev.description = val;
+    return ev;
+  }, null);
+  return rows;
+}
+async function readFile(file) {
+  const name = file.name.toLowerCase();
+  if (name.endsWith('.ics')) return { sheets: [{ name: 'Calendar', rows: parseICS(await file.text()) }], ics: true };
+  if (name.endsWith('.csv') || name.endsWith('.tsv') || name.endsWith('.txt') || file.type === 'text/csv') {
+    const text = await file.text();
+    return { sheets: [{ name: file.name, rows: name.endsWith('.tsv') ? text.split(/\r?\n/).filter(Boolean).map(l => l.split('\t')) : parseCSV(text) }] };
+  }
+  await loadXLSX();
+  const wb = XLSX.read(await file.arrayBuffer(), { type: 'array', cellDates: true });
+  return { sheets: wb.SheetNames.map(n => ({ name: n, rows: XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: false, defval: '' }).filter(r => r.some(x => String(x).trim())) })).filter(s => s.rows.length) };
+}
+// a sheet may have a title row above the headers: use the first row with 3+ filled cells as the header
+function splitHeader(rows) {
+  let i = rows.findIndex(r => r.filter(x => String(x).trim()).length >= Math.min(3, Math.max(...rows.slice(0, 5).map(r => r.filter(x => String(x).trim()).length))));
+  if (i < 0) i = 0;
+  return { head: rows[i].map(x => String(x).trim()), data: rows.slice(i + 1) };
+}
+
+// ---------- the wizard ----------
+const W = { step: 0 };
+function openImportWizard(preset = {}) {
+  Object.assign(W, { step: 0, source: preset.source || null, file: null, sheets: [], sheet: 0, head: [], data: [], kind: null, map: {}, defaultArtist: cur() !== 'all' ? cur() : (DB.artists[0]?.id || ''), defaultShow: null, createArtists: true, result: null });
+  renderWizard();
+}
+function renderWizard() {
+  const d = $('#dlg');
+  const src = SOURCES.find(s => s.id === W.source);
+  const stepsBar = `<ol class="wsteps" aria-label="Import steps">${['Source', 'File', 'Match', 'Check', 'Done'].map((l, i) => `<li class="${i < W.step ? 'past' : ''} ${i === W.step ? 'now' : ''}"><span>${i + 1}</span>${l}</li>`).join('')}</ol>`;
+  let body = '', foot = '';
+  if (W.step === 0) {
+    body = `<p class="muted" style="margin:0">Where is the data today? Pick one and we'll tell you how to get the file.</p>
+      <div class="srcgrid">${SOURCES.map(s => `<button type="button" class="srccard" data-src="${s.id}" aria-pressed="${W.source === s.id}"><b>${esc(s.name)}</b><span class="small muted">${esc(s.hint)}</span></button>`).join('')}</div>`;
+    foot = `<button class="btn btn-primary" type="button" data-w="next" ${W.source ? '' : 'disabled'}>Next: choose the file</button>`;
+  } else if (W.step === 1) {
+    const sheetPick = W.sheets.length > 1 ? `<label class="field" for="w-sheet">This file has ${W.sheets.length} sheets — which one first?<select id="w-sheet">${W.sheets.map((s, i) => `<option value="${i}" ${i === W.sheet ? 'selected' : ''}>${esc(s.name)} · ${s.rows.length - 1} rows</option>`).join('')}</select></label>` : '';
+    body = `<div class="note">${esc(src.hint)}</div>
+      <label class="upload" data-wdrop><input type="file" id="w-file" accept="${W.source === 'ics' ? '.ics' : '.xlsx,.xls,.csv,.tsv,.txt,.ics'}">${icon('upload')}<b>${W.file ? esc(W.file.name) : 'Drop the file here or tap to choose'}</b><span class="small">${W.file ? `${fileSize(W.file.size)} · ${W.sheets.reduce((a, s) => a + s.rows.length - 1, 0)} rows` : 'Excel (.xlsx), CSV or .ics — up to a few thousand rows'}</span></label>
+      ${sheetPick}
+      <details><summary class="small muted" style="cursor:pointer">Or paste rows copied from a spreadsheet</summary><textarea class="csv field" id="w-paste" placeholder="Paste here — first row should be the column names" style="width:100%;margin-top:8px;border:1px solid var(--line-strong);border-radius:12px;padding:10px;background:var(--surface);color:var(--text)"></textarea><button class="btn btn-secondary btn-sm" type="button" data-w="paste" style="margin-top:8px">Use pasted rows</button></details>`;
+    foot = `<button class="btn btn-secondary" type="button" data-w="back">Back</button><button class="btn btn-primary" type="button" data-w="next" ${W.sheets.length ? '' : 'disabled'}>Next: match columns</button>`;
+  } else if (W.step === 2) {
+    const K = IMPORT_KINDS[W.kind];
+    const sample = W.data[0] || [];
+    const allowed = src.kinds;
+    body = `<label class="field" for="w-kind">What is in this ${W.sheets.length > 1 ? 'sheet' : 'file'}?<select id="w-kind">${allowed.map(k => `<option value="${k}" ${k === W.kind ? 'selected' : ''}>${IMPORT_KINDS[k].label} → ${IMPORT_KINDS[k].where}</option>`).join('')}</select></label>
+      <p class="small muted" style="margin:0">We matched ${Object.keys(W.map).length} of your ${W.head.length} columns. Fix any that look wrong; leave the rest as "skip".</p>
+      <div class="maprows">${K.fields.map(([k, label, , req]) => `<label class="maprow" for="w-m-${k}"><span class="lbl">${label}${req ? ' <span class="req">needed</span>' : ''}</span>
+        <select id="w-m-${k}" data-map="${k}"><option value="">— skip —</option>${W.head.map((h, i) => `<option value="${i}" ${W.map[k] === i ? 'selected' : ''}>${esc(h || 'Column ' + (i + 1))}</option>`).join('')}</select>
+        <span class="small muted eg">${W.map[k] != null ? esc(String(sample[W.map[k]] ?? '').slice(0, 28)) : ''}</span></label>`).join('')}</div>
+      ${W.kind === 'shows' && W.map.artist == null ? `<label class="field" for="w-art">No artist column — put every row under<select id="w-art">${DB.artists.map(a => `<option value="${a.id}" ${W.defaultArtist === a.id ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}</select></label>` : ''}
+      ${['tasks', 'contacts', 'guests'].includes(W.kind) ? `<label class="field" for="w-show">When a row doesn't say which show, attach it to<select id="w-show"><option value="">— skip that row —</option>${curShows().filter(s => s.status !== 'cancelled').map(s => `<option value="${s.id}" ${W.defaultShow === s.id ? 'selected' : ''}>${short(s.date)} · ${esc(cityOf(s))} · ${esc(s.venue)}</option>`).join('')}</select></label>` : ''}`;
+    foot = `<button class="btn btn-secondary" type="button" data-w="back">Back</button><button class="btn btn-primary" type="button" data-w="next">Next: check</button>`;
+  } else if (W.step === 3) {
+    const pv = buildImport(true);
+    body = `<div class="stats">${Object.entries(pv.counts).filter(([, n]) => n).map(([k, n]) => `<div class="card stat" style="padding:12px 14px"><span class="eyebrow">${COUNT_LABELS[k]}</span><b>${n}</b></div>`).join('')}</div>
+      ${pv.updated ? `<p class="small muted" style="margin:0">${pv.updated} row${pv.updated > 1 ? 's' : ''} match shows you already have (same date and city) — they'll fill in blanks, not duplicate.</p>` : ''}
+      ${pv.skipped.length ? `<div class="note">Skipping ${pv.skipped.length} row${pv.skipped.length > 1 ? 's' : ''}: ${esc(pv.skipped.slice(0, 3).join(' · '))}${pv.skipped.length > 3 ? ' …' : ''}</div>` : ''}
+      <div class="scroll-x"><table><thead><tr>${pv.preview[0].map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${pv.preview.slice(1, 6).map(r => `<tr>${r.map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
+      <p class="small muted" style="margin:0">Everything from this file gets an "Imported" tag, so you can find it — or undo the whole import — under Settings › Imports.</p>`;
+    foot = `<button class="btn btn-secondary" type="button" data-w="back">Back</button><button class="btn btn-tape" type="button" data-w="run">Import ${pv.total} row${pv.total === 1 ? '' : 's'}</button>`;
+  } else {
+    const r = W.result;
+    body = `<p style="margin:0"><b>Done.</b> Here's where everything went:</p>
+      <div class="donelist">${Object.entries(r.counts).filter(([, n]) => n).map(([k, n]) => `<a href="#${WHERE[k][1]}" data-w="close" data-godone="${WHERE[k][1]}"><span class="cnt2">${n}</span><span class="grow"><b>${COUNT_LABELS[k]}</b><span class="small muted">now on ${WHERE[k][0]}</span></span>${icon('chev')}</a>`).join('')}</div>
+      ${r.skipped.length ? `<p class="small muted" style="margin:0">Skipped ${r.skipped.length}: ${esc(r.skipped.slice(0, 4).join(' · '))}</p>` : ''}
+      <p class="small muted" style="margin:0">Look for the <span class="chip st-imported plain">Imported</span> tag. Wrong file? <a href="#imports" data-w="close">Settings › Imports</a> can undo it.</p>`;
+    foot = `${W.sheets.length > 1 ? `<button class="btn btn-secondary" type="button" data-w="another">Import another sheet</button>` : `<button class="btn btn-secondary" type="button" data-w="restart">Import another file</button>`}<button class="btn btn-primary" type="button" data-w="close">Done</button>`;
+  }
+  d.style.width = 'min(720px, calc(100% - 24px))';
+  d.innerHTML = `<form id="wform" novalidate><div class="row between"><h2>${W.step === 4 ? 'Imported' : 'Bring your data'}</h2><button type="button" class="iconbtn" data-w="close" aria-label="Close">×</button></div>${stepsBar}${body}<div class="row wrap" style="justify-content:flex-end;gap:8px">${foot}</div></form>`;
+  if (!d.open) d.showModal();
+  bindWizard();
+}
+const COUNT_LABELS = { shows: 'Shows', updated: 'Shows updated', artists: 'New artists', tasks: 'Advance tasks', slots: 'Day-sheet times', contacts: 'Contacts', travel: 'Travel items', guests: 'Guests', budget: 'Budget lines', tours: 'Tours' };
+const WHERE = { shows: ['the Season board', 'board'], updated: ['the Season board', 'board'], artists: ['the Artists page', 'home'], tasks: ['each show’s Advance tab', 'show'], slots: ['each show’s Day sheet', 'show'], contacts: ['each show’s Contacts tab', 'show'], travel: ['Travel', 'travel'], guests: ['the Guest list', 'guests'], budget: ['Money › Tour budget', 'money'], tours: ['Tours', 'tour'] };
+function bindWizard() {
+  const d = $('#dlg'), form = $('#wform');
+  form.addEventListener('submit', e => e.preventDefault());
+  form.querySelectorAll('[data-src]').forEach(b => b.addEventListener('click', () => { W.source = b.dataset.src; W.step = 1; renderWizard(); }));
+  form.querySelectorAll('[data-w]').forEach(b => b.addEventListener('click', e => {
+    const a = b.dataset.w;
+    if (a === 'close') { e.preventDefault(); d.close(); if (b.dataset.godone) go(b.dataset.godone); else if (b.getAttribute('href')) go(b.getAttribute('href').slice(1)); else route(); }
+    if (a === 'back') { W.step = Math.max(0, W.step - 1); renderWizard(); }
+    if (a === 'next') { if (W.step === 1) prepSheet(); W.step++; renderWizard(); }
+    if (a === 'paste') { const rows = parseCSV($('#w-paste').value); if (rows.length < 2) return toast('Paste at least a header row and one row'); W.file = { name: 'Pasted rows', size: $('#w-paste').value.length }; W.sheets = [{ name: 'Pasted', rows }]; W.sheet = 0; renderWizard(); }
+    if (a === 'run') { W.result = buildImport(false); W.step = 4; renderWizard(); }
+    if (a === 'another') { W.step = 1; W.result = null; renderWizard(); }
+    if (a === 'restart') { openImportWizard({ source: W.source }); }
+  }));
+  const fi = $('#w-file');
+  if (fi) fi.addEventListener('change', async e => { const f = e.target.files[0]; if (!f) return; await takeFile(f); });
+  const zone = form.querySelector('[data-wdrop]');
+  if (zone) ['dragover', 'dragleave', 'drop'].forEach(ev => zone.addEventListener(ev, async e => { e.preventDefault(); zone.classList.toggle('drag', ev === 'dragover'); if (ev === 'drop' && e.dataTransfer.files[0]) await takeFile(e.dataTransfer.files[0]); }));
+  const sp = $('#w-sheet'); if (sp) sp.addEventListener('change', () => { W.sheet = +sp.value; });
+  const kp = $('#w-kind'); if (kp) kp.addEventListener('change', () => { W.kind = kp.value; W.map = guessMap(W.kind, W.head); renderWizard(); });
+  form.querySelectorAll('[data-map]').forEach(s => s.addEventListener('change', () => { if (s.value === '') delete W.map[s.dataset.map]; else W.map[s.dataset.map] = +s.value; renderWizard(); }));
+  const ap = $('#w-art'); if (ap) ap.addEventListener('change', () => { W.defaultArtist = ap.value; });
+  const shp = $('#w-show'); if (shp) shp.addEventListener('change', () => { W.defaultShow = shp.value || null; });
+}
+async function takeFile(f) {
+  try { toast('Reading ' + f.name + '…'); const r = await readFile(f); if (!r.sheets.length) return toast('That file looks empty'); W.file = f; W.sheets = r.sheets; W.sheet = 0; if (r.ics) W.source = 'ics'; renderWizard(); }
+  catch (err) { toast(err.message || 'Could not read that file'); }
+}
+function prepSheet() {
+  const { head, data } = splitHeader(W.sheets[W.sheet].rows);
+  W.head = head; W.data = data;
+  W.kind = detectKind(head, W.source);
+  W.map = guessMap(W.kind, head);
+  if (!W.defaultShow) W.defaultShow = (curShows().find(s => s.date >= NOW.date && s.status !== 'cancelled') || {}).id || null;
+}
+// turn mapped rows into records. dry = preview only (no writes)
+function buildImport(dry) {
+  const impId = dry ? null : uid('imp');
+  const g = (r, k) => W.map[k] != null ? String(r[W.map[k]] ?? '').trim() : '';
+  const counts = { shows: 0, updated: 0, artists: 0, tasks: 0, slots: 0, contacts: 0, travel: 0, guests: 0, budget: 0, tours: 0 };
+  const skipped = [], preview = [], ids = { shows: [], artists: [], tasks: [], slots: [], contacts: [], travel: [], guests: [], budget: [], tours: [] };
+  const artistsBefore = DB.artists.length;
+  const snapshotArtists = DB.artists.map(a => a.id), newNames = new Set();
+  const K = W.kind;
+  const tag = o => { if (!dry) o.src = impId; return o; };
+  if (K === 'shows') {
+    preview.push(['Date', 'Artist', 'City', 'Venue', 'Status', 'Deal']);
+    W.data.forEach((r, i) => {
+      const date = parseDate(g(r, 'date'));
+      let city = g(r, 'city'), venue = g(r, 'venue'), titleArtist = '';
+      if (W.source === 'ics' || (!city && venue)) {
+        let parts = venue.split(/\s*(?:[–—|@]|\s-\s|:\s)\s*/).map(x => x.trim()).filter(Boolean);
+        const ai = parts.findIndex(x => findArtist(x, false)); if (ai >= 0) { titleArtist = parts[ai]; parts.splice(ai, 1); }
+        if (parts.length >= 2) { city = parts[0]; venue = parts.slice(1).join(' · '); } else { venue = parts[0] || venue; city = (g(r, 'address').split(',').slice(-1)[0] || '').trim() || venue; }
+      }
+      if (!date) { skipped.push(`row ${i + 2}: no date`); return; }
+      if (!city && !venue) { skipped.push(`row ${i + 2}: no city or venue`); return; }
+      if (/^(day off|off day|off|travel|travel day|drive|fly|flight|rehearsal|press day|promo|interview|hotel)\b/i.test(venue) || /^(day off|off|travel)\b/i.test(city)) { skipped.push(`row ${i + 2}: "${(venue || city).slice(0, 20)}" isn't a show`); return; }
+      const aName = g(r, 'artist') || titleArtist;
+      let a = aName ? (dry ? (findArtist(aName, false) || { id: null, name: aName, isNew: true }) : findArtist(aName, W.createArtists, impId)) : artist(W.defaultArtist);
+      if (a && a.isNew && !newNames.has(norm(aName))) { newNames.add(norm(aName)); counts.artists++; }
+      const status = mapStatus(g(r, 'status'));
+      const dealType = /flat/.test(norm(g(r, 'dealType'))) ? 'flat' : /door/.test(norm(g(r, 'dealType'))) ? 'door' : /fest/.test(norm(g(r, 'dealType'))) ? 'fest' : 'vs';
+      const gCents = cents(g(r, 'g')), dep = cents(g(r, 'dep'));
+      preview.push([date, a ? a.name : '', city, venue, status, gCents ? money(gCents) + (dealType === 'vs' ? ' vs %' : '') : '—']);
+      const existing = DB.shows.find(s => s.date === date && (norm(s.city) === norm(city) || (venue && norm(s.venue) === norm(venue))));
+      if (existing) {
+        counts.updated++;
+        if (!dry) { if (!existing.venue || existing.venue === 'TBC') existing.venue = venue || existing.venue; if (!existing.cap && g(r, 'cap')) existing.cap = parseInt(g(r, 'cap'), 10) || 0; if (!existing.deal.g && gCents) existing.deal.g = gCents; if (!existing.deal.dep && dep) existing.deal.dep = dep; if (!existing.address && g(r, 'address')) existing.address = g(r, 'address'); addSlots(existing, r, g, impId, counts, ids); }
+        return;
+      }
+      counts.shows++;
+      if (dry) { addSlots({ id: '__dry', artist: a && a.id }, r, g, null, counts, ids); return; }
+      let tourId = '';
+      const tName = g(r, 'tour');
+      if (tName && a) { let t = DB.tours.find(x => x.artist === a.id && norm(x.name) === norm(tName)); if (!t) { t = tag({ id: uid('t'), artist: a.id, name: tName, season: '' }); DB.tours.push(t); counts.tours++; ids.tours.push(t.id); } tourId = t.id; }
+      const s = tag({ id: uid('sh'), artist: a ? a.id : DB.artists[0].id, tour: tourId, date, city, venue: venue || 'TBC', cap: parseInt(g(r, 'cap'), 10) || 0, status, hold: 1,
+        cur: /cad|c\$/.test(norm(g(r, 'cur'))) ? 'CAD' : /eur|€/.test(norm(g(r, 'cur'))) ? 'EUR' : /gbp|£/.test(norm(g(r, 'cur'))) ? 'GBP' : 'USD',
+        address: g(r, 'address'), wifi: '', parking: '', hospitality: '', note: [g(r, 'note'), g(r, 'promoter') ? 'Promoter: ' + g(r, 'promoter') : ''].filter(Boolean).join(' · '), guestCap: 24, settled: null,
+        deal: { type: dealType, g: gCents, pct: parseInt(g(r, 'pct'), 10) || 85, dep, depDue: parseDate(g(r, 'depDue')), depPaid: /yes|true|paid|received|✓|x/.test(norm(g(r, 'depPaid'))) } });
+      const key = Object.keys(CITIES).find(c => norm(s.city).startsWith(c)); if (key) s.ll = CITIES[key];
+      DB.shows.push(s); ids.shows.push(s.id);
+      DB.templates.advance.forEach(t => DB.tasks.push({ id: uid('k'), show: s.id, label: t.label, owner: t.owner, due: addDays(s.date, -t.before), status: 'To do', comments: [] }));
+      addSlots(s, r, g, impId, counts, ids);
+    });
+  } else if (K === 'tasks') {
+    preview.push(['Task', 'Show', 'Owner', 'Due', 'Status']);
+    W.data.forEach((r, i) => {
+      const label = g(r, 'label'); if (!label) { skipped.push(`row ${i + 2}: no task name`); return; }
+      const due = parseDate(g(r, 'due'));
+      const s = findShow(g(r, 'show'), null) || (W.defaultShow ? show(W.defaultShow) : null);
+      if (!s) { skipped.push(`row ${i + 2}: "${label.slice(0, 24)}" — no show`); return; }
+      const owner = findPerson(g(r, 'owner')) || 'dana';
+      const status = mapTaskStatus(g(r, 'status'));
+      preview.push([label, `${short(s.date)} ${cityOf(s)}`, P(owner).name, due ? short(due) : '—', status]);
+      counts.tasks++; if (dry) return;
+      const t = tag({ id: uid('k'), show: s.id, label, owner, due: due || addDays(s.date, -7), status, comments: g(r, 'notes') ? [{ who: me(), at: 'Imported', text: g(r, 'notes').slice(0, 400) }] : [] });
+      DB.tasks.push(t); ids.tasks.push(t.id);
+    });
+  } else if (K === 'contacts') {
+    preview.push(['Name', 'Role', 'Phone', 'Show']);
+    W.data.forEach((r, i) => {
+      const name = g(r, 'name'); if (!name) { skipped.push(`row ${i + 2}: no name`); return; }
+      const s = findShow(g(r, 'show') || g(r, 'company'), null) || (W.defaultShow ? show(W.defaultShow) : null);
+      if (!s) { skipped.push(`row ${i + 2}: ${name} — no show`); return; }
+      const role = [g(r, 'role'), g(r, 'company')].filter(Boolean).join(' · ');
+      const ph = g(r, 'ph') || g(r, 'email');
+      preview.push([name, role, ph, `${short(s.date)} ${cityOf(s)}`]);
+      counts.contacts++; if (dry) return;
+      const c = tag({ id: uid('c'), show: s.id, name, role, ph }); DB.contacts.push(c); ids.contacts.push(c.id);
+    });
+  } else if (K === 'travel') {
+    preview.push(['Date', 'Type', 'Route / hotel', 'Time', 'Who']);
+    W.data.forEach((r, i) => {
+      const date = parseDate(g(r, 'date')); if (!date) { skipped.push(`row ${i + 2}: no date`); return; }
+      const tRaw = norm(g(r, 'type') + ' ' + g(r, 'detail') + ' ' + g(r, 'label'));
+      const type = /flight|air|fly|[a-z]{2}\s?\d{2,4}/.test(norm(g(r, 'type'))) || /flight|airline|pnr/.test(tRaw) && !/hotel/.test(norm(g(r, 'type'))) ? 'flight' : /hotel|room|stay|check/.test(tRaw) ? 'hotel' : /van|bus|drive|ground|car|shuttle/.test(tRaw) ? 'van' : (g(r, 'type') ? 'other' : 'flight');
+      const label = [g(r, 'label'), g(r, 'to')].filter(Boolean).join(' → ') || g(r, 'detail') || 'Travel';
+      const whoName = g(r, 'who'); const who = whoName ? (/all|everyone|band|crew|party/.test(norm(whoName)) ? 'road' : findPerson(whoName) || 'road') : 'road';
+      preview.push([date, type, label, parseTime(g(r, 'time')), whoLabel(who)]);
+      counts.travel++; if (dry) return;
+      const v = tag({ id: uid('v'), type, date, label, time: parseTime(g(r, 'time')), detail: g(r, 'detail'), who, artist: cur() !== 'all' ? cur() : 'jv' }); DB.travel.push(v); ids.travel.push(v.id);
+    });
+  } else if (K === 'guests') {
+    preview.push(['Guest', '+', 'For', 'Show', 'Status']);
+    W.data.forEach((r, i) => {
+      const name = g(r, 'name'); if (!name) { skipped.push(`row ${i + 2}: no name`); return; }
+      const s = findShow(g(r, 'show'), parseDate(g(r, 'show'))) || (W.defaultShow ? show(W.defaultShow) : null);
+      if (!s) { skipped.push(`row ${i + 2}: ${name} — no show`); return; }
+      const plus = parseInt(g(r, 'plus'), 10) || 0, by = findPerson(g(r, 'by')) || me();
+      const status = /declin|no|denied/.test(norm(g(r, 'status'))) ? 'declined' : /pend|wait|request/.test(norm(g(r, 'status'))) ? 'pending' : 'approved';
+      preview.push([name, plus, P(by).name, `${short(s.date)} ${cityOf(s)}`, status]);
+      counts.guests++; if (dry) return;
+      const gg = tag({ id: uid('g'), show: s.id, name, plus, by, status }); DB.guests.push(gg); ids.guests.push(gg.id);
+    });
+  } else if (K === 'budget') {
+    preview.push(['Category', 'Budget', 'Actual', 'Tour']);
+    const tours = DB.tours.filter(t => inCur(t.artist));
+    W.data.forEach((r, i) => {
+      const cat = g(r, 'cat'); if (!cat) { skipped.push(`row ${i + 2}: no category`); return; }
+      const tName = g(r, 'tour'); const t = (tName && tours.find(x => norm(x.name) === norm(tName) || norm(tName).includes(norm(x.name)))) || tour(S.tourId) || tours[0];
+      if (!t) { skipped.push(`row ${i + 2}: no tour to attach to`); return; }
+      preview.push([cat, money(cents(g(r, 'budget'))), money(cents(g(r, 'actual'))), t.name]);
+      counts.budget++; if (dry) return;
+      const b = tag({ id: uid('b'), tour: t.id, cat, budget: cents(g(r, 'budget')), actual: cents(g(r, 'actual')) }); DB.budget.push(b); ids.budget.push(b.id);
+    });
+  }
+  if (!dry) {
+    ids.artists = DB.artists.filter(a => !snapshotArtists.includes(a.id)).map(a => a.id);
+    counts.artists = ids.artists.length;
+    const rec = { id: impId, at: 'Just now', date: NOW.date, source: SOURCES.find(s => s.id === W.source).name, file: W.file ? W.file.name : 'Pasted', sheet: W.sheets.length > 1 ? W.sheets[W.sheet].name : '', kind: IMPORT_KINDS[K].label, counts, ids, skipped: skipped.length, by: me() };
+    DB.imports.unshift(rec);
+    const total = Object.entries(counts).filter(([k]) => k !== 'updated').reduce((a, [, n]) => a + n, 0);
+    log(`Imported ${total} item${total === 1 ? '' : 's'} (${IMPORT_KINDS[K].label.toLowerCase()}) from ${rec.source}`);
+    save();
+  }
+  const total = Object.entries(counts).filter(([k]) => !['artists', 'tours', 'slots'].includes(k)).reduce((a, [, n]) => a + n, 0);
+  return { counts, skipped, preview, total, updated: counts.updated };
+}
+function addSlots(s, r, g, impId, counts, ids) {
+  [['loadin', 'Load-in'], ['soundcheck', 'Soundcheck'], ['doors', 'Doors'], ['set', artist(s.artist).name], ['curfew', 'Curfew']].forEach(([k, label]) => {
+    const t = parseTime(g(r, k)); if (!t) return;
+    if (DB.slots.some(x => x.show === s.id && x.time === t && x.label === label)) return;
+    counts.slots++; if (!impId) return;
+    const sl = { id: uid('s'), show: s.id, time: t, label, who: '', key: k === 'set', src: impId }; DB.slots.push(sl); ids.slots.push(sl.id);
+  });
+}
+function undoImport(id) {
+  const rec = DB.imports.find(x => x.id === id); if (!rec) return;
+  const drop = k => { DB[k] = DB[k].filter(x => x.src !== id); };
+  const showIds = new Set(rec.ids.shows || []);
+  ['tasks', 'slots', 'contacts', 'guests', 'travel', 'budget', 'docs', 'showExp'].forEach(k => { DB[k] = DB[k].filter(x => x.src !== id && !showIds.has(x.show)); });
+  drop('shows'); drop('tours');
+  DB.artists = DB.artists.filter(a => a.src !== id || DB.shows.some(s => s.artist === a.id));
+  DB.imports = DB.imports.filter(x => x !== rec);
+  if (!show(S.showId)) S.showId = null;
+  commit('Import undone — everything it created is gone', `Undid import from ${rec.source} (${rec.file})`);
+}
+const srcChip = x => x && x.src ? `<span class="chip st-imported plain" title="${esc(importTitle(x.src))}">Imported</span>` : '';
+const importTitle = id => { const r = DB.imports.find(x => x.id === id); return r ? `Imported from ${r.source} · ${r.file}` : 'Imported'; };
+
+// ---------- export (Excel-ready CSV; copy, or download where the browser allows it) ----------
+const EXPORTS = {
+  shows: { label: 'Shows (dates sheet)', head: ['date', 'artist', 'city', 'venue', 'capacity', 'status', 'deal_type', 'guarantee', 'artist_pct', 'deposit', 'deposit_due', 'deposit_paid', 'currency', 'tour', 'notes'],
+    rows: () => curShows().map(s => [s.date, artist(s.artist).name, s.city, s.venue, s.cap, s.status, s.deal.type, (s.deal.g / 100).toFixed(2), s.deal.pct || '', (s.deal.dep / 100).toFixed(2), s.deal.depDue || '', s.deal.depPaid ? 'yes' : 'no', s.cur, tour(s.tour)?.name || '', s.note || '']) },
+  tasks: { label: 'Advance tasks (ClickUp-style)', head: ['task_name', 'status', 'assignee', 'due_date', 'list', 'artist'],
+    rows: () => DB.tasks.filter(t => show(t.show) && inCur(show(t.show).artist)).map(t => [t.label, t.status, P(t.owner).name, t.due, `${short(show(t.show).date)} · ${cityOf(show(t.show))} · ${show(t.show).venue}`, artist(show(t.show).artist).name]) },
+  contacts: { label: 'Contacts', head: ['name', 'role', 'phone', 'show'], rows: () => DB.contacts.filter(c => show(c.show) && inCur(show(c.show).artist)).map(c => [c.name, c.role, c.ph, `${short(show(c.show).date)} · ${cityOf(show(c.show))}`]) },
+  guests: { label: 'Guest list (this show)', head: ['name', 'plus_ones', 'requested_by', 'status'], rows: () => DB.guests.filter(g => g.show === S.showId).map(g => [g.name, g.plus, P(g.by).name, g.status]) },
+};
+function openExport(kind = 'shows') {
+  const ex = EXPORTS[kind], rows = ex.rows();
+  const text = [ex.head, ...rows].map(r => r.map(csvCell).join(',')).join('\n');
+  openForm({ title: 'Export to Excel', fields: [], extra: `<label class="field" for="f-exkind">What to export<select id="f-exkind">${Object.entries(EXPORTS).map(([k, e]) => `<option value="${k}" ${k === kind ? 'selected' : ''}>${e.label}</option>`).join('')}</select></label>
+    <p class="muted" style="margin:0">${rows.length} rows${cur() !== 'all' ? ` for ${esc(artist(cur()).name)}` : ''}. Download opens in Excel, Numbers or Google Sheets; or copy and paste into any sheet.</p>
+    <textarea class="csv field" id="f-export" readonly style="width:100%;border:1px solid var(--line-strong);border-radius:12px;padding:10px;background:var(--surface-2);color:var(--text)">${esc(text)}</textarea>
+    <div class="row wrap"><a class="btn btn-tape" id="dlcsv" href="data:text/csv;charset=utf-8,${encodeURIComponent('﻿' + text)}" download="gigtrip-${kind}.csv">${icon('upload')} Download .csv</a><button class="btn btn-secondary" type="button" id="copycsv">Copy all</button></div>` });
+  $('#f-exkind').addEventListener('change', e => openExport(e.target.value));
+  $('#copycsv').addEventListener('click', () => { const ta = $('#f-export'); (navigator.clipboard?.writeText(ta.value) || Promise.reject()).then(() => toast('Copied — paste into Excel'), () => { ta.select(); toast('Selected — press Copy'); }); });
+  $('#dlcsv').addEventListener('click', () => setTimeout(() => toast('If nothing downloaded, use Copy all'), 800));
+}
+
+// ---------- imports page (Settings › Imports) ----------
+V.imports = () => `
+  <div class="head"><div><div class="eyebrow">Settings</div><h1 class="display">Imports</h1><div class="sub muted">What each import created and where it went. Undo any of them.</div></div>
+    <button class="btn btn-tape btn-sm" data-act="import">${icon('upload')} Import data</button></div>
+  ${DB.imports.length ? DB.imports.map(r => `<section class="card stack">
+    <div class="row between wrap"><div><h2>${esc(r.file)}${r.sheet ? ` · ${esc(r.sheet)}` : ''}</h2><div class="small muted">${esc(r.source)} · ${esc(r.kind)} · ${esc(r.at)} by ${esc(P(r.by).name)}${r.skipped ? ` · ${r.skipped} rows skipped` : ''}</div></div>
+      <button class="btn btn-outline btn-sm" data-act="undoImport" data-id="${r.id}">Undo this import</button></div>
+    <div class="donelist">${Object.entries(r.counts).filter(([, n]) => n).map(([k, n]) => `<a href="#${WHERE[k][1]}"><span class="cnt2">${n}</span><span class="grow"><b>${COUNT_LABELS[k]}</b><span class="small muted">on ${WHERE[k][0]}</span></span>${icon('chev')}</a>`).join('')}</div>
+  </section>`).join('') : `<section class="card stack"><h2>Nothing imported yet</h2><p class="muted" style="margin:0">Bring your dates sheet from Excel, or an export from ClickUp, Master Tour, Daysheets, Artist Growth, Prism or a calendar. You match the columns, check a preview, and see exactly where every row landed.</p>
+    <div class="srcgrid">${SOURCES.map(s => `<button type="button" class="srccard" data-act="importFrom" data-id="${s.id}"><b>${esc(s.name)}</b><span class="small muted">${esc(s.hint)}</span></button>`).join('')}</div></section>`}`;
+
+
 V.board = () => {
   const all = DB.shows.map(s => ({ ...s, kind: 'show' })).concat(DB.offers.filter(o => o.status === 'offer').map(o => ({ ...o, kind: 'offer', deal: null, dealText: o.deal })));
-  const rows = all.filter(r => inCur(r.artist) && (S.status === 'all' || r.status === S.status)
+  const rows = all.filter(r => inCur(r.artist) && (S.status === 'all' || (S.status === 'imported' ? !!r.src : r.status === S.status))
     && (!S.q || `${r.city} ${r.venue} ${artist(r.artist).name}`.toLowerCase().includes(S.q.toLowerCase())));
   const count = st => all.filter(r => r.status === st && inCur(r.artist)).length;
-  const segS = [['all', 'Any status'], ['confirmed', 'Confirmed'], ['hold', 'Holds'], ['offer', 'Offers'], ['pencil', 'Pencils'], ['cancelled', 'Cancelled']];
+  const segS = [['all', 'Any status'], ['confirmed', 'Confirmed'], ['hold', 'Holds'], ['offer', 'Offers'], ['pencil', 'Pencils'], ['cancelled', 'Cancelled']].concat(DB.imports.length ? [['imported', 'Imported']] : []);
   const edit = isMgr();
   const deals = can('costs');
   let body;
@@ -1105,7 +1614,7 @@ V.board = () => {
       <tbody>${rows.map(r => `<tr class="click" ${r.kind === 'show' ? `data-show="${r.id}"` : `data-act="offer" data-id="${r.id}"`}>
         ${edit ? `<td class="sel">${r.kind === 'show' ? `<input type="checkbox" data-sel="${r.id}" ${S.sel.has(r.id) ? 'checked' : ''} aria-label="Select ${esc(r.city)}">` : ''}</td>` : ''}
         <td>${short(r.date)}</td><td>${esc(artist(r.artist).name)}</td><td class="${r.status === 'cancelled' ? 'cancelled-text' : ''}">${esc(r.city)}</td><td>${esc(r.venue)}</td><td class="r">${(r.cap || 0).toLocaleString()}</td>
-        <td>${statusChip(r)}</td>${deals ? `<td class="r">${money(val(r, 'g'), false, r.cur)}</td><td class="r">${r.deal && r.deal.dep ? money(r.deal.dep, false, r.cur) + (r.deal.depPaid ? ' ✓' : '') : '—'}</td>` : ''}
+        <td>${statusChip(r)}${r.src ? ' ' + srcChip(r) : ''}</td>${deals ? `<td class="r">${money(val(r, 'g'), false, r.cur)}</td><td class="r">${r.deal && r.deal.dep ? money(r.deal.dep, false, r.cur) + (r.deal.depPaid ? ' ✓' : '') : '—'}</td>` : ''}
         <td class="r">${r.kind === 'show' ? pctDone(r.id) + '%' : '—'}</td></tr>`).join('')}</tbody>
     </table></div></section>`;
   } else {
@@ -1118,13 +1627,13 @@ V.board = () => {
             ${dateBox(r.date, r.date === NOW.date)}
             <div class="grow"><div class="${r.status === 'cancelled' ? 'cancelled-text' : ''}"><b>${esc(r.city)}</b> · ${esc(r.venue)}</div>
               <div class="small muted">${esc(artist(r.artist).name)}${r.tour ? ' · ' + esc(tour(r.tour)?.name || '') : ''} · cap ${(r.cap || 0).toLocaleString()}${deals ? ' · ' + esc(r.kind === 'show' ? dealText(r.deal, r.cur) : r.dealText) : ''}</div></div>
-            ${statusChip(r)}
+            ${srcChip(r)}${statusChip(r)}
           </div>`).join('')}</div></section>`).join('') : `<p class="muted">Nothing matches.</p>`;
   }
   return `
   <div class="head"><div><div class="eyebrow">${cur() === 'all' ? `Northlight Mgmt · ${myArtists().length} artists` : esc(artist(cur()).name)}</div><h1 class="display">Season 2027</h1>
     <div class="sub muted">${cur() === 'all' ? 'Every date for every artist — your Excel dates sheet, shared.' : 'Every date for this artist. Switch to All artists for the whole roster.'}</div></div>
-    ${edit ? `<div class="addbar">${addBtn('newShow', 'Add show', '', 'btn-tape')}<button class="btn btn-secondary btn-sm" data-act="import">${icon('upload')} Import</button><button class="btn btn-secondary btn-sm" data-act="export">Export</button></div>` : ''}</div>
+    ${edit ? `<div class="addbar">${addBtn('newShow', 'Add show', '', 'btn-tape')}<button class="btn btn-secondary btn-sm" data-act="import">${icon('upload')} Import from Excel…</button><button class="btn btn-secondary btn-sm" data-act="export">Export</button></div>` : ''}</div>
   <div class="stats">
     <div class="card stat"><span class="eyebrow">Confirmed</span><b>${count('confirmed')}</b></div>
     <div class="card stat"><span class="eyebrow">Holds</span><b>${count('hold')}</b></div>
@@ -1160,6 +1669,7 @@ V.home = () => {
     <label class="field" for="hq" style="flex:1;min-width:200px;max-width:360px"><span class="sr">Search artists</span><input id="hq" type="search" placeholder="Search ${myArtists().length} artists" value="${esc(S.hq)}" style="height:38px"></label>
     <div class="seg" data-filter="hsort"><button aria-pressed="${S.hsort === 'next'}" data-v="next">Next show</button><button aria-pressed="${S.hsort === 'att'}" data-v="att">Needs attention</button><button aria-pressed="${S.hsort === 'az'}" data-v="az">A–Z</button></div>
   </div>
+  ${startCard()}
   <button class="acard" data-act="pickArtist" data-id="all" aria-current="${cur() === 'all'}"><span class="ph aph" style="background:var(--tape)">${icon('board')}</span>
     <div class="grow"><div><b>All artists</b></div><div class="small muted">${isMgr() ? 'Season board, deposits and offers across the roster' : 'Everything across your artists'}</div></div>${att.length ? `<span class="cnt">${att.length}</span>` : ''}</button>
   <div class="hgrid">${list.map(({ a, next, today, att, shows }) => `
@@ -1167,7 +1677,7 @@ V.home = () => {
       <div class="grow"><div><b>${esc(a.name)}</b> <span class="small muted">${esc(a.genre || '')}</span></div>
         <div class="small">${today ? `<span class="chip st-pending plain">Show today · ${esc(cityOf(today))}</span>` : next ? `<span class="muted">Next: ${short(next.date)} · ${esc(cityOf(next))}</span>` : '<span class="muted">No upcoming shows</span>'}</div>
         <div class="small muted">${shows.filter(s => s.status === 'confirmed').length} confirmed · ${shows.filter(s => s.status === 'hold').length} holds</div></div>
-      ${att ? `<span class="cnt" aria-label="${att} need attention">${att}</span>` : ''}${icon('chev')}</button>`).join('') || '<p class="muted">No artists match.</p>'}</div>`;
+      ${att ? `<span class="cnt" aria-label="${att} need attention">${att}</span>` : ''}${icon('chev')}</button>`).join('') || (myArtists().length ? '<p class="muted">No artists match.</p>' : `<section class="card stack"><h2>No artists yet</h2><p class="muted" style="margin:0">Add one, or import your dates sheet — artists are created from the artist column.</p><div class="addbar">${addBtn('newArtist', 'Add artist')}<button class="btn btn-tape btn-sm" data-act="import">${icon('upload')} Import data</button></div></section>`)}</div>`;
 };
 
 V.overview = () => {
@@ -1308,7 +1818,7 @@ V.show = () => {
     body = `${list.length ? `<div>${list.map(t => { const late = t.status !== 'Done' && t.due < NOW.date; return `
       <div class="task ${t.status === 'Done' ? 'done' : ''}">
         <input type="checkbox" id="tk-${t.id}" data-taskdone="${t.id}" ${t.status === 'Done' ? 'checked' : ''} ${editAdv ? '' : 'disabled'} aria-label="Done: ${esc(t.label)}" style="width:20px;height:20px;accent-color:var(--good)">
-        <div class="grow" data-act="task" data-id="${t.id}"><span class="lbl">${esc(t.label)}</span><div class="small muted">${esc(P(t.owner).name)} · <span class="${late ? 'late' : ''}">${late ? 'overdue · ' : 'due '}${short(t.due)}</span>${t.comments.length ? ` · ${icon('comment')} ${t.comments.length}` : ''}</div></div>
+        <div class="grow" data-act="task" data-id="${t.id}"><span class="lbl">${esc(t.label)}</span><div class="small muted">${esc(P(t.owner).name)} · <span class="${late ? 'late' : ''}">${late ? 'overdue · ' : 'due '}${short(t.due)}</span>${t.comments.length ? ` · ${icon('comment')} ${t.comments.length}` : ''}</div></div>${srcChip(t)}
         ${editAdv ? `<label class="sr" for="ts-${t.id}">Status</label><select class="pillsel" id="ts-${t.id}" data-taskst="${t.id}">${TASK_ST.map(x => `<option ${t.status === x ? 'selected' : ''}>${x}</option>`).join('')}</select>` : `<span class="chip plain">${t.status}</span>`}
       </div>`; }).join('')}</div>` : '<p class="muted">No advance tasks yet.</p>'}
       ${editAdv ? `<div class="addbar" style="margin-top:12px">${addBtn('newTask', 'Add task', s.id)}${list.length ? '' : addBtn('applyAdv', 'Use advance template', s.id)}</div>` : ''}
@@ -1325,7 +1835,7 @@ V.show = () => {
   } else if (S.showTab === 'contacts') {
     const list = DB.contacts.filter(c => c.show === s.id);
     body = `<div class="list">${list.map(c => `<div class="li"><span class="avatar" style="background:var(--surface-2)">${esc(initials(c.name))}</span>
-      <div class="grow"><b>${esc(c.name)}</b><div class="small muted">${esc(c.role)}</div></div><span class="mono small" style="user-select:all">${esc(c.ph)}</span>${editAdv ? editBtn('contact', c.id) : ''}</div>`).join('') || '<p class="muted">No contacts yet.</p>'}</div>
+      <div class="grow"><b>${esc(c.name)}</b><div class="small muted">${esc(c.role)}</div></div>${srcChip(c)}<span class="mono small" style="user-select:all">${esc(c.ph)}</span>${editAdv ? editBtn('contact', c.id) : ''}</div>`).join('') || '<p class="muted">No contacts yet.</p>'}</div>
       ${editAdv ? `<div class="addbar" style="margin-top:10px">${addBtn('newContact', 'Add contact', s.id)}</div>` : ''}`;
   } else {
     const has = DB.slots.some(x => x.show === s.id);
@@ -1346,7 +1856,7 @@ V.show = () => {
 };
 
 function pickShowInCur() {
-  if (isVenue()) { S.showId = 'nyc'; return; }
+  if (isVenue()) { S.showId = show('nyc') ? 'nyc' : (DB.shows[0] || {}).id; return; }
   const s = show(S.showId);
   if (s && inCur(s.artist)) return;
   const list = curShows();
@@ -1382,6 +1892,7 @@ function mySupplyCard() {
 }
 
 V.today = () => {
+  if (!DB.shows.length) return `<div class="head"><h1 class="display">No shows yet</h1></div><p class="muted">Once management adds or imports shows, today's day sheet appears here.</p>`;
   if (cur() === 'all') return `<div class="head"><h1 class="display">Pick an artist</h1></div><p class="muted">Choose who you're with today on the <a href="#home">Artists</a> page.</p>`;
   const s = DB.shows.find(x => x.date === NOW.date && x.status !== 'cancelled' && x.artist === cur());
   if (!s) {
@@ -1529,7 +2040,7 @@ V.money = () => {
 };
 
 V.guests = () => {
-  if (isVenue() || !canEdit('guests')) S.showId = 'nyc'; else pickShowInCur();
+  if (isVenue() || !canEdit('guests')) S.showId = show('nyc') ? 'nyc' : (DB.shows[0] || {}).id; else pickShowInCur();
   const s = show(S.showId);
   if (!s) return `<div class="head"><h1 class="display">Guest list</h1></div><p class="muted">No shows for this artist yet.</p>`;
   const list0 = DB.guests.filter(g => g.show === s.id);
@@ -1686,8 +2197,12 @@ V.settings = () => `
         <div class="list">${DB.templates.slots.map(t => `<div class="li"><span class="mono">${t.time}</span><div class="grow">${esc(t.label)}</div>${editBtn('tmplSlot', t.id)}</div>`).join('')}</div></section>
       <section class="card stack"><div class="row between"><h2>Rates</h2><button class="btn btn-secondary btn-sm" data-act="rates">${icon('edit')} Edit</button></div>
         <dl class="kv"><dt>Per diem</dt><dd>${money(DB.settings.perDiem)} / day</dd><dt>Agent commission</dt><dd>${DB.settings.agentPct}%</dd><dt>Management commission</dt><dd>${DB.settings.mgmtPct}%</dd></dl></section>
-      <section class="card stack"><h2>Sample data</h2><p class="small muted" style="margin:0">Your edits are saved in this browser only. Start over any time.</p>
-        <button class="btn btn-danger btn-sm" data-act="reset">Reset sample data</button></section>
+      <section class="card stack"><h2>Appearance</h2><div class="seg themeseg">${THEMES.map(([k, l]) => `<button aria-pressed="${THEME === k}" data-act="theme" data-id="${k}">${l}</button>`).join('')}</div></section>
+      <section class="card stack"><div class="row between"><h2>Your data</h2><a class="btn btn-secondary btn-sm" href="#imports">${icon('imports')} Imports${DB.imports.length ? ` (${DB.imports.length})` : ''}</a></div>
+        <p class="small muted" style="margin:0">Bring in your dates sheet or exports from ClickUp, Master Tour and others. Every import can be undone.</p>
+        <div class="addbar"><button class="btn btn-tape btn-sm" data-act="import">${icon('upload')} Import data</button><button class="btn btn-secondary btn-sm" data-act="export">Export to Excel</button></div></section>
+      <section class="card stack"><h2>Sample data</h2><p class="small muted" style="margin:0">This prototype is full of made-up artists and shows, saved in this browser only.</p>
+        <div class="addbar"><button class="btn btn-outline btn-sm" data-act="fresh">Start fresh with my own data</button><button class="btn btn-danger btn-sm" data-act="reset">Reset sample data</button></div></section>
     </div>
   </div>`;
 
@@ -1700,7 +2215,9 @@ V.about = () => `
     <p><b>GigTrip is for artist managers and everyone who makes a show happen.</b> Your dates sheet, offers, deals and settlements, advance tasks, who brings what, day sheets, travel and guest lists — in one place, instead of Excel, ClickUp and group texts.</p>
     <p><b>Management edits everything and decides who sees what.</b> Add artists, tours and shows; import your Excel dates; upload riders and contracts; set templates. The tour manager, artist, band &amp; crew and the venue each see only what you allow — costs and profit can be hidden separately.</p>
     <p>Built on <a href="https://timdreamboat.github.io/grouptrip/" target="_blank" rel="noopener">GroupTrip</a>, which already runs travel, notifications, calendars and expenses for groups.</p>
-    <p class="muted">Use <b>View as</b> to switch between management, tour manager, artist, band &amp; crew (you're Nico, the VJ) and venue (Greg, production manager). All people, venues and numbers are made up. Edits stay in this browser — reset them in Settings.</p>
+    <h2>Moving from Excel, ClickUp or another tool?</h2>
+    <p>Settings › <a href="#imports">Imports</a> takes your dates sheet (.xlsx or .csv), a ClickUp list export, Master Tour or Daysheets exports, Artist Growth or Prism reports, or a calendar (.ics). You match the columns once, check a preview, and get a receipt showing where every row landed. Everything imported carries an "Imported" tag and can be undone in one tap.</p>
+    <p class="muted">Use <b>Demo as</b> to switch between management, tour manager, artist, band &amp; crew (you're Nico, the VJ) and venue (Greg, production manager). All people, venues and numbers are made up. Edits stay in this browser — reset them in Settings.</p>
   </section>`;
 
 // ---------- router ----------
@@ -1709,7 +2226,7 @@ function route() {
   let r = location.hash.slice(1);
   if (r !== 'more' && (!V[r] || !nav.some(n => n[0] === r))) r = nav[0][0];
   const links = list => list.map(([k, l]) => `<a href="#${k}" ${k === r ? 'aria-current="page"' : ''}>${icon(k in ICONS ? k : 'about')}<span>${l}</span></a>`).join('');
-  $('#sidenav').innerHTML = links(nav);
+  $('#sidenav').innerHTML = GROUPS.map(([g, keys]) => { const items = nav.filter(n => keys.includes(n[0])); return items.length ? (nav.length > 6 ? `<div class="grp">${g}</div>` : '') + links(items) : ''; }).join('');
   const main = nav.filter(n => n[0] !== 'about');
   $('#tabbar').innerHTML = main.length > 5 ? links(main.slice(0, 4)) + `<a href="#more" ${r === 'more' ? 'aria-current="page"' : ''}>${icon('more')}<span>More</span></a>` : links(main);
   const att = attention().length;
@@ -1717,11 +2234,15 @@ function route() {
   $('#achipslot').innerHTML = hasHome() ? `<a class="achip" href="#home" aria-label="Switch artist (now ${ca === 'all' ? 'all artists' : esc(artist(ca).name)})">${ca === 'all' ? `<span class="ph aph" style="background:var(--tape)">${icon('board')}</span>` : artistPh(artist(ca))}<span class="nm">${ca === 'all' ? 'All artists' : esc(artist(ca).name)}</span>▾</a>` : '';
   $('#bellslot').innerHTML = canEdit('advance') ? `<a class="iconbtn bell" href="#activity" aria-label="Activity, ${att} need attention">${icon('activity')}${att ? `<span class="badge">${att}</span>` : ''}</a>` : '';
   $('#main').innerHTML = V[r]();
+  const h1 = $('#main .head h1'); if (h1 && HELP[r]) { h1.outerHTML = `<div class="titlerow">${h1.outerHTML}${helpBtn(r)}</div>`; }
+  S.page = r;
   $('#role').value = S.role;
+  applyTheme();
 }
 function go(r) { if (location.hash.slice(1) === r) route(); else location.hash = r; }
 function setRole(r) { S.role = r; S.sel.clear(); store.set('role', r); go(navFor()[0][0]); }
 addEventListener('hashchange', () => { route(); scrollTo(0, 0); });
+$('#themebtn').addEventListener('click', () => { const t = THEME; const dark = t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches); setTheme(dark ? 'light' : 'dark'); toast(dark ? 'Light mode' : 'Dark mode'); });
 
 $('#role').addEventListener('change', e => setRole(e.target.value));
 
@@ -1742,7 +2263,13 @@ const ACT = {
   guest: id => E.guest(id), travel: id => E.travel(id), newTravel: () => E.travel(null), supply: id => E.supply(id), newSupply: () => E.supply(null),
   budget: id => E.budget(id), newBudget: id => E.budget(null, { tour: id }), showExp: id => E.showExp(id), newExp: id => E.showExp(null, { show: id }),
   myexp: id => E.myexp(id), newMyExp: () => E.myexp(null), tmplAdv: id => E.tmpl(id, 'advance'), newTmplAdv: () => E.tmpl(null, 'advance'), tmplSlot: id => E.tmpl(id, 'slots'), newTmplSlot: () => E.tmpl(null, 'slots'),
-  import: () => openImport(), export: () => openExport(),
+  import: () => openImportWizard(), importFrom: id => openImportWizard({ source: id }), export: () => openExport('shows'),
+  undoImport: (id, el) => { if (!el.dataset.sure) { el.dataset.sure = '1'; el.textContent = 'Tap again to undo'; return; } undoImport(id); },
+  help: id => openHelp(id === '__page' ? S.page : id),
+  hideStart: () => { store.set('start.hidden', true); route(); },
+  startStep: (k, el) => { const done = store.get('start.done', {}); if (k !== 'import') done[k] = true; store.set('start.done', done); if (k === 'import') openImportWizard(); else if (k === 'share') toast('Copies the join link for this artist’s team (mock)'); else go(el.dataset.go); },
+  theme: t => { setTheme(t); route(); },
+  fresh: (id, el) => { if (!el.dataset.sure) { el.dataset.sure = '1'; el.textContent = 'Tap again — this clears the sample data'; return; } DB = blank(); save(); S.artistId = 'all'; S.showId = null; S.tourId = null; route(); toast('Clean slate. Bring your data in.'); openImportWizard(); },
   gosettle: id => { S.showId = id; go('settle'); },
   sort: k => { S.sort = { k, dir: S.sort.k === k ? -S.sort.dir : 1 }; route(); },
   bulkStatus: () => { const st = $('#bulkst').value; S.sel.forEach(id => { const s = show(id); if (s) s.status = st; }); commit(`${S.sel.size} shows set to ${st}`, `Set ${S.sel.size} shows to ${st}`); S.sel.clear(); route(); },

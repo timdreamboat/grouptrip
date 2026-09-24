@@ -213,6 +213,59 @@ before upload, as GroupTrip does for photos; it shows on the artist home
 cards, the top-bar switcher and the artist page. Real build: `artists.photo_path`
 in the org's storage folder.
 
+### UI review pass (owner, 2026-09-23)
+- **Navigation**: sidebar grouped into Overview / Booking / Shows / Money /
+  Team / Setup; phones keep five tabs + More. The prototype's role switcher is
+  labelled "Demo as" (dashed outline) so nobody mistakes it for a feature.
+- **Dark mode**: sun/moon in the top bar and Match device / Light / Dark in
+  Settings. Every colour is a token defined for both themes; the only fixed
+  colours are white-on-red badges and black-on-yellow tape, which pass in both.
+- **Help on every page**: a `?` next to the title opens "what this page is
+  for / what you can do / who sees it". A dismissible **Getting started** card
+  on Artists walks management through: bring your data → add your team →
+  decide who sees what → share the day sheet.
+- **Empty states** name the next action (add or import) instead of blank space.
+
+### Bringing data in (the transition plan)
+Goal: a company moves over with little support and knows where everything
+went. Settings › Imports (also "Import from Excel…" on Season) is a 5-step
+wizard: **Source → File → Match → Check → Done**.
+
+| Source | How they get the file | What GigTrip makes of it |
+|---|---|---|
+| Excel / Google Sheets / Numbers | Upload the .xlsx as is, or .csv. Sheets: File → Download → Excel. Numbers: Export To → Excel | Any sheet: shows, tasks, contacts, travel, guests, budget. Multi-sheet workbooks: pick a sheet, import, then "import another sheet" |
+| ClickUp | List → ··· → Export → CSV | Task name, status, assignee, due date → advance tasks; the List/Folder name is matched to a show by city, venue or date |
+| Master Tour | Tour → Export → Excel (Schedule, Contacts, Personnel) | Date/city/venue → shows; Load In / Doors / Show Time columns → day-sheet times; contacts → show contacts |
+| Daysheets | Schedule / travel / personnel CSV export | Shows, travel items (flights, van, hotels), contacts |
+| Artist Growth / Prism / Gigwell | Events, holds or settlements CSV | Shows with deal, guarantee, deposit, status |
+| Calendar (Google/Apple/Outlook) | Export as .ics | Each event → a show; title parsed as "Artist — City: Venue"; day-off/travel events skipped |
+| Notion / Airtable / other | CSV export | Same as Excel |
+
+How it stays low-support:
+- **Matching is guessed** from column names (synonyms per field: "Show Date",
+  "Cap", "Gtd", "Assignees"…) and every guess is shown with a sample value;
+  the user only fixes wrong ones. Required fields are marked.
+- **Forgiving values**: US and ISO dates, "June 3 2027", Excel serial dates;
+  "$10,000"; "Hold 2" / "Confirmed" / "TBC" → statuses; "complete" → Done;
+  times like "7:00 PM"; a title row above the headers is skipped.
+- **No duplicates**: a row with the same date and city as an existing show
+  updates blanks instead of creating a second show.
+- **Check step** shows counts, the first rows as GigTrip will store them, and
+  what will be skipped (with the reason).
+- **Receipt ("Done")**: one line per thing created — "3 shows → Season board",
+  "12 tasks → each show's Advance tab" — each a link. Everything carries an
+  **Imported** tag (with source and file on hover), the Season board has an
+  Imported filter, and Settings › Imports lists every import with **Undo**.
+- **Export** back to Excel: shows, advance tasks (ClickUp-shaped), contacts,
+  guest list — download .csv or copy.
+- **Start fresh**: Settings clears the sample roster (keeps templates, rates
+  and role defaults) and opens the wizard — the demo of "day one".
+
+Real build: the wizard runs on the device (SheetJS from a CDN for .xlsx);
+rows post to `import_rows(import_id, kind, rows)` which creates records with
+`import_id` set, so undo is one delete. `imports` table: id, org, source,
+file, kind, counts, created_by.
+
 ## Build plan: mock → live site
 Day 1 (live on GitHub Pages under `/gigtrip/`, same Supabase project):
 usernames (reuse), artists/tours/shows, tasks + comments, docs upload
