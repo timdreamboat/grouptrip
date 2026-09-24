@@ -9,6 +9,15 @@ async function headers() {
   return { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' };
 }
 
+// Database refusals, in plain English.
+function friendly(msg = '') {
+  if (/booking_url_web/.test(msg)) return 'Booking links need to be a web address starting with https://';
+  if (/cover_(link|url)_web/.test(msg)) return "That photo link isn't a normal web address.";
+  if (/members_venmo_handle/.test(msg)) return 'Venmo usernames use only letters, numbers, - and _';
+  if (/violates|constraint|syntax|null value/i.test(msg)) return "That didn't save — check what you entered and try again.";
+  return msg || 'Something went wrong. Please try again.';
+}
+
 async function rpc(fn, args) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
     method: 'POST',
@@ -16,7 +25,7 @@ async function rpc(fn, args) {
     body: JSON.stringify(args),
   });
   const body = await res.json().catch(() => null);
-  if (!res.ok) throw new Error(body?.message || 'Something went wrong. Please try again.');
+  if (!res.ok) throw new Error(friendly(body?.message));
   return body;
 }
 

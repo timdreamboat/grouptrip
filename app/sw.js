@@ -1,6 +1,6 @@
 // GroupTrip service worker: makes the app installable, keeps it working
 // offline (last-seen copy of the app files), and shows push notifications.
-const CACHE = 'grouptrip-v7';
+const CACHE = 'grouptrip-v8';
 
 // The app's own files. Add new files here so they work offline too.
 const SHELL = [
@@ -24,13 +24,15 @@ self.addEventListener('activate', (e) => {
 });
 
 // App files: fresh from the network when online, saved copy when offline.
-// Fonts: saved copy first (they never change).
+// "no-cache" makes the browser check with the server every time (cheap: an
+// unchanged file isn't downloaded again), so after an update a phone never
+// mixes old and new app files. Fonts: saved copy first (they never change).
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin === location.origin) {
-    e.respondWith(fetch(req).then((res) => {
+    e.respondWith(fetch(req, { cache: 'no-cache' }).then((res) => {
       if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); }
       return res;
     }).catch(() => caches.match(req, { ignoreSearch: true })
