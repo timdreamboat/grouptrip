@@ -6,7 +6,7 @@
 //   #/me/<code>/<token>    old private links (before accounts) — just open the trip
 import * as store from './store.js';
 import * as auth from './auth.js';
-import { signIn, afterSignIn } from './views/signin.js';
+import { afterSignIn } from './views/signin.js';
 import * as admin from './views/admin.js';
 import { toast, esc, icon } from './ui.js';
 import * as home from './views/home.js';
@@ -39,14 +39,7 @@ async function route() {
   document.querySelectorAll('dialog.sheet').forEach((d) => d.close());
 
   if (page === 'me' && code) { location.replace(`#/t/${code}`); return; }
-  if (page === 'new') {
-    if (!auth.signedIn() && !(await signIn({ title: 'Sign in to plan a trip', reason: 'Your trip is saved to your account, so only you can manage it — from any device.' }))) {
-      if (location.hash === '#/new') location.replace('#/');
-      return;
-    }
-    current = {};
-    return paint(() => create.render(root));
-  }
+  if (page === 'new') { current = {}; return paint(() => create.render(root)); }
   if (page === 'admin') { current = {}; return paint(() => admin.render(root)); }
   if (page === 't' && code) return openTrip(code, extra || 'home');
   current = {};
@@ -123,7 +116,9 @@ async function finishPendingJoin() {
   try { p = JSON.parse(sessionStorage.getItem('grouptrip.pending-join')); sessionStorage.removeItem('grouptrip.pending-join'); } catch { /* ignore */ }
   if (!p?.code || store.tokenFor(p.code)) return;
   try {
-    await (p.memberId ? store.claimMember(p.code, p.memberId) : store.joinTrip(p.code, p.name));
+    const u = auth.user();
+    const name = p.name || String(u?.name || '').split(/\s+/)[0] || (u?.email || '').split('@')[0];
+    await (p.memberId ? store.claimMember(p.code, p.memberId) : store.joinTrip(p.code, name));
     sessionStorage.setItem('grouptrip.flash', "You're in! Welcome to the trip");
   } catch (err) { toast(err.message, { error: true }); }
 }

@@ -10,6 +10,7 @@ import { SUPABASE_URL, SUPABASE_KEY, SIGN_IN } from './config.js';
 const LIB = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1/+esm';
 const MIRROR = 'grouptrip.user';
 const RETURN = 'grouptrip.return';
+const LAST = 'grouptrip.last-signin';   // { method, email } — to prefill and mark "Last used"
 
 let client;
 async function sb() {
@@ -31,6 +32,8 @@ function mirror(session) {
   return next;
 }
 export const user = () => read();
+export function lastUsed() { try { return JSON.parse(localStorage.getItem(LAST)) || {}; } catch { return {}; } }
+function remember(method, email) { try { localStorage.setItem(LAST, JSON.stringify({ method, email: email || lastUsed().email })); } catch { /* ignore */ } }
 export const signedIn = () => Boolean(read());
 
 // The access token for database calls (refreshed as needed), or null.
@@ -46,7 +49,10 @@ export async function accessToken() {
 function friendly(error) {
   const msg = error?.message || String(error || '');
   const code = error?.code || '';
-  if (code === 'otp_expired' || /token has expired|invalid/i.test(msg)) return "That code didn't work. Check it, or send a new one.";
+  if (code === 'otp_expired' || code === 'otp_invalid' || /token has expired|token is invalid/i.test(msg)) return "That code didn't work. Check it, or send a new one.";
+  if (code === 'email_address_invalid') return "That email address doesn't look right — check it and try again.";
+  if (code === 'email_address_not_authorized' || /sending.*email|smtp/i.test(msg)) return "We couldn't send the email just now. Try again in a minute, or continue with Google.";
+  if (code === 'over_email_send_rate_limit') return 'Too many codes sent — please wait a bit, or continue with Google.';
   if (/rate limit|security purposes/i.test(msg)) return 'Please wait a minute before asking for another code.';
   if (code === 'passkey_disabled') return "Passkeys aren't switched on yet.";
   if (code === 'webauthn_credential_not_found') return "This passkey isn't linked to an account. Sign in with your email and add it again.";
@@ -62,11 +68,13 @@ export async function sendCode(email) {
 export async function verifyCode(email, code) {
   const data = check(await (await sb()).auth.verifyOtp({ email, token: code.replace(/\s/g, ''), type: 'email' }));
   mirror(data.session);
+  remember('email', email);
 }
 
 // ---------- Google / Apple (leave the page, come back signed in) ----------
 export async function signInWith(provider, returnHash = location.hash) {
   try { sessionStorage.setItem(RETURN, returnHash || '#/'); } catch { /* ignore */ }
+  remember(provider);
   check(await (await sb()).auth.signInWithOAuth({ provider, options: { redirectTo: `${location.origin}${location.pathname}` } }));
 }
 // On page load: finish a Google/Apple sign-in if we just came back from one.
@@ -81,14 +89,21 @@ export async function finishRedirect() {
   history.replaceState(null, '', `${location.pathname}${back}`);
   if (err) throw new Error(err);
   const data = check(await (await sb()).auth.exchangeCodeForSession(code));
-  return Boolean(mirror(data.session));
+  const u = mirror(data.session);
+  if (u) remember(lastUsed().method || 'google', u.email);
+  return Boolean(u);
 }
 
 // ---------- passkeys ----------
 export const passkeysSupported = () => SIGN_IN.passkeys && Boolean(window.PublicKeyCredential);
-export async function signInWithPasskey() {
-  const data = check(await (await sb()).auth.signInWithPasskey());
-  mirror(data.session);
+// conditional: offer saved passkeys in the email field's autofill (no popup).
+export async function signInWithPasskey({ conditional = false, signal } = {}) {
+  const data = check(await (await sb()).auth.signInWithPasskey(conditional ? { options: { mediation: 'conditional', signal } } : undefined));
+  const u = mirror(data.session);
+  remember('passkey', u?.email);
+}
+export async function conditionalPasskeysAvailable() {
+  try { return passkeysSupported() && Boolean(await PublicKeyCredential.isConditionalMediationAvailable?.()); } catch { return false; }
 }
 export async function addPasskey() {
   return check(await (await sb()).auth.registerPasskey());

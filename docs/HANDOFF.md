@@ -17,6 +17,16 @@ and what's pending**.
   to the URL). The Claude desktop preview browser cannot run service workers,
   so install/offline/push must be tested on a real phone.
 
+## Testing sign-in (owner's question, 2026-09-23)
+- Admin = whoever signs in with timmdonlon@gmail.com (the `admins` table);
+  there's no separate admin login. Google (once set up) or a passkey = no code.
+- To test other roles: guests need no account; for a second organizer or
+  account holder use Gmail "+" addresses (timmdonlon+org2@gmail.com) — codes
+  land in the same inbox — in a private window. A "test as someone else"
+  switcher without codes was blocked as a security weakening; not built.
+- Claude's own UI tests create throwaway users via SQL with a password and sign
+  in with signInWithPassword in the preview; delete them afterwards.
+
 ## Working with the owner (Tim)
 - Non-technical; wants plain-English outcomes, end-to-end work, tested before
   reporting. Explain results in a sentence or two, not code.
@@ -75,7 +85,8 @@ and what's pending**.
    - Email: Authentication → Emails → SMTP → custom SMTP with Brevo (free,
      300/day, verify a single sender — no domain needed; Resend needs your
      own domain). Edit the "Magic Link" template so it shows the code:
-     `Your GroupTrip code is {{ .Token }}`.
+     `Your GroupTrip code is {{ .Token }}`. Keep "Email OTP length" at 6
+     (the app signs in automatically once 6 digits are entered).
    - URLs: Authentication → URL Configuration → Site URL
      `https://timdreamboat.github.io/grouptrip/`, redirect URLs add
      `https://timdreamboat.github.io/grouptrip/**` and `http://localhost:8080/**`.

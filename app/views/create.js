@@ -1,19 +1,27 @@
 // Create a trip in three quick questions: where, when, who's organizing.
+// No sign-in until the very end ("Save your trip"), like most apps: the draft
+// is kept in sessionStorage so it survives a trip out to Google and back.
 import { esc, icon, coverBg, busy, toast, suggest } from '../ui.js';
 import * as store from '../store.js';
 import { locate, suggestDestinations } from '../places.js';
 import { mapEmbed } from '../embeds.js';
 import { mountCoverPicker } from './cover.js';
-import { KINDS } from './common.js';
+import { KINDS, firstName } from './common.js';
+import * as auth from '../auth.js';
+import { signIn } from './signin.js';
 
 const STEPS = 3;
 
 export function render(root) {
   document.title = 'New trip · GroupTrip';
-  const data = { destination: '', name: '', startDate: '', endDate: '', organizer: '', cover: null, kind: 'friends', where: null };
+  const DRAFT = 'grouptrip.draft';
+  let draft = null;
+  try { draft = JSON.parse(sessionStorage.getItem(DRAFT)); sessionStorage.removeItem(DRAFT); } catch { /* ignore */ }
+  const accountName = auth.user()?.name ? firstName(auth.user().name) : '';
+  const data = draft?.data ?? { destination: '', name: '', startDate: '', endDate: '', organizer: accountName, cover: null, kind: 'friends', where: null };
   let photosFor = null; // destination the photo picker last searched
   let searchTimer;
-  let step = 0;
+  let step = draft ? STEPS - 1 : 0;
 
   // Google's own map of the picked place, like the Place field on plans.
   const destMap = () => `<iframe class="dest-map" title="Map of ${esc(data.destination)}" loading="lazy"
@@ -129,6 +137,12 @@ export function render(root) {
       if (step === 1 && data.endDate && data.startDate && data.endDate < data.startDate) return toast('The end date is before the start date', { error: true });
       if (step < STEPS - 1) { step++; draw(); return; }
       if (!data.name || !data.organizer) return toast('Add a trip name and your name', { error: true });
+      if (!auth.signedIn()) {
+        try { sessionStorage.setItem(DRAFT, JSON.stringify({ data, create: true })); } catch { /* ignore */ }
+        const ok = await signIn({ title: 'Save your trip', reason: `Sign in to save "${data.name}" and invite people. You'll be able to manage it from any device.` });
+        try { sessionStorage.removeItem(DRAFT); } catch { /* ignore */ }
+        if (!ok) return;
+      }
       const code = await busy(form.querySelector('.btn-primary'), async () => {
         const c = await store.createTrip(data);
         // Cover photo + map location (for the weather). Nice-to-have: never block creating the trip.
@@ -140,4 +154,6 @@ export function render(root) {
     };
   };
   draw();
+  // Back from Google/Apple with a finished draft: save it now.
+  if (draft?.create && auth.signedIn()) root.querySelector('#flow')?.requestSubmit();
 }

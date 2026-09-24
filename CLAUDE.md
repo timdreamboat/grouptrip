@@ -73,7 +73,12 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
   saved on that device only) or "Join with an account". Sign-in: passkey,
   Google, Apple (off until the owner approves the $99/yr Apple Developer
   account), or a 6-digit email code for any email; after an email sign-in we
-  offer "Add a passkey". `app/auth.js` wraps supabase-js (loaded lazily from
+  offer "Add a passkey". Consumer-first flow (owner, 2026-09-23): one
+  sheet for sign-in and sign-up, Google first, "Continue with email", code
+  auto-submits, resend timer, webmail shortcut, remembered email + "Last
+  used" badge, passkeys via autofill. Creating a trip asks for sign-in only
+  at the end ("Save your trip"; draft survives the Google round-trip).
+  Invite page: name + email → "Join trip" (guest) or "Join with Google". `app/auth.js` wraps supabase-js (loaded lazily from
   jsDelivr, pinned version, so offline still works); `SIGN_IN` in config.js
   toggles options. Every seat (member) still has a secret token that all the
   share-code functions check, plus `members.user_id`: a seat linked to an
