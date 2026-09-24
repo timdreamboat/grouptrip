@@ -1,4 +1,4 @@
-# GigTrip — product spec (draft v0, 2026-09-23)
+# GigTrip — product spec (V1 mock, 2026-09-23)
 
 GigTrip is GroupTrip's "next level" for **music artist managers and their
 touring party**: plan single concerts, festival slots and whole tours in one
@@ -169,6 +169,41 @@ In the mock, "View as" covers Manager, Tour manager, Artist, Band & crew
 (Nico, the VJ) and Venue (Greg, production manager). Management changes role
 defaults on the **Access** screen and one person's access on their card;
 menus follow what each viewer is allowed to see.
+
+## V1 mock scope (2026-09-23) — the pitch version
+Management can add, edit and delete everything; other roles edit only what
+their access allows. Every form is one shared dialog (`openForm`) — the real
+build reuses GroupTrip's "add form doubles as edit form" pattern.
+- **Roster**: artists (press photo upload), tours per artist.
+- **Season**: list + sortable table, search, filters, bulk status change,
+  **Import from Excel/CSV** (paste or file) and **Export** (copy CSV).
+- **Offers**: log/edit; accept creates a hold with template advance tasks.
+- **Show**: edit all details + deal (currency, deposit due/received);
+  advance **tasks** with owner, due date, status and **comments**; docs with
+  **uploads** (drag-drop or tap, image preview); contacts; day sheet with
+  add/edit and "use template"; who brings what.
+- **Settlement** for any show: editable show expenses, withholding line,
+  deal types vs / flat / door / festival, "mark as settled".
+- **Money**: deposits due (overdue / due soon / received), commission
+  statement per artist (agent % + management %), tour budget lines.
+- **Activity**: needs-attention feed (overdue tasks, deposits, expiring
+  offers, guest requests) + change log; bell badge in the top bar.
+- **Settings**: advance template, day-sheet template, per diem and
+  commission rates, reset sample data.
+- Travel, guests, people, supply lists, expenses with receipt upload — all
+  editable. Mock data object `DB` mirrors the tables in §6 plus `tours`,
+  `artists`, `slots`, `tasks` (+ `comments`), `docs`, `contacts`, `supply`,
+  `travel`, `budget`, `showExp`, `sheets`, `myexp`, `templates`, `settings`,
+  `access`, `activity`.
+
+## Build plan: mock → live site
+Day 1 (live on GitHub Pages under `/gigtrip/`, same Supabase project):
+usernames (reuse), artists/tours/shows, tasks + comments, docs upload
+(reuse `photos` Edge Function + storage), day sheet, supply lists, people +
+roles/access (checked server-side in the trip builder), guest list, travel,
+push notifications (reuse `notify`). Day 2: deals, settlement, deposits,
+commissions, budget (needs owner approval as exception #6), CSV import/export,
+activity feed. Screens port 1:1 from the mock's views.
 
 ## 8. Where it lives (real build)
 - Same repo, new folder `gigtrip/` that imports shared modules from `app/`

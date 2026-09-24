@@ -1,5 +1,5 @@
 <title>GigTrip</title>
-<meta name="description" content="GigTrip prototype — tours, shows, day sheets and settlements for artist managers and their touring party.">
+<meta name="description" content="GigTrip V1 prototype — roster, tours, shows, advancing, day sheets, settlements and access control for artist managers and their teams.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500;600&display=swap">
@@ -276,6 +276,53 @@ tfoot td { font-weight: 700; border-bottom: 0; }
 .minihead { font-size: 11.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
 .cols2 { display: grid; gap: 18px; }
 @media (min-width: 760px) { .cols2 { grid-template-columns: 1fr 1fr; } }
+
+/* ---- V1: editing, dialogs, uploads, tables ---- */
+dialog.sheet { border: 0; padding: 0; background: var(--surface); color: var(--text); border-radius: 22px; width: min(580px, calc(100% - 24px)); max-height: calc(100% - 40px); box-shadow: 0 18px 48px rgba(0, 0, 0, .28); }
+dialog.sheet::backdrop { background: rgba(10, 10, 12, .45); }
+dialog.sheet > form { padding: 20px; display: grid; gap: 14px; }
+@media (max-width: 640px) { dialog.sheet { margin: auto auto 0; width: 100%; max-width: 100%; border-radius: 22px 22px 0 0; padding-bottom: env(safe-area-inset-bottom, 0px); } }
+.fgrid { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; }
+.fgrid .full { grid-column: 1 / -1; }
+@media (max-width: 480px) { .fgrid { grid-template-columns: 1fr; } }
+.field textarea { min-height: 88px; border-radius: 12px; border: 1px solid var(--line-strong); background: var(--surface); padding: 10px 12px; color: var(--text); width: 100%; resize: vertical; font: inherit; font-size: 15px; }
+.field.checkf { grid-template-columns: auto 1fr; align-items: center; gap: 10px; color: var(--text); font-size: 14px; }
+.field.checkf input { width: 20px; height: 20px; accent-color: var(--good); }
+.iconbtn { width: 34px; height: 34px; border-radius: 10px; border: 0; background: transparent; color: var(--muted); cursor: pointer; display: inline-grid; place-items: center; flex: none; text-decoration: none; }
+.iconbtn:hover { background: var(--surface-2); color: var(--text); }
+.iconbtn svg { width: 17px; height: 17px; }
+.btn-danger { background: var(--bad-soft); color: var(--bad); }
+.upload { position: relative; display: grid; place-items: center; gap: 2px; padding: 18px; border: 2px dashed var(--line-strong); border-radius: 16px; color: var(--muted); text-align: center; cursor: pointer; font-size: 14px; }
+.upload b { color: var(--text); }
+.upload.drag { border-color: var(--tape); background: color-mix(in srgb, var(--tape) 12%, transparent); }
+.upload input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.thumb { width: 44px; height: 44px; border-radius: 10px; object-fit: cover; flex: none; background: var(--surface-2); display: grid; place-items: center; color: var(--muted); }
+.bell { position: relative; }
+.bell .badge { position: absolute; top: 1px; right: 0; min-width: 17px; height: 17px; border-radius: 9px; background: var(--bad); color: #fff; font-size: 10.5px; font-weight: 700; display: grid; place-items: center; padding: 0 4px; }
+th button.sort { all: unset; cursor: pointer; }
+th button.sort:focus-visible { outline: 3px solid var(--ring); }
+td.sel, th.sel { width: 36px; padding-right: 0; }
+td.sel input, th.sel input { width: 17px; height: 17px; accent-color: var(--text); }
+tr.click { cursor: pointer; }
+tr.click:hover td { background: var(--surface-2); }
+.pillsel { height: 28px; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--surface); font-size: 12px; font-weight: 600; padding: 0 8px; color: var(--text); }
+.comment { background: var(--surface-2); border-radius: 12px; padding: 8px 12px; font-size: 14px; }
+.comment .who { font-weight: 600; font-size: 12.5px; }
+.bulkbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: var(--tape); color: var(--tape-ink); padding: 8px 12px; border-radius: 14px; font-weight: 600; font-size: 14px; }
+.bulkbar select { height: 30px; border-radius: 8px; border: 0; padding: 0 8px; background: #fff; color: #141414; }
+.bulkbar .btn { height: 30px; }
+.cover { width: 100%; aspect-ratio: 16 / 7; border-radius: 14px; object-fit: cover; display: grid; place-items: center; font: 900 44px/1 var(--font-display); color: var(--tape-ink); max-width: 100%; }
+.acards { display: grid; gap: 18px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+.task { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+.task:first-child { border-top: 0; }
+.task .grow { flex: 1; min-width: 0; cursor: pointer; }
+.task.done .lbl { color: var(--muted); text-decoration: line-through; }
+.late { color: var(--bad); font-weight: 600; }
+.more-list a { display: flex; align-items: center; gap: 12px; padding: 14px 4px; border-top: 1px solid var(--line); text-decoration: none; font-weight: 600; }
+.more-list a:first-child { border-top: 0; }
+.addbar { display: flex; gap: 8px; flex-wrap: wrap; }
+.preview-img { width: 100%; max-height: 60vh; object-fit: contain; border-radius: 12px; background: var(--surface-2); }
+textarea.csv { font: 13px/1.5 var(--font-mono); min-height: 180px; }
 </style>
 
 <div class="shell">
@@ -283,7 +330,7 @@ tfoot td { font-weight: 700; border-bottom: 0; }
     <a class="brand" href="#about"><span class="logo">G</span><b>GigTrip</b></a>
     <nav id="sidenav"></nav>
     <div class="foot">
-      <span>Prototype · sample data</span>
+      <span>Prototype V1 · sample data</span>
       <a href="https://timdreamboat.github.io/grouptrip/" target="_blank" rel="noopener">Made by GroupTrip ↗</a>
     </div>
   </aside>
@@ -291,6 +338,7 @@ tfoot td { font-weight: 700; border-bottom: 0; }
     <header class="top">
       <a class="brand" href="#about"><span class="logo">G</span><b>GigTrip</b></a>
       <span class="spacer"></span>
+      <span id="bellslot"></span>
       <label class="viewas" for="role">View as
         <select id="role">
           <option value="manager">Manager</option>
@@ -305,264 +353,283 @@ tfoot td { font-weight: 700; border-bottom: 0; }
   </div>
 </div>
 <nav class="tabbar" id="tabbar"></nav>
+<dialog class="sheet" id="dlg"></dialog>
 <div class="toast" id="toast" role="status"></div>
 
 <script>
-// ---------- sample data (all made up) ----------
+// =====================================================================
+// GigTrip V1 mock. Everything lives in DB, shaped like the real tables
+// (see docs/GIGTRIP-SPEC.md) so the real build is mostly wiring.
+// Edits are kept in this browser only; "Reset sample data" in Settings.
+// =====================================================================
 const NOW = { date: '2027-04-12', min: 16 * 60 + 5 };   // mock clock: Mon Apr 12, 4:05 pm
-const ARTISTS = { jv: 'Juniper Vale', co: 'The Coastlines' };
-const TOUR = { name: 'Low Tide Tour', season: 'Spring 2027', artist: 'jv' };
-
-// kind = the role that sets default access. over = this person's own changes, set by management.
 const KINDS = { manager: 'Management', tm: 'Tour manager', artist: 'Artist', crew: 'Band & crew', venue: 'Venue', agent: 'Agent' };
-const PEOPLE = {
-  rae:   { name: 'Rae Collins',  kind: 'manager', role: 'Manager · Northlight Mgmt', group: 'office', ph: '(416) 555-0110', hue: 30 },
-  jordan:{ name: 'Jordan Blake', kind: 'agent', role: 'Agent · Fieldhouse Agency', group: 'office', ph: '(212) 555-0177', hue: 260 },
-  juni:  { name: 'Juniper Vale', kind: 'artist', role: 'Artist', group: 'road', ph: '(416) 555-0101', hue: 48, room: '614' },
-  dana:  { name: 'Dana Reyes',   kind: 'tm', role: 'Tour manager', group: 'road', ph: '(416) 555-0156', hue: 10, room: '610' },
-  theo:  { name: 'Theo Marsh',   kind: 'crew', role: 'Guitar', group: 'road', ph: '(416) 555-0122', hue: 200, room: '612', pay: 40000 },
-  priya: { name: 'Priya Anand',  kind: 'crew', role: 'Bass', group: 'road', ph: '(647) 555-0134', hue: 330, room: '615', pay: 40000 },
-  sam:   { name: 'Sam Okafor',   kind: 'crew', role: 'Drums', group: 'road', ph: '(416) 555-0145', hue: 150, room: '612', pay: 40000 },
-  luis:  { name: 'Luis Ortega',  kind: 'crew', role: 'FOH engineer', group: 'road', ph: '(514) 555-0167', hue: 100, room: '611', pay: 45000, tech: true },
-  kit:   { name: 'Kit Brennan',  kind: 'crew', role: 'Lighting (LD)', group: 'road', ph: '(416) 555-0178', hue: 280, room: '611', pay: 40000, tech: true },
-  nico:  { name: 'Nico Laurent', kind: 'crew', role: 'VJ · visuals', group: 'road', ph: '(514) 555-0183', hue: 230, room: '616', pay: 35000, tech: true },
-  mo:    { name: 'Mo Haddad',    kind: 'crew', role: 'Backline tech', group: 'road', ph: '(905) 555-0189', hue: 180, room: '616', pay: 30000, tech: true },
-  ellie: { name: 'Ellie Park',   kind: 'crew', role: 'Merch', group: 'road', ph: '(647) 555-0190', hue: 60, room: '615', pay: 25000 },
-  greg:  { name: 'Greg Ho',      kind: 'venue', role: 'Production manager · Canal Street Ballroom', group: 'venue', ph: '(212) 555-0193', hue: 20 },
-  nina:  { name: 'Nina Alvarez', kind: 'venue', role: 'Promoter rep · Riverside Presents', group: 'venue', ph: '(212) 555-0148', hue: 340 },
-};
-Object.values(PEOPLE).forEach(p => { p.over = {}; });
-
-// What each person is expected to bring (venue people: what the venue provides). Management sets these.
-const SUPPLY = {
-  greg: ['Stage 40 × 30 ft, 4 ft high', 'House PA + FOH console (DiGiCo SD12)', 'House lighting rig + console', 'LED wall 6 × 3 m, SDI input stage left', 'Power: 200 A three-phase, stage right', 'Barricade + 6 security', 'Green room, dinner buyout for 11'],
-  nina: ['Settlement paperwork + box office report', 'Guest list at box office by 6:30 pm', '24 wristbands for guests'],
-  nico: ['Media server laptop (Resolume) + backup laptop', 'HDMI → SDI converter box', '50 ft SDI cable + HDMI spares', 'USB-C / DisplayPort adapters', 'Timecode + MIDI interface to sync with lighting'],
-  luis: ['In-ear monitor rack (6 mixes)', 'Mic package per input list', 'FOH show file on USB + backup'],
-  kit:  ['Lighting show file (grandMA3) on USB', '2 hazers + fluid'],
-  mo:   ['Guitar + bass amps', 'Drum hardware + snares', 'Spare strings, heads, sticks', 'Tuning station'],
-  theo: ['3 guitars + pedalboard'],
-  priya:['2 basses + DI box'],
-  sam:  ['Cymbals, snare, kick pedal', 'In-ear molds'],
-  juni: ['Wireless vocal mic (own capsule)', 'In-ear molds', 'Setlist for tonight'],
-  dana: ['Settlement sheet + calculator', 'Per diem cash', 'Laminates for the party'],
-  ellie:['Merch stock (see count sheet)', 'Card readers ×2', 'Display grid + lights'],
-};
-const SUP = {};
-Object.entries(SUPPLY).forEach(([k, list]) => { SUP[k] = list.map((t, i) => ({ t, ok: i < 2 && k !== 'nico' })); });
-
-// What each role can see. off / view / edit. Management always has everything.
+const STATUSES = [['confirmed', 'Confirmed'], ['hold', 'Hold'], ['pencil', 'Pencil'], ['offer', 'Offer'], ['cancelled', 'Cancelled']];
+const DEALS = [['vs', 'Guarantee vs % of net'], ['flat', 'Flat guarantee'], ['door', 'Door deal (% of net box office)'], ['fest', 'Festival flat fee']];
+const TASK_ST = ['To do', 'In progress', 'Waiting', 'Done'];
 const AREAS = [
-  ['season', 'Season board + offers'],
-  ['day', 'Day sheet + schedule'],
-  ['advance', 'Advance checklist, docs, who brings what'],
-  ['travel', 'Travel (flights, van, rooms)'],
-  ['guests', 'Guest list (edit = approve)'],
-  ['mymoney', 'My money (own pay, per diems)'],
-  ['costs', 'Show costs + settlement'],
-  ['profit', 'Profit + tour budget'],
+  ['season', 'Season board + offers'], ['day', 'Day sheet + schedule'], ['advance', 'Advance tasks, docs, who brings what'],
+  ['travel', 'Travel (flights, van, rooms)'], ['guests', 'Guest list (edit = approve)'], ['mymoney', 'My money (own pay, per diems)'],
+  ['costs', 'Show costs + settlement'], ['profit', 'Profit, budget, commissions'],
 ];
-const ACCESS = {
-  tm:     { season: 'off',  day: 'edit', advance: 'edit', travel: 'edit', guests: 'edit', mymoney: 'view', costs: 'edit', profit: 'off' },
-  artist: { season: 'off',  day: 'view', advance: 'off',  travel: 'view', guests: 'view', mymoney: 'view', costs: 'off',  profit: 'off' },
-  crew:   { season: 'off',  day: 'view', advance: 'view', travel: 'view', guests: 'view', mymoney: 'view', costs: 'off',  profit: 'off' },
-  venue:  { season: 'off',  day: 'view', advance: 'edit', travel: 'off',  guests: 'view', mymoney: 'off',  costs: 'view', profit: 'off' },
-  agent:  { season: 'view', day: 'view', advance: 'off',  travel: 'off',  guests: 'off',  mymoney: 'off',  costs: 'view', profit: 'off' },
-};
 const LV = { off: 0, view: 1, edit: 2 };
-
-const ADVANCE = [
-  ['Contract signed', 'rae'], ['Deposit received', 'rae'], ['Tech rider sent', 'luis'],
-  ['Input list + stage plot confirmed', 'luis'], ['Lighting plot + video input confirmed', 'kit'],
-  ['Hospitality rider confirmed', 'dana'], ['Parking for van + trailer', 'dana'],
-  ['Load-in time + dock', 'dana'], ['Hotel booked near venue', 'dana'],
-  ['Guest list cap agreed', 'dana'], ['Merch split + seller confirmed', 'ellie'],
-  ['Settlement contact confirmed', 'dana'],
-];
-// deal: g = guarantee (cents), pct = artist % of net after expenses (vs deal), dep = deposit
-const SHOWS = [
-  { id: 'tor', date: '2027-04-08', city: 'Toronto, ON', venue: 'The Marlowe Hall', cap: 1100, status: 'confirmed', ll: [43.65, -79.38], deal: { type: 'vs', g: 1200000, pct: 85, dep: 600000 }, settled: 1400000, adv: 12 },
-  { id: 'mtl', date: '2027-04-09', city: 'Montréal, QC', venue: 'Salle Ferro', cap: 900, status: 'confirmed', ll: [45.50, -73.57], deal: { type: 'flat', g: 850000, dep: 425000 }, settled: 850000, adv: 12, drive: '5h 30m · 541 km' },
-  { id: 'bos', date: '2027-04-10', city: 'Boston, MA', venue: 'The Wharfhouse', cap: 1000, status: 'confirmed', ll: [42.36, -71.06], deal: { type: 'vs', g: 1000000, pct: 85, dep: 500000 }, settled: 1100000, adv: 12, drive: '5h 00m · 500 km' },
-  { id: 'nyc', date: '2027-04-12', city: 'New York, NY', venue: 'Canal Street Ballroom', cap: 1400, status: 'confirmed', ll: [40.71, -74.01], deal: { type: 'vs', g: 900000, pct: 85, dep: 450000 }, adv: 11, drive: '3h 45m · 346 km', today: true },
-  { id: 'phl', date: '2027-04-13', city: 'Philadelphia, PA', venue: 'The Tinworks', cap: 850, status: 'hold', hold: 1, ll: [39.95, -75.17], deal: { type: 'vs', g: 900000, pct: 85, dep: 0 }, adv: 7, drive: '1h 50m · 153 km' },
-  { id: 'dc', date: '2027-04-15', city: 'Washington, DC', venue: 'Ninth & Pine', cap: 1200, status: 'hold', hold: 2, ll: [38.91, -77.04], deal: { type: 'vs', g: 1300000, pct: 85, dep: 650000 }, adv: 4, drive: '2h 45m · 224 km' },
-  { id: 'fest', date: '2027-04-24', city: 'Asheville, NC', venue: 'Sunmeadow Festival · Pine Stage', cap: 8000, status: 'confirmed', ll: [35.60, -82.55], deal: { type: 'fest', g: 2000000, dep: 1000000 }, adv: 3, fest: '45-min set · 5:15 pm', drive: 'fly · via CLT' },
-];
-const OTHER_DATES = [
-  { artist: 'co', date: '2027-03-30', city: 'Vancouver, BC', venue: 'Harbourline Theatre', cap: 1000, status: 'cancelled' },
-  { artist: 'co', date: '2027-04-17', city: 'Austin, TX', venue: 'The Lantern Room', cap: 750, status: 'confirmed' },
-  { artist: 'co', date: '2027-04-30', city: 'Denver, CO', venue: 'Gold Hill Theatre', cap: 1600, status: 'hold', hold: 1 },
-  { artist: 'co', date: '2027-05-22', city: 'Seattle, WA', venue: 'Pier Nine', cap: 1100, status: 'pencil' },
-  { artist: 'jv', date: '2027-06-05', city: 'Portland, ME', venue: 'Casco Pier Stage', cap: 2200, status: 'pencil' },
-];
-const OFFERS = [
-  { id: 'o1', artist: 'jv', date: '2027-05-14', city: 'Chicago, IL', venue: 'The Foundry', cap: 1500, promoter: 'Lakeshore Live', deal: '$10,000 vs 85% of net', radius: 'No other Chicago plays 60 days before, 150 mi', expires: 'Apr 16', status: 'offer' },
-  { id: 'o2', artist: 'jv', date: '2027-05-16', city: 'Nashville, TN', venue: 'Brightwater Hall', cap: 900, promoter: 'Cumberland Presents', deal: '$8,000 flat + hotel buyout', radius: '45 days, 100 mi', expires: 'Apr 19', status: 'offer' },
-  { id: 'o3', artist: 'co', date: '2027-06-19', city: 'Halifax, NS', venue: 'Harbor Lights Fest', cap: 12000, promoter: 'Harbor Lights', deal: '$18,000 flat (festival)', radius: 'No Atlantic Canada shows 90 days before', expires: 'Apr 22', status: 'offer' },
-];
-const NYC = {
-  address: '415 Canal St, New York, NY 10013',
-  hotel: { name: 'The Mercer Row Hotel', addr: '88 Grand St, New York, NY', nights: 'Apr 11 – 13' },
-  wifi: 'CanalGuest · pw: lowtide2027',
-  parking: 'Van + trailer: Lispenard St loading dock. Street parking after 7 pm only.',
-  hospitality: 'Dinner buyout $25/person × 11 · 2 cases water, coffee on arrival',
-  slots: [
-    ['12:00', 'Lobby call — van to venue', 'Everyone', 'key'],
-    ['13:00', 'Load-in', 'Crew · dock on Lispenard St'],
-    ['15:30', 'Line check + video check', 'Luis, Mo, Nico'],
-    ['16:30', 'Soundcheck — Juniper Vale', 'Band', 'key'],
-    ['17:30', 'Soundcheck — Hollow Pines', 'Support'],
-    ['18:00', 'Dinner', 'Green room (buyout)'],
-    ['19:00', 'Doors', 'Venue'],
-    ['20:00', 'Hollow Pines', '40 min'],
-    ['21:00', 'Juniper Vale', '90 min', 'key'],
-    ['22:30', 'Curfew', 'Hard — $1,000 per 15 min over'],
-    ['23:00', 'Settlement', 'Dana + Nina · production office'],
-    ['23:30', 'Load-out', 'Crew'],
-  ],
-  tomorrow: 'Bus call 09:00 · lobby · drive to Philadelphia (1h 50m)',
-  contacts: [
-    ['Nina Alvarez', 'Promoter rep · Riverside Presents', '(212) 555-0148'],
-    ['Greg Ho', 'Production manager', '(212) 555-0193'],
-    ['Dana Reyes', 'Tour manager', '(416) 555-0156'],
-    ['Front desk', 'The Mercer Row Hotel', '(212) 555-0161'],
-  ],
-  docs: [
-    ['Hospitality rider', 'v3 · sent Mar 2', 'ok'], ['Tech rider + input list', 'v5 · sent Mar 2', 'ok'],
-    ['Stage plot', 'v5 · PDF', 'ok'], ['Contract', 'Signed Feb 18', 'ok'],
-    ['Certificate of insurance', 'Requested by venue', 'ok'], ['Settlement sheet', 'Tonight', 'pending'],
-  ],
-  settle: {
-    sold: 1262, price: 3800, feePer: 300,
-    expenses: [['Room rent', 650000], ['Production (sound + lights)', 420000], ['Staff + security', 385000], ['Advertising', 290000], ['Hospitality', 100000]],
-  },
+const CITIES = {
+  'toronto': [43.65, -79.38], 'montréal': [45.50, -73.57], 'montreal': [45.50, -73.57], 'boston': [42.36, -71.06], 'new york': [40.71, -74.01],
+  'philadelphia': [39.95, -75.17], 'washington': [38.91, -77.04], 'asheville': [35.60, -82.55], 'chicago': [41.88, -87.63], 'nashville': [36.16, -86.78],
+  'detroit': [42.33, -83.05], 'cleveland': [41.50, -81.69], 'pittsburgh': [40.44, -80.00], 'ottawa': [45.42, -75.70], 'quebec': [46.81, -71.21],
+  'atlanta': [33.75, -84.39], 'baltimore': [39.29, -76.61], 'portland, me': [43.66, -70.26], 'buffalo': [42.89, -78.88], 'halifax': [44.65, -63.58],
 };
-const GUESTS = [
-  { name: 'Maya Chen', plus: 1, by: 'theo', status: 'approved' },
-  { name: 'Jon & Alex Rivera', plus: 1, by: 'priya', status: 'approved' },
-  { name: 'Harbor Records (label)', plus: 3, by: 'rae', status: 'approved' },
-  { name: 'The Setlist (press)', plus: 1, by: 'rae', status: 'approved' },
-  { name: 'Carol Okafor', plus: 1, by: 'sam', status: 'pending' },
-  { name: 'Devon Park', plus: 0, by: 'ellie', status: 'pending' },
-  { name: 'Lena Vale', plus: 1, by: 'juni', status: 'approved' },
-];
-const GUEST_CAP = 24;
-const TRAVEL = {
-  van: [
-    ['Sun Apr 11', 'Boston → New York', '11:00 lobby', '3h 45m · 346 km', true],
-    ['Tue Apr 13', 'New York → Philadelphia', '09:00 lobby', '1h 50m · 153 km'],
-    ['Wed Apr 14', 'Philadelphia → Washington (day off)', '12:00 lobby', '2h 45m · 224 km'],
-  ],
-  flights: [
-    { date: 'Fri Apr 16', from: 'DCA', to: 'YYZ', dep: '10:40', arr: '12:15', no: 'AC 8783', seat: '14C', conf: 'Q7RT2M' },
-    { date: 'Fri Apr 23', from: 'YYZ', to: 'CLT', dep: '08:05', arr: '10:20', no: 'AA 1739', seat: '22A', conf: 'W4KD9P', next: 'Connects to AVL · AA 5210 · 11:35 → 12:30' },
-  ],
-  hotels: [['Apr 11 – 13', 'The Mercer Row Hotel, New York'], ['Apr 13 – 15', 'Hotel Tinsley, Philadelphia']],
-};
-// tour budget, cents. Actuals are to date (Apr 12).
-const PER_DIEM = 5000, ROAD_DAYS = 14, DAYS_SO_FAR = 8, SHOWS_PLAYED = 4;
-const BUDGET = [
-  ['Crew pay', 2880000, 1645000],
-  ['Travel — van, fuel, flights', 1420000, 988000],
-  ['Hotels', 1260000, 734000],
-  ['Per diems ($50 × 10 people × 14 days)', PER_DIEM * 10 * ROAD_DAYS, PER_DIEM * 10 * DAYS_SO_FAR],
-  ['Production + backline', 850000, 612000],
-];
-const MERCH = { budget: 1860000, actual: 1124500 };
-const AGENT_PCT = 10, MGMT_PCT = 15;
 
-// ---------- state ----------
+let seq = 0; const uid = p => p + (Date.now() % 1e6).toString(36) + (seq++).toString(36);
+const addDays = (iso, n) => { const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
+
+function seed() {
+  const people = {
+    rae:   { name: 'Rae Collins',  kind: 'manager', role: 'Manager · Northlight Mgmt', group: 'office', ph: '(416) 555-0110', hue: 30 },
+    sol:   { name: 'Sol Mendez',   kind: 'manager', role: 'Day-to-day manager · Northlight', group: 'office', ph: '(416) 555-0111', hue: 120 },
+    jordan:{ name: 'Jordan Blake', kind: 'agent', role: 'Agent · Fieldhouse Agency', group: 'office', ph: '(212) 555-0177', hue: 260 },
+    juni:  { name: 'Juniper Vale', kind: 'artist', role: 'Artist', group: 'road', ph: '(416) 555-0101', hue: 48, room: '614' },
+    dana:  { name: 'Dana Reyes',   kind: 'tm', role: 'Tour manager', group: 'road', ph: '(416) 555-0156', hue: 10, room: '610', pay: 50000 },
+    theo:  { name: 'Theo Marsh',   kind: 'crew', role: 'Guitar', group: 'road', ph: '(416) 555-0122', hue: 200, room: '612', pay: 40000 },
+    priya: { name: 'Priya Anand',  kind: 'crew', role: 'Bass', group: 'road', ph: '(647) 555-0134', hue: 330, room: '615', pay: 40000 },
+    sam:   { name: 'Sam Okafor',   kind: 'crew', role: 'Drums', group: 'road', ph: '(416) 555-0145', hue: 150, room: '612', pay: 40000 },
+    luis:  { name: 'Luis Ortega',  kind: 'crew', role: 'FOH engineer', group: 'road', ph: '(514) 555-0167', hue: 100, room: '611', pay: 45000, tech: true },
+    kit:   { name: 'Kit Brennan',  kind: 'crew', role: 'Lighting (LD)', group: 'road', ph: '(416) 555-0178', hue: 280, room: '611', pay: 40000, tech: true },
+    nico:  { name: 'Nico Laurent', kind: 'crew', role: 'VJ · visuals', group: 'road', ph: '(514) 555-0183', hue: 230, room: '616', pay: 35000, tech: true },
+    mo:    { name: 'Mo Haddad',    kind: 'crew', role: 'Backline tech', group: 'road', ph: '(905) 555-0189', hue: 180, room: '616', pay: 30000, tech: true },
+    ellie: { name: 'Ellie Park',   kind: 'crew', role: 'Merch', group: 'road', ph: '(647) 555-0190', hue: 60, room: '615', pay: 25000 },
+    greg:  { name: 'Greg Ho',      kind: 'venue', role: 'Production manager · Canal Street Ballroom', group: 'venue', ph: '(212) 555-0193', hue: 20 },
+    nina:  { name: 'Nina Alvarez', kind: 'venue', role: 'Promoter rep · Riverside Presents', group: 'venue', ph: '(212) 555-0148', hue: 340 },
+  };
+  Object.values(people).forEach(p => { p.over = {}; });
+  const S = (id, o) => ({ id, artist: 'jv', tour: 't1', cur: 'USD', address: '', wifi: '', parking: '', hospitality: '', note: '', guestCap: 24, settled: null, ...o });
+  const shows = [
+    S('tor', { date: '2027-04-08', city: 'Toronto, ON', venue: 'The Marlowe Hall', cap: 1100, status: 'confirmed', ll: [43.65, -79.38], cur: 'CAD', deal: { type: 'vs', g: 1200000, pct: 85, dep: 600000, depDue: '2027-03-08', depPaid: true }, settled: 1400000 }),
+    S('mtl', { date: '2027-04-09', city: 'Montréal, QC', venue: 'Salle Ferro', cap: 900, status: 'confirmed', ll: [45.50, -73.57], cur: 'CAD', deal: { type: 'flat', g: 850000, dep: 425000, depDue: '2027-03-09', depPaid: true }, settled: 850000 }),
+    S('bos', { date: '2027-04-10', city: 'Boston, MA', venue: 'The Wharfhouse', cap: 1000, status: 'confirmed', ll: [42.36, -71.06], deal: { type: 'vs', g: 1000000, pct: 85, dep: 500000, depDue: '2027-03-10', depPaid: true }, settled: 1100000 }),
+    S('nyc', { date: '2027-04-12', city: 'New York, NY', venue: 'Canal Street Ballroom', cap: 1400, status: 'confirmed', ll: [40.71, -74.01], deal: { type: 'vs', g: 900000, pct: 85, dep: 450000, depDue: '2027-03-12', depPaid: true },
+      address: '415 Canal St, New York, NY 10013', wifi: 'CanalGuest · pw: lowtide2027', parking: 'Van + trailer: Lispenard St loading dock. Street parking after 7 pm only.', hospitality: 'Dinner buyout $25/person × 11 · 2 cases water, coffee on arrival' }),
+    S('phl', { date: '2027-04-13', city: 'Philadelphia, PA', venue: 'The Tinworks', cap: 850, status: 'hold', hold: 1, ll: [39.95, -75.17], deal: { type: 'vs', g: 900000, pct: 85, dep: 0, depDue: '', depPaid: false } }),
+    S('dc', { date: '2027-04-15', city: 'Washington, DC', venue: 'Ninth & Pine', cap: 1200, status: 'hold', hold: 2, ll: [38.91, -77.04], deal: { type: 'vs', g: 1300000, pct: 85, dep: 650000, depDue: '2027-03-15', depPaid: false } }),
+    S('fest', { date: '2027-04-24', city: 'Asheville, NC', venue: 'Sunmeadow Festival · Pine Stage', cap: 8000, status: 'confirmed', ll: [35.60, -82.55], deal: { type: 'fest', g: 2000000, dep: 1000000, depDue: '2027-04-17', depPaid: false }, note: '45-min set · 5:15 pm' }),
+    S('pdx', { artist: 'co', tour: 't2', date: '2027-03-20', city: 'Portland, OR', venue: 'Rosewater Hall', cap: 1100, status: 'confirmed', deal: { type: 'vs', g: 800000, pct: 85, dep: 400000, depDue: '2027-02-20', depPaid: true }, settled: 960000 }),
+    S('van', { artist: 'co', tour: 't2', date: '2027-03-30', city: 'Vancouver, BC', venue: 'Harbourline Theatre', cap: 1000, status: 'cancelled', cur: 'CAD', deal: { type: 'flat', g: 700000, dep: 0, depDue: '', depPaid: false } }),
+    S('atx', { artist: 'co', tour: 't2', date: '2027-04-17', city: 'Austin, TX', venue: 'The Lantern Room', cap: 750, status: 'confirmed', deal: { type: 'flat', g: 750000, dep: 375000, depDue: '2027-04-14', depPaid: false } }),
+    S('den', { artist: 'co', tour: 't2', date: '2027-04-30', city: 'Denver, CO', venue: 'Gold Hill Theatre', cap: 1600, status: 'hold', hold: 1, deal: { type: 'vs', g: 1200000, pct: 85, dep: 600000, depDue: '2027-04-20', depPaid: false } }),
+    S('sea', { artist: 'co', tour: 't2', date: '2027-05-22', city: 'Seattle, WA', venue: 'Pier Nine', cap: 1100, status: 'pencil', deal: { type: 'vs', g: 1000000, pct: 85, dep: 500000, depDue: '2027-04-22', depPaid: false } }),
+    S('pme', { tour: '', date: '2027-06-05', city: 'Portland, ME', venue: 'Casco Pier Stage', cap: 2200, status: 'pencil', ll: [43.66, -70.26], deal: { type: 'vs', g: 1500000, pct: 85, dep: 750000, depDue: '2027-05-05', depPaid: false } }),
+  ];
+  const advTemplate = [
+    ['Contract signed', 'rae', 45], ['Deposit received', 'rae', 30], ['Tech rider sent', 'luis', 21], ['Input list + stage plot confirmed', 'luis', 14],
+    ['Lighting plot + video input confirmed', 'kit', 14], ['Hospitality rider confirmed', 'dana', 14], ['Parking for van + trailer', 'dana', 7],
+    ['Load-in time + dock', 'dana', 7], ['Hotel booked near venue', 'dana', 21], ['Guest list cap agreed', 'dana', 7],
+    ['Merch split + seller confirmed', 'ellie', 7], ['Settlement contact confirmed', 'dana', 3],
+  ];
+  const doneCount = { tor: 12, mtl: 12, bos: 12, nyc: 11, phl: 10, dc: 9, fest: 7 };
+  const tasks = [];
+  shows.filter(s => s.artist === 'jv' && s.tour === 't1').forEach(s => advTemplate.forEach(([label, owner, before], i) => {
+    const done = s.id === 'nyc' ? label !== 'Merch split + seller confirmed' : i < doneCount[s.id];
+    tasks.push({ id: uid('k'), show: s.id, label, owner, due: addDays(s.date, -before), status: done ? 'Done' : (s.id === 'phl' && i === 7 ? 'In progress' : 'To do'), comments: [] });
+  }));
+  const merchTask = tasks.find(t => t.show === 'nyc' && t.label.startsWith('Merch'));
+  merchTask.status = 'Waiting';
+  merchTask.comments.push({ who: 'dana', at: 'Apr 11', text: '@Ellie venue wants 20% on soft goods. Can we get it to 15%?' }, { who: 'ellie', at: 'Apr 11', text: 'Asked Nina, waiting on her reply.' });
+  const nycSlots = [
+    ['12:00', 'Lobby call — van to venue', 'Everyone', true], ['13:00', 'Load-in', 'Crew · dock on Lispenard St'], ['15:30', 'Line check + video check', 'Luis, Mo, Nico'],
+    ['16:30', 'Soundcheck — Juniper Vale', 'Band', true], ['17:30', 'Soundcheck — Hollow Pines', 'Support'], ['18:00', 'Dinner', 'Green room (buyout)'],
+    ['19:00', 'Doors', 'Venue'], ['20:00', 'Hollow Pines', '40 min'], ['21:00', 'Juniper Vale', '90 min', true],
+    ['22:30', 'Curfew', 'Hard — $1,000 per 15 min over'], ['23:00', 'Settlement', 'Dana + Nina · production office'], ['23:30', 'Load-out', 'Crew'],
+  ];
+  const supply = {
+    greg: ['Stage 40 × 30 ft, 4 ft high', 'House PA + FOH console (DiGiCo SD12)', 'House lighting rig + console', 'LED wall 6 × 3 m, SDI input stage left', 'Power: 200 A three-phase, stage right', 'Barricade + 6 security', 'Green room, dinner buyout for 11'],
+    nina: ['Settlement paperwork + box office report', 'Guest list at box office by 6:30 pm', '24 wristbands for guests'],
+    nico: ['Media server laptop (Resolume) + backup laptop', 'HDMI → SDI converter box', '50 ft SDI cable + HDMI spares', 'USB-C / DisplayPort adapters', 'Timecode + MIDI interface to sync with lighting'],
+    luis: ['In-ear monitor rack (6 mixes)', 'Mic package per input list', 'FOH show file on USB + backup'],
+    kit: ['Lighting show file (grandMA3) on USB', '2 hazers + fluid'],
+    mo: ['Guitar + bass amps', 'Drum hardware + snares', 'Spare strings, heads, sticks', 'Tuning station'],
+    theo: ['3 guitars + pedalboard'], priya: ['2 basses + DI box'], sam: ['Cymbals, snare, kick pedal', 'In-ear molds'],
+    juni: ['Wireless vocal mic (own capsule)', 'In-ear molds', 'Setlist for tonight'],
+    dana: ['Settlement sheet + calculator', 'Per diem cash', 'Laminates for the party'],
+    ellie: ['Merch stock (see count sheet)', 'Card readers ×2', 'Display grid + lights'],
+  };
+  return {
+    v: 1,
+    artists: [
+      { id: 'jv', name: 'Juniper Vale', genre: 'Indie folk', home: 'Toronto, ON', agent: 'Jordan Blake · Fieldhouse', hue: 48, photo: null },
+      { id: 'co', name: 'The Coastlines', genre: 'Alt-rock', home: 'Vancouver, BC', agent: 'Jordan Blake · Fieldhouse', hue: 200, photo: null },
+    ],
+    tours: [
+      { id: 't1', artist: 'jv', name: 'Low Tide Tour', season: 'Spring 2027' },
+      { id: 't2', artist: 'co', name: 'West Coast Run', season: 'Spring 2027' },
+    ],
+    shows,
+    offers: [
+      { id: 'o1', artist: 'jv', date: '2027-05-14', city: 'Chicago, IL', venue: 'The Foundry', cap: 1500, promoter: 'Lakeshore Live', deal: '$10,000 vs 85% of net', g: 1000000, radius: 'No other Chicago plays 60 days before, 150 mi', expires: '2027-04-16', status: 'offer' },
+      { id: 'o2', artist: 'jv', date: '2027-05-16', city: 'Nashville, TN', venue: 'Brightwater Hall', cap: 900, promoter: 'Cumberland Presents', deal: '$8,000 flat + hotel buyout', g: 800000, radius: '45 days, 100 mi', expires: '2027-04-19', status: 'offer' },
+      { id: 'o3', artist: 'co', date: '2027-06-19', city: 'Halifax, NS', venue: 'Harbor Lights Fest', cap: 12000, promoter: 'Harbor Lights', deal: '$18,000 flat (festival)', g: 1800000, radius: 'No Atlantic Canada shows 90 days before', expires: '2027-04-22', status: 'offer' },
+    ],
+    slots: nycSlots.map(([time, label, who, key]) => ({ id: uid('s'), show: 'nyc', time, label, who, key: !!key })),
+    tasks,
+    docs: [
+      ...[['Hospitality rider', 'v3 · sent Mar 2'], ['Tech rider + input list', 'v5 · sent Mar 2'], ['Stage plot', 'v5 · PDF'], ['Contract', 'Signed Feb 18'], ['Certificate of insurance', 'Requested by venue']]
+        .map(([name, meta]) => ({ id: uid('d'), show: 'nyc', name, meta, status: 'ok', file: null })),
+      { id: uid('d'), show: 'nyc', name: 'Settlement sheet', meta: 'Tonight', status: 'pending', file: null },
+      { id: uid('d'), show: 'fest', name: 'Artist credentials + wristbands', meta: 'From festival advance', status: 'pending', file: null },
+    ],
+    contacts: [
+      { id: uid('c'), show: 'nyc', name: 'Nina Alvarez', role: 'Promoter rep · Riverside Presents', ph: '(212) 555-0148' },
+      { id: uid('c'), show: 'nyc', name: 'Greg Ho', role: 'Production manager', ph: '(212) 555-0193' },
+      { id: uid('c'), show: 'nyc', name: 'Dana Reyes', role: 'Tour manager', ph: '(416) 555-0156' },
+      { id: uid('c'), show: 'nyc', name: 'Front desk', role: 'The Mercer Row Hotel', ph: '(212) 555-0161' },
+    ],
+    people,
+    supply: Object.entries(supply).flatMap(([p, list]) => list.map((label, i) => ({ id: uid('u'), person: p, label, ok: i < 2 && p !== 'nico' }))),
+    guests: [
+      ['Maya Chen', 1, 'theo', 'approved'], ['Jon & Alex Rivera', 1, 'priya', 'approved'], ['Harbor Records (label)', 3, 'rae', 'approved'],
+      ['The Setlist (press)', 1, 'rae', 'approved'], ['Carol Okafor', 1, 'sam', 'pending'], ['Devon Park', 0, 'ellie', 'pending'], ['Lena Vale', 1, 'juni', 'approved'],
+    ].map(([name, plus, by, status]) => ({ id: uid('g'), show: 'nyc', name, plus, by, status })),
+    travel: [
+      { id: uid('v'), type: 'van', date: '2027-04-11', label: 'Boston → New York', time: '11:00', detail: '3h 45m · 346 km', who: 'road' },
+      { id: uid('v'), type: 'van', date: '2027-04-13', label: 'New York → Philadelphia', time: '09:00', detail: '1h 50m · 153 km', who: 'road' },
+      { id: uid('v'), type: 'van', date: '2027-04-14', label: 'Philadelphia → Washington (day off)', time: '12:00', detail: '2h 45m · 224 km', who: 'road' },
+      { id: uid('v'), type: 'hotel', date: '2027-04-11', label: 'The Mercer Row Hotel, New York', time: '', detail: 'Apr 11 – 13 · 88 Grand St', who: 'road' },
+      { id: uid('v'), type: 'hotel', date: '2027-04-13', label: 'Hotel Tinsley, Philadelphia', time: '', detail: 'Apr 13 – 15', who: 'road' },
+      { id: uid('v'), type: 'flight', date: '2027-04-16', label: 'DCA → YYZ', time: '10:40', detail: 'AC 8783 · arrives 12:15 · conf Q7RT2M', who: 'road' },
+      { id: uid('v'), type: 'flight', date: '2027-04-23', label: 'YYZ → CLT → AVL', time: '08:05', detail: 'AA 1739 + AA 5210 · arrives 12:30 · conf W4KD9P', who: 'road' },
+    ],
+    budget: [
+      ['t1', 'Crew pay', 2880000, 1645000], ['t1', 'Travel — van, fuel, flights', 1420000, 988000], ['t1', 'Hotels', 1260000, 734000],
+      ['t1', 'Per diems', 700000, 400000], ['t1', 'Production + backline', 850000, 612000], ['t1', 'Merch income (net)', -1860000, -1124500],
+      ['t2', 'Crew pay', 1600000, 420000], ['t2', 'Travel', 900000, 210000], ['t2', 'Hotels', 700000, 160000],
+    ].map(([tour, cat, budget, actual]) => ({ id: uid('b'), tour, cat, budget, actual })),
+    showExp: [['Room rent', 650000], ['Production (sound + lights)', 420000], ['Staff + security', 385000], ['Advertising', 290000], ['Hospitality', 100000]]
+      .map(([label, cents]) => ({ id: uid('e'), show: 'nyc', label, cents })),
+    sheets: { nyc: { sold: 1262, price: 3800, feePer: 300, withholding: 0 } },
+    myexp: [
+      { id: uid('x'), person: 'nico', label: 'Replacement SDI cable', date: '2027-04-10', cents: 8760, status: 'waiting', file: null },
+      { id: uid('x'), person: 'nico', label: 'Cab to venue', date: '2027-04-08', cents: 5500, status: 'paid', file: null },
+      { id: uid('x'), person: 'dana', label: 'Fuel — Boston', date: '2027-04-11', cents: 14260, status: 'paid', file: null },
+    ],
+    templates: {
+      advance: advTemplate.map(([label, owner, before]) => ({ id: uid('a'), label, owner, before })),
+      slots: [['12:00', 'Lobby call'], ['13:00', 'Load-in'], ['15:30', 'Line check'], ['16:30', 'Soundcheck'], ['18:00', 'Dinner'], ['19:00', 'Doors'], ['21:00', 'Set'], ['22:30', 'Curfew'], ['23:00', 'Settlement'], ['23:30', 'Load-out']]
+        .map(([time, label]) => ({ id: uid('a'), time, label })),
+    },
+    settings: { perDiem: 5000, agentPct: 10, mgmtPct: 15, currency: 'USD' },
+    access: {
+      tm:     { season: 'off',  day: 'edit', advance: 'edit', travel: 'edit', guests: 'edit', mymoney: 'view', costs: 'edit', profit: 'off' },
+      artist: { season: 'off',  day: 'view', advance: 'off',  travel: 'view', guests: 'view', mymoney: 'view', costs: 'off',  profit: 'off' },
+      crew:   { season: 'off',  day: 'view', advance: 'view', travel: 'view', guests: 'view', mymoney: 'view', costs: 'off',  profit: 'off' },
+      venue:  { season: 'off',  day: 'view', advance: 'edit', travel: 'off',  guests: 'view', mymoney: 'off',  costs: 'view', profit: 'off' },
+      agent:  { season: 'view', day: 'view', advance: 'off',  travel: 'off',  guests: 'off',  mymoney: 'off',  costs: 'view', profit: 'off' },
+    },
+    activity: [
+      { at: 'Apr 12, 3:48 pm', who: 'dana', text: 'Moved Juniper Vale soundcheck to 4:30 pm (New York)' },
+      { at: 'Apr 12, 2:10 pm', who: 'nico', text: 'Confirmed "USB-C / DisplayPort adapters"' },
+      { at: 'Apr 12, 11:02 am', who: 'sam', text: 'Asked for guest list: Carol Okafor +1 (New York)' },
+      { at: 'Apr 11, 6:30 pm', who: 'rae', text: 'Accepted offer from Brightwater Hall — no, still waiting on radius clause' },
+      { at: 'Apr 11, 9:15 am', who: 'rae', text: 'Settled Boston: $11,000' },
+    ],
+  };
+}
+
+// ---------- storage (this browser only) ----------
+const KEY = 'gigtrip.v1.db';
+const FILES = {};   // uploaded files live in memory for the mock (object URLs)
+function load() { try { const v = JSON.parse(localStorage.getItem(KEY)); return v && v.v === 1 ? v : null; } catch { return null; } }
+function save() { try { localStorage.setItem(KEY, JSON.stringify(DB)); } catch {} }
+let DB = load() || seed();
+
 const store = {
   get(k, d) { try { const v = localStorage.getItem('gigtrip.' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v) { try { localStorage.setItem('gigtrip.' + k, JSON.stringify(v)); } catch {} },
 };
 const ME = { manager: 'rae', tm: 'dana', artist: 'juni', crew: 'nico', venue: 'greg' };
-let savedRole = store.get('role', 'manager');
-if (savedRole === 'band') savedRole = 'crew';
+let savedRole = store.get('role', 'manager'); if (savedRole === 'band') savedRole = 'crew';
 const S = {
-  role: ME[savedRole] ? savedRole : 'manager',
-  showId: 'nyc',
-  showTab: 'deal',
-  artist: 'all', status: 'all',
-  open: new Set(),
+  role: ME[savedRole] ? savedRole : 'manager', showId: 'nyc', tourId: 't1', showTab: '', moneyTab: 'deposits', commArtist: 'jv',
+  artist: 'all', status: 'all', seasonView: 'list', sort: { k: 'date', dir: 1 }, sel: new Set(), open: new Set(), q: '',
 };
-SHOWS.forEach(s => { s.done = ADVANCE.map((_, i) => i < s.adv); });
-SHOWS.find(s => s.id === 'nyc').done = ADVANCE.map(a => a[0] !== 'Merch split + seller confirmed');
 
 // ---------- helpers ----------
 const $ = s => document.querySelector(s);
-const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const money = (c, cents = false) => (c < 0 ? '−' : '') + '$' + (Math.abs(c) / 100).toLocaleString('en-US', { minimumFractionDigits: cents ? 2 : 0, maximumFractionDigits: cents ? 2 : 0 });
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const money = (c, cents = false, cur = '') => (c < 0 ? '−' : '') + (cur === 'CAD' ? 'CA$' : '$') + (Math.abs(c || 0) / 100).toLocaleString('en-US', { minimumFractionDigits: cents ? 2 : 0, maximumFractionDigits: cents ? 2 : 0 });
 const pctOf = (c, p) => Math.round(c * p / 100);
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const DAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const dt = iso => { const [y, m, d] = iso.split('-').map(Number); return new Date(y, m - 1, d); };
-const fmtDate = iso => { const d = dt(iso); return `${DAY[d.getDay()]} ${MON[d.getMonth()]} ${d.getDate()}`; };
+const fmtDate = iso => { if (!iso) return '—'; const d = dt(iso); return `${DAY[d.getDay()]} ${MON[d.getMonth()]} ${d.getDate()}`; };
+const short = iso => { if (!iso) return '—'; const d = dt(iso); return `${MON[d.getMonth()]} ${d.getDate()}`; };
 const toMin = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
 const ampm = t => { let [h, m] = t.split(':').map(Number); const p = h >= 12 ? 'pm' : 'am'; h = h % 12 || 12; return `${h}:${String(m).padStart(2, '0')} ${p}`; };
+const daysUntil = iso => Math.round((dt(iso) - dt(NOW.date)) / 864e5);
 const dateBox = (iso, tape) => { const d = dt(iso); return `<div class="datebox${tape ? ' tape' : ''}"><div class="m">${DAY[d.getDay()]}</div><div class="d">${d.getDate()}</div><div class="m">${MON[d.getMonth()]}</div></div>`; };
-const statusChip = s => {
-  const st = s.status;
-  const label = st === 'hold' ? `Hold ${s.hold || ''}`.trim() : st === 'offer' ? 'Offer' : st[0].toUpperCase() + st.slice(1);
-  return `<span class="chip st-${st}">${label}</span>`;
-};
-const initials = n => n.split(/\s+/).map(w => w[0]).slice(0, 2).join('');
-const avatar = id => { const p = PEOPLE[id]; return `<span class="avatar" style="background:hsl(${p.hue} 70% var(--av-l));color:hsl(${p.hue} 60% var(--av-ink))">${initials(p.name)}</span>`; };
-const pctDone = s => Math.round(s.done.filter(Boolean).length / ADVANCE.length * 100);
-const dealText = d => d.type === 'flat' ? `${money(d.g)} flat` : d.type === 'fest' ? `${money(d.g)} festival flat` : `${money(d.g)} vs ${d.pct}% of net`;
-const show = id => SHOWS.find(s => s.id === id);
-function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2400); }
+const statusChip = s => { const st = s.status; const label = st === 'hold' ? `Hold ${s.hold || ''}`.trim() : (STATUSES.find(x => x[0] === st) || [, st])[1]; return `<span class="chip st-${st}">${label}</span>`; };
+const initials = n => String(n).split(/\s+/).map(w => w[0]).slice(0, 2).join('');
+const P = id => DB.people[id] || { name: 'Someone', kind: 'crew', role: '', hue: 0, over: {} };
+const avatar = id => { const p = P(id); return `<span class="avatar" style="background:hsl(${p.hue} 70% var(--av-l));color:hsl(${p.hue} 60% var(--av-ink))">${esc(initials(p.name))}</span>`; };
+const artist = id => DB.artists.find(a => a.id === id) || { name: '—', hue: 0 };
+const tour = id => DB.tours.find(t => t.id === id);
+const show = id => DB.shows.find(s => s.id === id);
+const cityOf = s => s.city.split(',')[0];
+const dealText = (d, cur) => !d ? '—' : d.type === 'flat' ? `${money(d.g, false, cur)} flat` : d.type === 'fest' ? `${money(d.g, false, cur)} festival flat` : d.type === 'door' ? `${d.pct}% of net box office` : `${money(d.g, false, cur)} vs ${d.pct}% of net`;
+const showTasks = id => DB.tasks.filter(t => t.show === id);
+const pctDone = id => { const t = showTasks(id); return t.length ? Math.round(t.filter(x => x.status === 'Done').length / t.length * 100) : 0; };
+const taskDone = (id, label) => showTasks(id).some(t => t.label.startsWith(label) && t.status === 'Done');
+const getp = (o, p) => p.split('.').reduce((a, k) => (a == null ? a : a[k]), o);
+const setp = (o, p, v) => { const ks = p.split('.'); let t = o; ks.slice(0, -1).forEach(k => { t = t[k] ??= {}; }); t[ks[ks.length - 1]] = v; };
+const fileSize = n => n > 1e6 ? (n / 1e6).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1e3)) + ' KB';
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2600); }
+function log(text) { DB.activity.unshift({ at: 'Just now', who: me(), text }); DB.activity.length = Math.min(DB.activity.length, 80); }
+function commit(msg, logText) { if (logText) log(logText); save(); route(); if (msg) toast(msg); }
 
-// access: management has everything; everyone else = their own change, else their role's default
+// ---------- access ----------
 const me = () => ME[S.role];
-const isMgr = () => S.role === 'manager';
-function level(pid, area) {
-  const p = PEOPLE[pid];
-  if (p.kind === 'manager') return 'edit';
-  return p.over[area] || (ACCESS[p.kind] || {})[area] || 'off';
-}
+const isMgr = () => P(me()).kind === 'manager';
+function level(pid, area) { const p = P(pid); if (p.kind === 'manager') return 'edit'; return p.over[area] || (DB.access[p.kind] || {})[area] || 'off'; }
 const can = (area, min = 'view', pid = me()) => LV[level(pid, area)] >= LV[min];
+const canEdit = area => can(area, 'edit');
+const isVenue = () => P(me()).kind === 'venue';
 
-// settlement math — integer cents, "versus" deal: artist earns the larger of guarantee and % of net after expenses
-function settle(s, d) {
-  const gross = s.sold * s.price;
-  const fees = s.sold * s.feePer;
-  const net = gross - fees;
-  const exp = s.expenses.reduce((a, e) => a + e[1], 0);
+// ---------- money ----------
+function sheetFor(s) { return DB.sheets[s.id] ||= { sold: Math.round(s.cap * .9), price: 3500, feePer: 300, withholding: 0 }; }
+function settle(s) {
+  const st = sheetFor(s), d = s.deal;
+  const gross = st.sold * st.price, fees = st.sold * st.feePer, net = gross - fees;
+  const exp = DB.showExp.filter(e => e.show === s.id).reduce((a, e) => a + e.cents, 0);
   const after = Math.max(0, net - exp);
-  const share = pctOf(after, d.pct);
-  const earns = Math.max(d.g, share);
-  return { gross, fees, net, exp, after, share, earns, versusWins: share > d.g, due: earns - d.dep };
+  let share = 0, earns = d.g;
+  if (d.type === 'vs') { share = pctOf(after, d.pct); earns = Math.max(d.g, share); }
+  if (d.type === 'door') { share = pctOf(net, d.pct); earns = share; }
+  const dep = d.depPaid ? d.dep : 0;
+  return { gross, fees, net, exp, after, share, earns, versusWins: d.type === 'vs' && share > d.g, dep, wh: st.withholding || 0, due: earns - dep - (st.withholding || 0) };
 }
-function showFee(s) {
-  if (s.settled) return s.settled;
-  if (s.id === 'nyc') return settle(NYC.settle, s.deal).earns;
-  return s.deal.g;
-}
+const showFee = s => s.settled != null ? s.settled : (s.id === 'nyc' ? settle(s).earns : s.deal.g);
 
 // ---------- icons ----------
 const ICONS = {
-  board: 'M4 6h16v14H4z M4 10h16 M9 3v4 M15 3v4 M8 14h2 M14 14h2',
-  offers: 'M4 13l2-8h12l2 8v6H4z M4 13h5l1 2h4l1-2h5',
-  tour: 'M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z M9 3v15 M15 6v15',
-  show: 'M4 7h16v3a2 2 0 0 0 0 4v3H4v-3a2 2 0 0 0 0-4z M14 7v10',
-  budget: 'M5 20V10 M12 20V4 M19 20v-7',
+  board: 'M4 6h16v14H4z M4 10h16 M9 3v4 M15 3v4 M8 14h2 M14 14h2', offers: 'M4 13l2-8h12l2 8v6H4z M4 13h5l1 2h4l1-2h5',
+  tour: 'M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z M9 3v15 M15 6v15', show: 'M4 7h16v3a2 2 0 0 0 0 4v3H4v-3a2 2 0 0 0 0-4z M14 7v10',
+  money: 'M3 7h18v12H3z M3 11h18 M16 15h2', budget: 'M5 20V10 M12 20V4 M19 20v-7',
   party: 'M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z M3 20c0-3 2.7-5 6-5s6 2 6 5 M16 4.5a3.5 3.5 0 0 1 0 6.5 M18 15c2 .6 3 2.3 3 5',
-  today: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z M12 7v5l3 2',
-  travel: 'M3 17h18 M5 13l14-5 1.5 2-9 5.5-2-.5-2 2H5l1-2.5z',
-  guests: 'M10 6h10 M10 12h10 M10 18h10 M4 6l1 1 2-2 M4 12l1 1 2-2 M4 18l1 1 2-2',
-  settle: 'M6 3h12v18l-3-2-3 2-3-2-3 2z M9 8h6 M9 12h6 M9 16h3',
-  access: 'M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z M9.5 12l2 2 3.5-4',
-  mymoney: 'M3 7h18v12H3z M3 11h18 M16 15h2',
-  about: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z M12 11v5 M12 8v.01',
-  chev: 'M9 6l6 6-6 6',
+  today: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z M12 7v5l3 2', travel: 'M3 17h18 M5 13l14-5 1.5 2-9 5.5-2-.5-2 2H5l1-2.5z',
+  guests: 'M10 6h10 M10 12h10 M10 18h10 M4 6l1 1 2-2 M4 12l1 1 2-2 M4 18l1 1 2-2', settle: 'M6 3h12v18l-3-2-3 2-3-2-3 2z M9 8h6 M9 12h6 M9 16h3',
+  access: 'M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z M9.5 12l2 2 3.5-4', mymoney: 'M3 7h18v12H3z M3 11h18 M16 15h2',
+  artists: 'M12 3a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z M6 11a6 6 0 0 0 12 0 M12 17v4 M9 21h6',
+  activity: 'M6 16V11a6 6 0 1 1 12 0v5l2 2H4z M10 21h4', settings: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0-1.2-2.9H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 2.9-1.2V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0 1.2 2.9H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z',
+  more: 'M5 12h.01 M12 12h.01 M19 12h.01', about: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z M12 11v5 M12 8v.01',
+  chev: 'M9 6l6 6-6 6', edit: 'M4 20h4L19 9l-4-4L4 16z M14 6l4 4', plus: 'M12 5v14 M5 12h14', file: 'M6 3h9l4 4v14H6z M14 3v5h5',
+  upload: 'M12 16V4 M7 9l5-5 5 5 M4 16v4h16v-4', comment: 'M4 5h16v11H8l-4 4z',
 };
 const icon = (n, cls = '') => `<svg class="i ${cls}" viewBox="0 0 24 24" aria-hidden="true"><path d="${ICONS[n]}"/></svg>`;
+const editBtn = (act, id, label = 'Edit') => `<button class="iconbtn" type="button" data-act="${act}" data-id="${esc(id)}" aria-label="${esc(label)}">${icon('edit')}</button>`;
+const addBtn = (act, label, id = '', cls = 'btn-secondary') => `<button class="btn ${cls} btn-sm" type="button" data-act="${act}" data-id="${esc(id)}">${icon('plus')} ${esc(label)}</button>`;
+const uploadZone = (target, id, text = 'Drop files here or tap to upload') => `<label class="upload" data-drop="${target}" data-id="${esc(id)}">${icon('upload')}<b>${text}</b><span class="small">Riders, stage plots, contracts, photos, PDFs</span><input type="file" multiple data-upload="${target}" data-id="${esc(id)}" id="up-${target}-${esc(id)}"></label>`;
 
-// navigation follows what the viewer is allowed to see
+// ---------- navigation (follows what the viewer may see) ----------
 function navFor() {
-  if (isMgr()) return [['board', 'Season'], ['offers', 'Offers'], ['tour', 'Tour'], ['show', 'Show'], ['budget', 'Budget'], ['party', 'Party'], ['access', 'Access'], ['about', 'About']];
+  if (isMgr()) return [['board', 'Season'], ['tour', 'Tour'], ['show', 'Show'], ['money', 'Money'], ['party', 'Party'], ['artists', 'Artists'], ['offers', 'Offers'], ['settle', 'Settle'], ['guests', 'Guests'], ['travel', 'Travel'], ['activity', 'Activity'], ['access', 'Access'], ['settings', 'Settings'], ['about', 'About']];
   const n = [];
   if (can('day')) n.push(['today', 'Today']);
   if (can('advance') || can('costs')) n.push(['show', 'Show']);
@@ -571,31 +638,395 @@ function navFor() {
   if (can('travel')) n.push(['travel', 'Travel']);
   if (can('mymoney')) n.push(['mymoney', 'My money']);
   if (can('season')) n.push(['board', 'Season']);
-  if (can('profit')) n.push(['budget', 'Budget']);
-  n.push(['party', PEOPLE[me()].kind === 'venue' ? 'Tour team' : 'Party'], ['about', 'About']);
+  if (can('profit')) n.push(['money', 'Money']);
+  if (canEdit('advance')) n.push(['activity', 'Activity']);
+  n.push(['party', isVenue() ? 'Tour team' : 'Party'], ['about', 'About']);
   return n;
+}
+function attention() {
+  const items = [];
+  if (!canEdit('advance')) return items;
+  const mgr = isMgr(), venue = isVenue();
+  DB.tasks.filter(t => (!venue || t.show === 'nyc') && t.status !== 'Done' && t.due < NOW.date && show(t.show).status !== 'cancelled').forEach(t => items.push({ kind: 'Overdue task', text: `${t.label} — ${cityOf(show(t.show))}`, sub: `${P(t.owner).name} · was due ${short(t.due)}`, act: 'task', id: t.id }));
+  if (mgr) DB.shows.filter(s => s.deal.dep && !s.deal.depPaid && s.deal.depDue && s.status !== 'cancelled' && daysUntil(s.deal.depDue) <= 7).forEach(s => items.push({ kind: daysUntil(s.deal.depDue) < 0 ? 'Deposit overdue' : 'Deposit due soon', text: `${money(s.deal.dep, false, s.cur)} — ${s.venue}`, sub: `${artist(s.artist).name} · due ${short(s.deal.depDue)}`, go: 'money' }));
+  if (mgr) DB.offers.filter(o => o.status === 'offer' && daysUntil(o.expires) <= 7).forEach(o => items.push({ kind: 'Offer expiring', text: `${o.city} · ${o.venue}`, sub: `Answer by ${short(o.expires)}`, go: 'offers' }));
+  if (canEdit('guests')) DB.guests.filter(g => g.status === 'pending').forEach(g => items.push({ kind: 'Guest request', text: `${g.name}${g.plus ? ' +' + g.plus : ''}`, sub: `for ${P(g.by).name} · ${cityOf(show(g.show))}`, go: 'guests' }));
+  return items;
+}
+
+// ---------- form dialog (every add/edit uses this) ----------
+function fieldHtml(f, v) {
+  const id = 'f-' + f.k.replace(/\./g, '-');
+  const val = v == null ? '' : v;
+  const cls = `field${f.full ? ' full' : ''}`;
+  if (f.type === 'select') return `<label class="${cls}" for="${id}">${f.label}<select id="${id}" name="${f.k}">${f.options.map(([o, l]) => `<option value="${esc(o)}" ${String(val) === String(o) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>`;
+  if (f.type === 'textarea') return `<label class="${cls}" for="${id}">${f.label}<textarea id="${id}" name="${f.k}" placeholder="${esc(f.ph || '')}">${esc(val)}</textarea></label>`;
+  if (f.type === 'check') return `<label class="${cls} checkf" for="${id}"><input type="checkbox" id="${id}" name="${f.k}" ${val ? 'checked' : ''}><span>${f.label}</span></label>`;
+  if (f.type === 'file') return `<label class="${cls}" for="${id}">${f.label}<input type="file" id="${id}" name="${f.k}" ${f.accept ? `accept="${f.accept}"` : ''} style="height:auto;padding:10px"></label>`;
+  const shown = f.type === 'money' ? (val === '' ? '' : (val / 100).toFixed(2)) : val;
+  const type = f.type === 'money' || f.type === 'number' ? 'text' : (f.type || 'text');
+  const mode = f.type === 'money' ? 'decimal' : f.type === 'number' ? 'numeric' : '';
+  return `<label class="${cls}" for="${id}">${f.label}<input id="${id}" name="${f.k}" type="${type}" ${mode ? `inputmode="${mode}"` : ''} value="${esc(shown)}" placeholder="${esc(f.ph || '')}" ${f.req ? 'required' : ''} autocomplete="off"></label>`;
+}
+function openForm({ title, fields, value = {}, submit = 'Save', onSave, onDelete, extra = '', wide }) {
+  const d = $('#dlg');
+  d.innerHTML = `<form id="dlgform" novalidate>
+    <div class="row between"><h2>${esc(title)}</h2><button type="button" class="iconbtn" data-close aria-label="Close">×</button></div>
+    ${fields.length ? `<div class="fgrid">${fields.map(f => fieldHtml(f, getp(value, f.k))).join('')}</div>` : ''}
+    ${extra}
+    <div class="row between wrap">${onDelete ? '<button type="button" class="btn btn-danger btn-sm" data-del>Delete</button>' : '<span></span>'}
+      <div class="row"><button type="button" class="btn btn-secondary" data-close>Cancel</button>${onSave ? `<button class="btn btn-primary" type="submit">${esc(submit)}</button>` : ''}</div></div>
+  </form>`;
+  d.style.width = wide ? 'min(760px, calc(100% - 24px))' : '';
+  const form = d.querySelector('form');
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+    const out = {};
+    for (const f of fields) {
+      const el = form.elements[f.k];
+      if (!el) continue;
+      let v = f.type === 'check' ? el.checked : f.type === 'file' ? el.files[0] || null : el.value.trim();
+      if (f.type === 'money') v = v === '' ? 0 : Math.round(parseFloat(String(v).replace(/[^0-9.\-]/g, '')) * 100) || 0;
+      if (f.type === 'number') v = v === '' ? 0 : parseInt(String(v).replace(/[^0-9\-]/g, ''), 10) || 0;
+      if (f.req && (v === '' || v == null)) { el.focus(); toast(`${f.label} is needed`); return; }
+      out[f.k] = v;
+    }
+    if (onSave(out, form) === false) return;
+    d.close(); save(); route();
+  });
+  form.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => d.close()));
+  const del = form.querySelector('[data-del]');
+  if (del) del.addEventListener('click', () => {
+    if (!del.dataset.sure) { del.dataset.sure = '1'; del.textContent = 'Tap again to delete'; return; }
+    onDelete(); d.close(); save(); route();
+  });
+  d.showModal();
+  const first = form.querySelector('input:not([type=checkbox]):not([type=file]),select,textarea');
+  if (first && !('ontouchstart' in window)) first.focus();
+}
+const peopleOpts = (filter = () => true) => Object.entries(DB.people).filter(([k, p]) => filter(p, k)).map(([k, p]) => [k, `${p.name} — ${p.role}`]);
+const whoOpts = () => [['road', 'Everyone on the road'], ['all', 'Everyone'], ...peopleOpts(p => p.group === 'road')];
+const whoLabel = w => w === 'road' ? 'Everyone on the road' : w === 'all' ? 'Everyone' : P(w).name;
+const seesTravel = (item, pid) => item.who === 'all' || (item.who === 'road' && P(pid).group === 'road') || item.who === pid;
+
+// ---------- entity editors ----------
+const E = {};
+E.show = (id, preset = {}) => {
+  const s = id ? show(id) : null;
+  const v = s ? JSON.parse(JSON.stringify(s)) : { artist: preset.artist || 'jv', tour: preset.tour ?? S.tourId, date: preset.date || '2027-06-12', city: '', venue: '', cap: 1000, status: 'hold', hold: 1, cur: 'USD', guestCap: 24, deal: { type: 'vs', g: 1000000, pct: 85, dep: 500000, depDue: '', depPaid: false }, ...preset };
+  openForm({
+    title: s ? `Edit ${cityOf(s)}` : 'Add a show', wide: true, value: v,
+    fields: [
+      { k: 'artist', label: 'Artist', type: 'select', options: DB.artists.map(a => [a.id, a.name]) },
+      { k: 'tour', label: 'Tour', type: 'select', options: [['', 'One-off (no tour)'], ...DB.tours.map(t => [t.id, `${t.name} · ${artist(t.artist).name}`])] },
+      { k: 'date', label: 'Date', type: 'date', req: true }, { k: 'status', label: 'Status', type: 'select', options: STATUSES },
+      { k: 'city', label: 'City', ph: 'e.g. Chicago, IL', req: true }, { k: 'venue', label: 'Venue', ph: 'e.g. The Foundry', req: true },
+      { k: 'cap', label: 'Capacity', type: 'number' }, { k: 'hold', label: 'Hold number (if a hold)', type: 'number' },
+      { k: 'deal.type', label: 'Deal type', type: 'select', options: DEALS }, { k: 'cur', label: 'Currency', type: 'select', options: [['USD', 'US dollars'], ['CAD', 'Canadian dollars'], ['EUR', 'Euros'], ['GBP', 'Pounds']] },
+      { k: 'deal.g', label: 'Guarantee ($)', type: 'money' }, { k: 'deal.pct', label: 'Artist % (vs / door deals)', type: 'number' },
+      { k: 'deal.dep', label: 'Deposit ($)', type: 'money' }, { k: 'deal.depDue', label: 'Deposit due', type: 'date' },
+      { k: 'deal.depPaid', label: 'Deposit received', type: 'check', full: true },
+      { k: 'address', label: 'Venue address', full: true }, { k: 'parking', label: 'Parking / load-in notes', type: 'textarea', full: true },
+      { k: 'hospitality', label: 'Hospitality', full: true }, { k: 'wifi', label: 'Wi-Fi' }, { k: 'guestCap', label: 'Guest list spots', type: 'number' },
+      { k: 'note', label: 'Notes (e.g. festival set time)', full: true },
+    ],
+    onSave(o) {
+      const t = s || { id: uid('sh'), settled: null, deal: {} };
+      Object.entries(o).forEach(([k, val]) => setp(t, k, val));
+      if (!t.ll) { const key = Object.keys(CITIES).find(c => t.city.toLowerCase().startsWith(c)); if (key) t.ll = CITIES[key]; }
+      if (!s) {
+        DB.shows.push(t);
+        DB.templates.advance.forEach(a => DB.tasks.push({ id: uid('k'), show: t.id, label: a.label, owner: a.owner, due: addDays(t.date, -a.before), status: 'To do', comments: [] }));
+        S.showId = t.id;
+      }
+      log(`${s ? 'Updated' : 'Added'} show: ${t.city} · ${t.venue} (${short(t.date)})`);
+      toast(s ? 'Show saved' : `Added ${cityOf(t)} with ${DB.templates.advance.length} advance tasks from your template`);
+    },
+    onDelete: s && (() => { DB.shows = DB.shows.filter(x => x !== s); ['tasks', 'slots', 'docs', 'contacts', 'guests', 'showExp'].forEach(k => { DB[k] = DB[k].filter(x => x.show !== s.id); }); log(`Deleted show: ${s.city} (${short(s.date)})`); S.showId = 'nyc'; toast('Show deleted'); }),
+  });
+};
+E.artist = id => {
+  const a = id ? artist(id) : null;
+  openForm({
+    title: a ? `Edit ${a.name}` : 'Add an artist', value: a || { hue: Math.floor(Math.random() * 360) },
+    fields: [{ k: 'name', label: 'Artist name', req: true, full: true }, { k: 'genre', label: 'Genre' }, { k: 'home', label: 'Home base' }, { k: 'agent', label: 'Booking agent', full: true }, { k: 'photo', label: 'Press photo', type: 'file', accept: 'image/*', full: true }],
+    onSave(o) {
+      const t = a || { id: uid('ar'), hue: Math.floor(Math.random() * 360), photo: null };
+      const file = o.photo; delete o.photo;
+      Object.assign(t, o);
+      if (file) { const fid = uid('f'); FILES[fid] = { url: URL.createObjectURL(file), name: file.name, type: file.type, size: file.size }; t.photo = fid; }
+      if (!a) DB.artists.push(t);
+      log(`${a ? 'Updated' : 'Added'} artist ${t.name}`); toast(a ? 'Saved' : `${t.name} added to the roster`);
+    },
+    onDelete: a && (() => { if (DB.shows.some(s => s.artist === a.id)) { toast('Move or delete their shows first'); return; } DB.artists = DB.artists.filter(x => x !== a); log(`Removed artist ${a.name}`); }),
+  });
+};
+E.tour = (id, preset = {}) => {
+  const t = id ? tour(id) : null;
+  openForm({
+    title: t ? `Edit ${t.name}` : 'Add a tour', value: t || { artist: preset.artist || 'jv', season: 'Fall 2027' },
+    fields: [{ k: 'name', label: 'Tour name', req: true, full: true }, { k: 'artist', label: 'Artist', type: 'select', options: DB.artists.map(a => [a.id, a.name]) }, { k: 'season', label: 'Season' }],
+    onSave(o) { const x = t || { id: uid('t') }; Object.assign(x, o); if (!t) { DB.tours.push(x); S.tourId = x.id; } log(`${t ? 'Updated' : 'Added'} tour ${x.name}`); toast('Tour saved'); },
+    onDelete: t && (() => { DB.shows.filter(s => s.tour === t.id).forEach(s => { s.tour = ''; }); DB.tours = DB.tours.filter(x => x !== t); S.tourId = DB.tours[0]?.id; log(`Deleted tour ${t.name}`); }),
+  });
+};
+E.offer = id => {
+  const o = id ? DB.offers.find(x => x.id === id) : null;
+  openForm({
+    title: o ? 'Edit offer' : 'Log an offer', wide: true, value: o || { artist: 'jv', date: '2027-06-20', status: 'offer', expires: addDays(NOW.date, 7), g: 1000000 },
+    fields: [
+      { k: 'artist', label: 'Artist', type: 'select', options: DB.artists.map(a => [a.id, a.name]) }, { k: 'date', label: 'Show date', type: 'date', req: true },
+      { k: 'city', label: 'City', req: true }, { k: 'venue', label: 'Venue', req: true }, { k: 'cap', label: 'Capacity', type: 'number' }, { k: 'promoter', label: 'Promoter' },
+      { k: 'g', label: 'Guarantee ($)', type: 'money' }, { k: 'expires', label: 'Answer by', type: 'date' },
+      { k: 'deal', label: 'Deal as offered', full: true, ph: 'e.g. $10,000 vs 85% of net' }, { k: 'radius', label: 'Radius clause', full: true },
+    ],
+    onSave(v) { const x = o || { id: uid('o'), status: 'offer' }; Object.assign(x, v); if (!o) DB.offers.push(x); log(`${o ? 'Updated' : 'Logged'} offer: ${x.city} · ${x.venue}`); toast('Offer saved'); },
+    onDelete: o && (() => { DB.offers = DB.offers.filter(x => x !== o); }),
+  });
+};
+E.task = (id, preset = {}) => {
+  const t = id ? DB.tasks.find(x => x.id === id) : null;
+  const edit = canEdit('advance');
+  const comments = t ? `<div class="stack" style="gap:8px"><div class="minihead">Comments</div>
+    ${t.comments.length ? t.comments.map(c => `<div class="comment"><span class="who">${esc(P(c.who).name)}</span> <span class="small muted">${esc(c.at)}</span><div>${esc(c.text)}</div></div>`).join('') : '<p class="small muted" style="margin:0">No comments yet.</p>'}
+    <label class="field" for="f-newcomment">Add a comment<textarea id="f-newcomment" name="newcomment" placeholder="Type @ and a name to tag someone"></textarea></label></div>` : '';
+  openForm({
+    title: t ? t.label : 'Add an advance task', value: t || { show: preset.show || S.showId, owner: 'dana', due: addDays(show(preset.show || S.showId).date, -7), status: 'To do' },
+    fields: edit ? [
+      { k: 'label', label: 'Task', req: true, full: true }, { k: 'owner', label: 'Owner', type: 'select', options: peopleOpts(p => p.kind !== 'artist') },
+      { k: 'due', label: 'Due', type: 'date' }, { k: 'status', label: 'Status', type: 'select', options: TASK_ST.map(x => [x, x]) },
+    ] : [], extra: (t && !edit ? `<p class="muted" style="margin:0">${esc(P(t.owner).name)} · due ${short(t.due)} · ${t.status}</p>` : '') + comments,
+    submit: t ? 'Save' : 'Add task',
+    onSave(o, form) {
+      const x = t || { id: uid('k'), show: preset.show || S.showId, comments: [] };
+      Object.assign(x, o);
+      const c = form.elements.newcomment?.value.trim();
+      if (c) { x.comments.push({ who: me(), at: 'Just now', text: c }); log(`Commented on "${x.label}": ${c.slice(0, 60)}`); }
+      if (!t) { DB.tasks.push(x); log(`Added task "${x.label}"`); }
+      toast(c ? 'Comment added' : 'Task saved');
+    },
+    onDelete: t && edit && (() => { DB.tasks = DB.tasks.filter(x => x !== t); log(`Removed task "${t.label}"`); }),
+  });
+};
+E.slot = (id, preset = {}) => {
+  const t = id ? DB.slots.find(x => x.id === id) : null;
+  openForm({
+    title: t ? 'Edit time' : 'Add to the day sheet', value: t || { show: preset.show || S.showId, time: '17:00' },
+    fields: [{ k: 'time', label: 'Time', type: 'time', req: true }, { k: 'label', label: 'What', req: true }, { k: 'who', label: 'Who / where', full: true }, { k: 'key', label: 'Highlight for everyone', type: 'check', full: true }],
+    onSave(o) { const x = t || { id: uid('s'), show: preset.show || S.showId }; Object.assign(x, o); if (!t) DB.slots.push(x); log(`${t ? 'Changed' : 'Added'} ${x.label} at ${ampm(x.time)} (${cityOf(show(x.show))})`); toast('Day sheet updated — everyone sees it now'); },
+    onDelete: t && (() => { DB.slots = DB.slots.filter(x => x !== t); log(`Removed ${t.label} from the day sheet`); }),
+  });
+};
+E.doc = id => {
+  const t = DB.docs.find(x => x.id === id);
+  const f = t.file && FILES[t.file];
+  const preview = f ? (f.type.startsWith('image/') ? `<img class="preview-img" src="${f.url}" alt="${esc(t.name)}">` : `<p class="note">${esc(f.name)} · ${fileSize(f.size)}. The real app opens it in the browser's viewer.</p>`)
+    : `<p class="note">Sample document — upload a real file to see it here.</p>`;
+  openForm({
+    title: t.name, value: t, extra: preview, wide: !!f,
+    fields: canEdit('advance') ? [{ k: 'name', label: 'Name', full: true }, { k: 'meta', label: 'Version / note' }, { k: 'status', label: 'Status', type: 'select', options: [['ok', 'Ready'], ['pending', 'Waiting']] }, { k: 'file', label: 'Replace file', type: 'file', full: true }] : [],
+    onSave: canEdit('advance') ? (o => { const file = o.file; delete o.file; Object.assign(t, o); if (file) attachFile(t, file); log(`Updated document ${t.name}`); toast('Saved'); }) : null,
+    onDelete: canEdit('advance') && (() => { DB.docs = DB.docs.filter(x => x !== t); log(`Deleted document ${t.name}`); }),
+  });
+};
+E.contact = (id, preset = {}) => {
+  const t = id ? DB.contacts.find(x => x.id === id) : null;
+  openForm({ title: t ? 'Edit contact' : 'Add a contact', value: t || { show: preset.show || S.showId },
+    fields: [{ k: 'name', label: 'Name', req: true }, { k: 'role', label: 'Role' }, { k: 'ph', label: 'Phone', full: true }],
+    onSave(o) { const x = t || { id: uid('c'), show: preset.show || S.showId }; Object.assign(x, o); if (!t) DB.contacts.push(x); toast('Contact saved'); },
+    onDelete: t && (() => { DB.contacts = DB.contacts.filter(x => x !== t); }) });
+};
+E.person = id => {
+  const p = id ? DB.people[id] : null;
+  openForm({ title: p ? `Edit ${p.name}` : 'Add someone', value: p || { kind: 'crew', group: 'road', hue: 200 },
+    fields: [
+      { k: 'name', label: 'Name', req: true }, { k: 'role', label: 'Job title', ph: 'e.g. Monitor engineer' },
+      { k: 'kind', label: 'Access role', type: 'select', options: Object.entries(KINDS) }, { k: 'group', label: 'Where', type: 'select', options: [['road', 'On the road'], ['office', 'Office'], ['venue', 'Venue']] },
+      { k: 'ph', label: 'Phone' }, { k: 'room', label: 'Hotel room' }, { k: 'pay', label: 'Pay per show ($)', type: 'money' },
+    ],
+    onSave(o) {
+      if (p) Object.assign(p, o); else { const k = uid('p'); DB.people[k] = { ...o, hue: Math.floor(Math.random() * 360), over: {} }; S.open.add(k); }
+      log(`${p ? 'Updated' : 'Added'} ${o.name} (${KINDS[o.kind]})`); toast(p ? 'Saved' : `${o.name} added — set what they bring and can see below`);
+    },
+    onDelete: p && id !== 'rae' && (() => { delete DB.people[id]; DB.supply = DB.supply.filter(x => x.person !== id); log(`Removed ${p.name}`); }) });
+};
+E.guest = (id, preset = {}) => {
+  const g = id ? DB.guests.find(x => x.id === id) : null;
+  openForm({ title: g ? 'Edit guest' : 'Add a guest', value: g || { show: preset.show || S.showId, plus: 0, by: me(), status: 'approved' },
+    fields: [{ k: 'name', label: 'Name on the list', req: true, full: true }, { k: 'plus', label: 'Plus-ones', type: 'number' }, { k: 'status', label: 'Status', type: 'select', options: [['approved', 'Approved'], ['pending', 'Pending'], ['declined', 'Declined']] }, { k: 'by', label: 'Requested by', type: 'select', options: peopleOpts(), full: true }],
+    onSave(o) { const x = g || { id: uid('g'), show: preset.show || S.showId }; Object.assign(x, o); if (!g) DB.guests.push(x); toast('Guest list updated'); },
+    onDelete: g && (() => { DB.guests = DB.guests.filter(x => x !== g); }) });
+};
+E.travel = id => {
+  const t = id ? DB.travel.find(x => x.id === id) : null;
+  openForm({ title: t ? 'Edit travel' : 'Add travel', value: t || { type: 'flight', date: NOW.date, who: 'road' },
+    fields: [{ k: 'type', label: 'Type', type: 'select', options: [['flight', 'Flight'], ['van', 'Van / bus'], ['hotel', 'Hotel'], ['other', 'Other']] }, { k: 'date', label: 'Date', type: 'date', req: true },
+      { k: 'label', label: 'Route or hotel', req: true, ph: 'e.g. YYZ → LAX' }, { k: 'time', label: 'Time', type: 'time' },
+      { k: 'detail', label: 'Details (flight number, confirmation, drive time)', full: true }, { k: 'who', label: 'Who', type: 'select', options: whoOpts(), full: true }],
+    onSave(o) { const x = t || { id: uid('v') }; Object.assign(x, o); if (!t) DB.travel.push(x); log(`${t ? 'Updated' : 'Added'} travel: ${x.label} (${short(x.date)})`); toast('Travel saved — it shows for the people it applies to'); },
+    onDelete: t && (() => { DB.travel = DB.travel.filter(x => x !== t); }) });
+};
+E.supply = (id, preset = {}) => {
+  const t = id ? DB.supply.find(x => x.id === id) : null;
+  openForm({ title: t ? 'Edit item' : 'Add an item to bring', value: t || { person: preset.person || 'nico', ok: false },
+    fields: [{ k: 'person', label: 'Who supplies it', type: 'select', options: peopleOpts(), full: true }, { k: 'label', label: 'Item', req: true, full: true }, { k: 'ok', label: 'Already confirmed', type: 'check', full: true }],
+    onSave(o) { const x = t || { id: uid('u') }; Object.assign(x, o); if (!t) DB.supply.push(x); log(`${P(x.person).name} to bring: ${x.label}`); toast('Saved — shows on their card and Today screen'); },
+    onDelete: t && (() => { DB.supply = DB.supply.filter(x => x !== t); }) });
+};
+E.budget = (id, preset = {}) => {
+  const t = id ? DB.budget.find(x => x.id === id) : null;
+  openForm({ title: t ? 'Edit budget line' : 'Add a budget line', value: t || { tour: preset.tour || S.tourId, budget: 0, actual: 0 },
+    fields: [{ k: 'cat', label: 'Category', req: true, full: true }, { k: 'budget', label: 'Budget ($)', type: 'money' }, { k: 'actual', label: 'Spent so far ($)', type: 'money' }],
+    onSave(o) { const x = t || { id: uid('b'), tour: preset.tour || S.tourId }; Object.assign(x, o); if (!t) DB.budget.push(x); log(`Budget: ${x.cat} ${money(x.budget)}`); toast('Budget updated'); },
+    onDelete: t && (() => { DB.budget = DB.budget.filter(x => x !== t); }) });
+};
+E.showExp = (id, preset = {}) => {
+  const t = id ? DB.showExp.find(x => x.id === id) : null;
+  openForm({ title: t ? 'Edit show expense' : 'Add a show expense', value: t || { show: preset.show || S.showId, cents: 0 },
+    fields: [{ k: 'label', label: 'Expense', req: true, full: true }, { k: 'cents', label: 'Amount ($)', type: 'money', full: true }],
+    onSave(o) { const x = t || { id: uid('e'), show: preset.show || S.showId }; Object.assign(x, o); if (!t) DB.showExp.push(x); toast('Settlement updated'); },
+    onDelete: t && (() => { DB.showExp = DB.showExp.filter(x => x !== t); }) });
+};
+E.myexp = id => {
+  const t = id ? DB.myexp.find(x => x.id === id) : null;
+  openForm({ title: t ? 'Edit expense' : 'Add an expense', value: t || { person: me(), date: NOW.date, cents: 0, status: 'waiting' },
+    fields: [{ k: 'label', label: 'What for', req: true, full: true }, { k: 'cents', label: 'Amount ($)', type: 'money' }, { k: 'date', label: 'Date', type: 'date' }, { k: 'receipt', label: 'Receipt photo', type: 'file', accept: 'image/*,application/pdf', full: true }]
+      .concat(isMgr() || canEdit('costs') ? [{ k: 'status', label: 'Status', type: 'select', options: [['waiting', 'Waiting'], ['paid', 'Paid back']] }] : []),
+    onSave(o) { const file = o.receipt; delete o.receipt; const x = t || { id: uid('x'), person: me(), status: 'waiting', file: null }; Object.assign(x, o); if (file) attachFile(x, file); if (!t) DB.myexp.push(x); log(`Expense: ${x.label} ${money(x.cents, true)}`); toast(file ? 'Expense + receipt saved' : 'Expense saved'); },
+    onDelete: t && (() => { DB.myexp = DB.myexp.filter(x => x !== t); }) });
+};
+E.tmpl = (id, kind) => {
+  const list = DB.templates[kind];
+  const t = id ? list.find(x => x.id === id) : null;
+  const fields = kind === 'advance'
+    ? [{ k: 'label', label: 'Task', req: true, full: true }, { k: 'owner', label: 'Usual owner', type: 'select', options: peopleOpts(p => p.kind !== 'artist') }, { k: 'before', label: 'Due (days before show)', type: 'number' }]
+    : [{ k: 'time', label: 'Time', type: 'time', req: true }, { k: 'label', label: 'What', req: true }];
+  openForm({ title: t ? 'Edit template item' : 'Add to template', value: t || { owner: 'dana', before: 7, time: '17:00' }, fields,
+    onSave(o) { const x = t || { id: uid('a') }; Object.assign(x, o); if (!t) list.push(x); if (kind === 'slots') list.sort((a, b) => a.time.localeCompare(b.time)); toast('Template saved — used for new shows'); },
+    onDelete: t && (() => { DB.templates[kind] = list.filter(x => x !== t); }) });
+};
+function attachFile(obj, file) {
+  const fid = uid('f');
+  FILES[fid] = { url: URL.createObjectURL(file), name: file.name, type: file.type, size: file.size };
+  obj.file = fid;
+}
+function uploadFiles(target, id, files) {
+  if (!files || !files.length) return;
+  [...files].forEach(file => {
+    if (target === 'docs') {
+      const d = { id: uid('d'), show: id, name: file.name.replace(/\.[^.]+$/, ''), meta: `${fileSize(file.size)} · uploaded by ${P(me()).name.split(' ')[0]}`, status: 'ok', file: null };
+      attachFile(d, file); DB.docs.push(d);
+    }
+  });
+  commit(`${files.length} file${files.length > 1 ? 's' : ''} uploaded`, `Uploaded ${files.length} file${files.length > 1 ? 's' : ''} to ${cityOf(show(id))}`);
+}
+
+// ---------- CSV import / export (Excel parity) ----------
+const CSV_COLS = ['date', 'artist', 'city', 'venue', 'capacity', 'status', 'deal_type', 'guarantee', 'artist_pct', 'deposit', 'deposit_due', 'deposit_paid', 'currency', 'tour'];
+function csvRows() {
+  return DB.shows.slice().sort((a, b) => a.date.localeCompare(b.date)).map(s => [s.date, artist(s.artist).name, s.city, s.venue, s.cap, s.status, s.deal.type, (s.deal.g / 100).toFixed(2), s.deal.pct || '', (s.deal.dep / 100).toFixed(2), s.deal.depDue || '', s.deal.depPaid ? 'yes' : 'no', s.cur, tour(s.tour)?.name || '']);
+}
+const csvCell = v => /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v);
+function parseCSV(text) {
+  const rows = []; let row = [], cell = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) { if (c === '"' && text[i + 1] === '"') { cell += '"'; i++; } else if (c === '"') q = false; else cell += c; }
+    else if (c === '"') q = true; else if (c === ',') { row.push(cell); cell = ''; } else if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(cell); rows.push(row); row = []; cell = ''; } else cell += c;
+  }
+  if (cell || row.length) { row.push(cell); rows.push(row); }
+  return rows.filter(r => r.some(x => x.trim()));
+}
+function openExport() {
+  const text = [CSV_COLS, ...csvRows()].map(r => r.map(csvCell).join(',')).join('\n');
+  openForm({ title: 'Export to Excel', fields: [], extra: `<p class="muted" style="margin:0">Copy this and paste it into Excel or Google Sheets. The real app downloads a .csv file.</p>
+    <textarea class="csv field" id="f-export" readonly style="width:100%;border:1px solid var(--line-strong);border-radius:12px;padding:10px;background:var(--surface-2);color:var(--text)">${esc(text)}</textarea>
+    <button class="btn btn-tape" type="button" id="copycsv">Copy all ${DB.shows.length} shows</button>` });
+  $('#copycsv').addEventListener('click', () => {
+    const ta = $('#f-export');
+    navigator.clipboard?.writeText(ta.value).then(() => toast('Copied — paste into Excel'), () => { ta.select(); toast('Selected — press Copy'); }) ?? (ta.select(), toast('Selected — press Copy'));
+  });
+}
+function openImport() {
+  const sample = `date,artist,city,venue,capacity,status,guarantee,deposit\n2027-07-09,Juniper Vale,Detroit MI,The Crescent,1200,hold,9500,4750\n2027-07-10,Juniper Vale,Cleveland OH,Lakehouse Hall,900,pencil,7000,3500\n2027-07-12,Juniper Vale,Pittsburgh PA,Steel & Sparrow,1000,pencil,8000,4000`;
+  openForm({ title: 'Import from Excel', submit: 'Import shows', fields: [],
+    extra: `<p class="muted" style="margin:0">Paste rows copied from your dates sheet, or choose a .csv file. First row = column names. We match <b>date, artist, city, venue, capacity, status, guarantee, deposit</b> (anything else is ignored).</p>
+      <label class="field" for="f-csvfile">CSV file<input type="file" id="f-csvfile" accept=".csv,text/csv" style="height:auto;padding:10px"></label>
+      <label class="field" for="f-csv">Or paste here<textarea class="csv" id="f-csv" name="csv">${esc(sample)}</textarea></label>
+      <p class="small muted" style="margin:0" id="csvinfo"></p>`,
+    onSave(o, form) {
+      const rows = parseCSV(form.elements.csv.value);
+      if (rows.length < 2) { toast('Nothing to import'); return false; }
+      const head = rows[0].map(h => h.trim().toLowerCase().replace(/\s+/g, '_'));
+      const col = n => head.findIndex(h => h === n || h.startsWith(n));
+      let added = 0;
+      rows.slice(1).forEach(r => {
+        const g = k => (col(k) >= 0 ? (r[col(k)] || '').trim() : '');
+        if (!g('date') || !g('city')) return;
+        let a = DB.artists.find(x => x.name.toLowerCase() === g('artist').toLowerCase());
+        if (!a && g('artist')) { a = { id: uid('ar'), name: g('artist'), genre: '', home: '', agent: '', hue: Math.floor(Math.random() * 360), photo: null }; DB.artists.push(a); }
+        const cents = v => Math.round(parseFloat(String(v).replace(/[^0-9.]/g, '')) * 100) || 0;
+        const st = (g('status') || 'pencil').toLowerCase();
+        const s = { id: uid('sh'), artist: (a || DB.artists[0]).id, tour: '', date: g('date'), city: g('city'), venue: g('venue') || 'TBC', cap: parseInt(g('capacity'), 10) || 0, status: STATUSES.some(x => x[0] === st) ? st : 'pencil', hold: 1, cur: 'USD', address: '', wifi: '', parking: '', hospitality: '', note: 'Imported', guestCap: 24, settled: null,
+          deal: { type: 'vs', g: cents(g('guarantee')), pct: 85, dep: cents(g('deposit')), depDue: '', depPaid: false } };
+        const key = Object.keys(CITIES).find(c => s.city.toLowerCase().startsWith(c)); if (key) s.ll = CITIES[key];
+        DB.shows.push(s);
+        DB.templates.advance.forEach(t => DB.tasks.push({ id: uid('k'), show: s.id, label: t.label, owner: t.owner, due: addDays(s.date, -t.before), status: 'To do', comments: [] }));
+        added++;
+      });
+      log(`Imported ${added} shows from a spreadsheet`); toast(`Imported ${added} shows — they're on the season board`);
+    } });
+  $('#f-csvfile').addEventListener('change', e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => { $('#f-csv').value = r.result; $('#csvinfo').textContent = `Loaded ${f.name}`; }; r.readAsText(f); });
 }
 
 // ---------- views ----------
 const V = {};
 
 V.board = () => {
-  const rows = [
-    ...SHOWS.map(s => ({ ...s, artist: TOUR.artist, tour: TOUR.name })),
-    ...OTHER_DATES,
-    ...OFFERS.filter(o => o.status !== 'declined').map(o => ({ ...o, fromOffer: true })),
-  ].filter(r => (S.artist === 'all' || r.artist === S.artist) && (S.status === 'all' || r.status === S.status))
-   .sort((a, b) => a.date.localeCompare(b.date));
-  const byMonth = {};
-  rows.forEach(r => { const k = r.date.slice(0, 7); (byMonth[k] ||= []).push(r); });
-  const count = st => [...SHOWS, ...OTHER_DATES, ...OFFERS].filter(r => r.status === st).length;
-  const segA = [['all', 'All artists'], ['jv', ARTISTS.jv], ['co', ARTISTS.co]];
+  const all = DB.shows.map(s => ({ ...s, kind: 'show' })).concat(DB.offers.filter(o => o.status === 'offer').map(o => ({ ...o, kind: 'offer', deal: null, dealText: o.deal })));
+  const rows = all.filter(r => (S.artist === 'all' || r.artist === S.artist) && (S.status === 'all' || r.status === S.status)
+    && (!S.q || `${r.city} ${r.venue} ${artist(r.artist).name}`.toLowerCase().includes(S.q.toLowerCase())));
+  const count = st => all.filter(r => r.status === st && (S.artist === 'all' || r.artist === S.artist)).length;
+  const segA = [['all', 'All artists'], ...DB.artists.map(a => [a.id, a.name])];
   const segS = [['all', 'Any status'], ['confirmed', 'Confirmed'], ['hold', 'Holds'], ['offer', 'Offers'], ['pencil', 'Pencils'], ['cancelled', 'Cancelled']];
-  const showDeals = can('costs');
+  const edit = isMgr();
+  const deals = can('costs');
+  let body;
+  if (S.seasonView === 'table') {
+    const cols = [['date', 'Date'], ['artist', 'Artist'], ['city', 'City'], ['venue', 'Venue'], ['cap', 'Cap'], ['status', 'Status']].concat(deals ? [['g', 'Guarantee'], ['dep', 'Deposit']] : []).concat([['adv', 'Advanced']]);
+    const val = (r, k) => k === 'artist' ? artist(r.artist).name : k === 'g' ? (r.deal ? r.deal.g : r.g) : k === 'dep' ? (r.deal ? r.deal.dep : 0) : k === 'adv' ? (r.kind === 'show' ? pctDone(r.id) : -1) : r[k];
+    rows.sort((a, b) => { const x = val(a, S.sort.k), y = val(b, S.sort.k); return (x > y ? 1 : x < y ? -1 : 0) * S.sort.dir; });
+    const shows = rows.filter(r => r.kind === 'show');
+    body = `
+    ${edit && S.sel.size ? `<div class="bulkbar"><span>${S.sel.size} selected</span>
+      <label for="bulkst" class="sr">New status</label><select id="bulkst">${STATUSES.map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select>
+      <button class="btn btn-primary btn-sm" data-act="bulkStatus">Set status</button><button class="btn btn-secondary btn-sm" data-act="bulkClear">Clear</button></div>` : ''}
+    <section class="card" style="padding:6px 8px"><div class="scroll-x"><table>
+      <thead><tr>${edit ? `<th class="sel"><input type="checkbox" id="selall" aria-label="Select all shows" ${shows.length && shows.every(s => S.sel.has(s.id)) ? 'checked' : ''}></th>` : ''}
+        ${cols.map(([k, l]) => `<th class="${['cap', 'g', 'dep', 'adv'].includes(k) ? 'r' : ''}"><button class="sort" data-act="sort" data-id="${k}">${l}${S.sort.k === k ? (S.sort.dir > 0 ? ' ↑' : ' ↓') : ''}</button></th>`).join('')}</tr></thead>
+      <tbody>${rows.map(r => `<tr class="click" ${r.kind === 'show' ? `data-show="${r.id}"` : `data-act="offer" data-id="${r.id}"`}>
+        ${edit ? `<td class="sel">${r.kind === 'show' ? `<input type="checkbox" data-sel="${r.id}" ${S.sel.has(r.id) ? 'checked' : ''} aria-label="Select ${esc(r.city)}">` : ''}</td>` : ''}
+        <td>${short(r.date)}</td><td>${esc(artist(r.artist).name)}</td><td class="${r.status === 'cancelled' ? 'cancelled-text' : ''}">${esc(r.city)}</td><td>${esc(r.venue)}</td><td class="r">${(r.cap || 0).toLocaleString()}</td>
+        <td>${statusChip(r)}</td>${deals ? `<td class="r">${money(val(r, 'g'), false, r.cur)}</td><td class="r">${r.deal && r.deal.dep ? money(r.deal.dep, false, r.cur) + (r.deal.depPaid ? ' ✓' : '') : '—'}</td>` : ''}
+        <td class="r">${r.kind === 'show' ? pctDone(r.id) + '%' : '—'}</td></tr>`).join('')}</tbody>
+    </table></div></section>`;
+  } else {
+    const byMonth = {};
+    rows.sort((a, b) => a.date.localeCompare(b.date)).forEach(r => { (byMonth[r.date.slice(0, 7)] ||= []).push(r); });
+    body = Object.keys(byMonth).length ? Object.entries(byMonth).map(([k, list]) => `
+      <section class="card"><h2 style="margin-bottom:6px">${MON[+k.slice(5) - 1]} ${k.slice(0, 4)}</h2>
+        <div class="list">${list.map(r => `
+          <div class="li click" ${r.kind === 'show' ? `data-show="${r.id}"` : `data-act="offer" data-id="${r.id}"`}>
+            ${dateBox(r.date, r.date === NOW.date)}
+            <div class="grow"><div class="${r.status === 'cancelled' ? 'cancelled-text' : ''}"><b>${esc(r.city)}</b> · ${esc(r.venue)}</div>
+              <div class="small muted">${esc(artist(r.artist).name)}${r.tour ? ' · ' + esc(tour(r.tour)?.name || '') : ''} · cap ${(r.cap || 0).toLocaleString()}${deals ? ' · ' + esc(r.kind === 'show' ? dealText(r.deal, r.cur) : r.dealText) : ''}</div></div>
+            ${statusChip(r)}
+          </div>`).join('')}</div></section>`).join('') : `<p class="muted">Nothing matches.</p>`;
+  }
   return `
-  <div class="head"><div><div class="eyebrow">Northlight Mgmt · roster</div><h1 class="display">Season 2027</h1>
-    <div class="sub muted">Every date for every artist — the dates sheet you keep in Excel.</div></div>
-    ${isMgr() ? `<button class="btn btn-tape" data-go="offers">${icon('offers')} ${OFFERS.filter(o => o.status === 'offer').length} offers waiting</button>` : ''}</div>
+  <div class="head"><div><div class="eyebrow">Northlight Mgmt · ${DB.artists.length} artists</div><h1 class="display">Season 2027</h1>
+    <div class="sub muted">Every date for every artist — your Excel dates sheet, shared.</div></div>
+    ${edit ? `<div class="addbar">${addBtn('newShow', 'Add show', '', 'btn-tape')}<button class="btn btn-secondary btn-sm" data-act="import">${icon('upload')} Import</button><button class="btn btn-secondary btn-sm" data-act="export">Export</button></div>` : ''}</div>
   <div class="stats">
     <div class="card stat"><span class="eyebrow">Confirmed</span><b>${count('confirmed')}</b></div>
     <div class="card stat"><span class="eyebrow">Holds</span><b>${count('hold')}</b></div>
@@ -603,83 +1034,103 @@ V.board = () => {
     <div class="card stat"><span class="eyebrow">Open offers</span><b>${count('offer')}</b></div>
   </div>
   <div class="stack">
+    <div class="row wrap between"><div class="seg" data-filter="seasonView"><button aria-pressed="${S.seasonView === 'list'}" data-v="list">List</button><button aria-pressed="${S.seasonView === 'table'}" data-v="table">Table</button></div>
+      <label class="field" for="q" style="flex:1;max-width:320px"><span class="sr">Search</span><input id="q" type="search" placeholder="Search city, venue, artist" value="${esc(S.q)}" style="height:36px"></label></div>
     <div class="seg" data-filter="artist">${segA.map(([k, l]) => `<button aria-pressed="${S.artist === k}" data-v="${k}">${esc(l)}</button>`).join('')}</div>
     <div class="seg" data-filter="status">${segS.map(([k, l]) => `<button aria-pressed="${S.status === k}" data-v="${k}">${l}</button>`).join('')}</div>
   </div>
-  ${Object.keys(byMonth).length ? Object.entries(byMonth).map(([k, list]) => `
-    <section class="card"><h2 style="margin-bottom:6px">${MON[+k.slice(5) - 1]} ${k.slice(0, 4)}</h2>
-      <div class="list">${list.map(r => `
-        <div class="li ${r.id ? 'click' : ''}" ${r.id ? (r.fromOffer ? 'data-go="offers"' : `data-show="${r.id}"`) : ''}>
-          ${dateBox(r.date, r.today)}
-          <div class="grow"><div class="${r.status === 'cancelled' ? 'cancelled-text' : ''}"><b>${esc(r.city)}</b> · ${esc(r.venue)}</div>
-            <div class="small muted">${esc(ARTISTS[r.artist])}${r.tour ? ' · ' + esc(r.tour) : ''} · cap ${r.cap.toLocaleString()}${r.deal && showDeals ? ' · ' + esc(typeof r.deal === 'string' ? r.deal : dealText(r.deal)) : ''}</div></div>
-          ${statusChip(r)}
-        </div>`).join('')}</div></section>`).join('') : `<p class="muted">Nothing matches those filters.</p>`}`;
+  ${body}`;
 };
 
+V.artists = () => `
+  <div class="head"><div><div class="eyebrow">Northlight Mgmt</div><h1 class="display">Roster</h1><div class="sub muted">Every artist you manage, their tours and what's next.</div></div>
+    ${addBtn('newArtist', 'Add artist', '', 'btn-tape')}</div>
+  <div class="acards">${DB.artists.map(a => {
+    const shows = DB.shows.filter(s => s.artist === a.id && s.status !== 'cancelled').sort((x, y) => x.date.localeCompare(y.date));
+    const next = shows.find(s => s.date >= NOW.date);
+    const f = a.photo && FILES[a.photo];
+    const earned = shows.filter(s => s.settled != null).reduce((x, s) => x + s.settled, 0);
+    return `<section class="card stack">
+      ${f ? `<img class="cover" src="${f.url}" alt="${esc(a.name)}">` : `<div class="cover" style="background:linear-gradient(135deg,hsl(${a.hue} 85% 62%),hsl(${(a.hue + 40) % 360} 80% 52%))">${esc(initials(a.name))}</div>`}
+      <div class="row between"><div><h2>${esc(a.name)}</h2><div class="small muted">${esc([a.genre, a.home].filter(Boolean).join(' · '))}</div></div>${editBtn('artist', a.id, `Edit ${a.name}`)}</div>
+      <dl class="kv small"><dt>Agent</dt><dd>${esc(a.agent || '—')}</dd><dt>Dates</dt><dd>${shows.filter(s => s.status === 'confirmed').length} confirmed · ${shows.filter(s => s.status === 'hold').length} holds</dd>
+        <dt>Next show</dt><dd>${next ? `${short(next.date)} · ${esc(cityOf(next))}` : '—'}</dd><dt>Settled this season</dt><dd>${money(earned)}</dd></dl>
+      <div class="stack" style="gap:6px"><div class="minihead">Tours</div>
+        ${DB.tours.filter(t => t.artist === a.id).map(t => `<div class="row between"><a href="#tour" data-act="gotour" data-id="${t.id}"><b>${esc(t.name)}</b></a><span class="small muted">${esc(t.season)} · ${DB.shows.filter(s => s.tour === t.id).length} shows</span></div>`).join('') || '<span class="small muted">No tours yet</span>'}
+      </div>
+      <div class="addbar">${addBtn('newTour', 'Add tour', a.id)}${addBtn('newShowFor', 'Add show', a.id)}</div>
+    </section>`; }).join('')}</div>`;
+
 V.offers = () => {
-  const open = OFFERS.filter(o => o.status === 'offer');
-  const done = OFFERS.filter(o => o.status !== 'offer');
+  const open = DB.offers.filter(o => o.status === 'offer'), done = DB.offers.filter(o => o.status !== 'offer');
   const card = o => `
     <article class="card stack">
       <div class="row between wrap"><div class="row">${dateBox(o.date)}<div><h2>${esc(o.city)} · ${esc(o.venue)}</h2>
-        <div class="small muted">${esc(ARTISTS[o.artist])} · from ${esc(o.promoter)} · cap ${o.cap.toLocaleString()}</div></div></div>
-        ${o.status === 'offer' ? `<span class="chip st-offer">Answer by ${o.expires}</span>` : statusChip(o)}</div>
+        <div class="small muted">${esc(artist(o.artist).name)} · from ${esc(o.promoter)} · cap ${(o.cap || 0).toLocaleString()}</div></div></div>
+        <div class="row">${o.status === 'offer' ? `<span class="chip st-offer">Answer by ${short(o.expires)}</span>` : `<span class="chip ${o.status === 'declined' ? 'st-cancelled' : 'st-hold'}">${o.status === 'declined' ? 'Declined' : 'Accepted'}</span>`}${editBtn('offer', o.id, 'Edit offer')}</div></div>
       <dl class="kv"><dt>Deal</dt><dd>${esc(o.deal)}</dd><dt>Radius clause</dt><dd>${esc(o.radius)}</dd></dl>
       ${o.status === 'offer' ? `<div class="row wrap">
-        <button class="btn btn-primary btn-sm" data-offer="${o.id}" data-act="hold">Accept as hold</button>
-        <button class="btn btn-secondary btn-sm" data-offer="${o.id}" data-act="counter">Counter</button>
-        <button class="btn btn-outline btn-sm" data-offer="${o.id}" data-act="decline">Decline</button></div>` : ''}
+        <button class="btn btn-primary btn-sm" data-act="acceptOffer" data-id="${o.id}">Accept as hold</button>
+        <button class="btn btn-secondary btn-sm" data-toast="Counter sent to ${esc(o.promoter)} (mock)">Counter</button>
+        <button class="btn btn-outline btn-sm" data-act="declineOffer" data-id="${o.id}">Decline</button></div>` : ''}
     </article>`;
   return `
   <div class="head"><div><div class="eyebrow">From agents and promoters</div><h1 class="display">Offers</h1>
-    <div class="sub muted">Accepting puts a hold on the season board. Confirming the hold starts the show's advance.</div></div></div>
-  ${open.length ? open.map(card).join('') : '<p class="muted">No open offers. Nice.</p>'}
+    <div class="sub muted">Accepting creates a hold on the season board with the advance tasks from your template.</div></div>${addBtn('newOffer', 'Log an offer', '', 'btn-tape')}</div>
+  ${open.length ? open.map(card).join('') : '<p class="muted">No open offers.</p>'}
   ${done.length ? `<h2>Answered</h2>${done.map(card).join('')}` : ''}`;
 };
 
 V.tour = () => {
-  const total = SHOWS.reduce((a, s) => a + showFee(s), 0);
+  if (!tour(S.tourId)) S.tourId = DB.tours[0]?.id;
+  const t = tour(S.tourId);
+  if (!t) return `<div class="head"><h1 class="display">Tours</h1>${addBtn('newTour', 'Add tour', '', 'btn-tape')}</div><p class="muted">No tours yet.</p>`;
+  const shows = DB.shows.filter(s => s.tour === t.id).sort((a, b) => a.date.localeCompare(b.date));
+  const total = shows.filter(s => s.status !== 'cancelled').reduce((a, s) => a + showFee(s), 0);
   return `
-  <div class="head"><div><div class="eyebrow">${esc(ARTISTS[TOUR.artist])} · ${TOUR.season}</div><h1 class="display">${TOUR.name}</h1>
-    <div class="sub muted">${SHOWS.length} shows · 10 on the road · Apr 8 – 24</div></div>
-    <button class="btn btn-secondary" data-go="budget">${icon('budget')} Tour budget</button></div>
+  <div class="head"><div><div class="eyebrow">${esc(artist(t.artist).name)} · ${esc(t.season)}</div><h1 class="display">${esc(t.name)}</h1>
+    <div class="sub muted">${shows.length} shows${shows.length ? ` · ${short(shows[0].date)} – ${short(shows[shows.length - 1].date)}` : ''}</div></div>
+    <div class="addbar"><label class="viewas" for="tourpick">Tour <select id="tourpick">${DB.tours.map(x => `<option value="${x.id}" ${x.id === t.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label>
+      ${editBtn('tour', t.id, 'Edit tour')}${addBtn('newShowTour', 'Add show', t.id, 'btn-tape')}</div></div>
   <div class="grid2 wide-left">
-    <section class="card map"><div class="row between" style="margin-bottom:8px"><h2>Routing</h2><span class="small muted">Real build: Google map embed</span></div>${routeMap()}</section>
-    <section class="card stack"><h2>Money so far</h2>
+    <section class="card map"><div class="row between" style="margin-bottom:8px"><h2>Routing</h2><span class="small muted">Real build: Google map embed</span></div>${routeMap(shows)}</section>
+    <section class="card stack"><h2>Money</h2>
       <dl class="kv"><dt>Show fees (settled + expected)</dt><dd>${money(total)}</dd>
-      <dt>Deposits received</dt><dd>${money(SHOWS.filter(s => s.done[1]).reduce((a, s) => a + s.deal.dep, 0))}</dd>
-      <dt>Settled so far</dt><dd>${SHOWS.filter(s => s.settled).length} of ${SHOWS.length} shows</dd></dl>
-      <div class="note">Tonight: New York settles at 11 pm. Dana has the sheet.</div></section>
+      <dt>Deposits received</dt><dd>${money(shows.filter(s => s.deal.depPaid).reduce((a, s) => a + s.deal.dep, 0))}</dd>
+      <dt>Settled</dt><dd>${shows.filter(s => s.settled != null).length} of ${shows.length} shows</dd></dl>
+      <button class="btn btn-secondary btn-sm" data-go="money">${icon('budget')} Budget + deposits</button></section>
   </div>
   <section class="card"><h2 style="margin-bottom:6px">Shows</h2><div class="list">
-    ${SHOWS.map(s => `
+    ${shows.map(s => `
       <div class="li click" data-show="${s.id}">
-        ${dateBox(s.date, s.today)}
-        <div class="grow"><div><b>${esc(s.city)}</b> · ${esc(s.venue)}${s.today ? ' <span class="chip st-pending plain">Today</span>' : ''}</div>
-          <div class="small muted">${s.drive ? 'From previous: ' + esc(s.drive) + ' · ' : ''}${esc(dealText(s.deal))}</div>
-          <div class="row small wrap" style="gap:10px;margin-top:6px"><div class="bar ${pctDone(s) === 100 ? 'good' : ''}" style="width:120px"><i style="width:${pctDone(s)}%"></i></div>
-            <span class="muted">${pctDone(s)}% advanced</span>
-            <span class="${s.done[0] ? '' : 'muted'}">${s.done[0] ? '✓ contract' : '○ contract'}</span>
-            <span class="${s.done[1] ? '' : 'muted'}">${s.done[1] ? '✓ deposit' : '○ deposit'}</span></div></div>
-        ${s.settled ? '<span class="chip st-settled">Settled</span>' : statusChip(s)}
-      </div>`).join('')}
+        ${dateBox(s.date, s.date === NOW.date)}
+        <div class="grow"><div><b>${esc(s.city)}</b> · ${esc(s.venue)}${s.date === NOW.date ? ' <span class="chip st-pending plain">Today</span>' : ''}</div>
+          <div class="small muted">${esc(dealText(s.deal, s.cur))}${s.note ? ' · ' + esc(s.note) : ''}</div>
+          <div class="row small wrap" style="gap:10px;margin-top:6px"><div class="bar ${pctDone(s.id) === 100 ? 'good' : ''}" style="width:120px"><i style="width:${pctDone(s.id)}%"></i></div>
+            <span class="muted">${pctDone(s.id)}% advanced</span>
+            <span class="${taskDone(s.id, 'Contract') ? '' : 'muted'}">${taskDone(s.id, 'Contract') ? '✓' : '○'} contract</span>
+            <span class="${s.deal.depPaid ? '' : 'muted'}">${s.deal.depPaid ? '✓' : '○'} deposit</span></div></div>
+        ${s.settled != null ? '<span class="chip st-settled">Settled</span>' : statusChip(s)}
+      </div>`).join('') || '<p class="muted">No shows on this tour yet.</p>'}
   </div></section>`;
 };
 
-function routeMap() {
-  const W = 620, H = 380, lon0 = -85, lon1 = -69, lat0 = 34, lat1 = 47;
-  const P = ([la, lo]) => [((lo - lon0) / (lon1 - lon0)) * W, H - ((la - lat0) / (lat1 - lat0)) * H];
-  const pts = SHOWS.map(s => P(s.ll));
+function routeMap(shows) {
+  const pts0 = shows.filter(s => s.ll && s.status !== 'cancelled');
+  if (pts0.length < 1) return '<p class="muted">Add cities we recognise (or coordinates) to see the route.</p>';
+  const lats = pts0.map(s => s.ll[0]), lons = pts0.map(s => s.ll[1]);
+  const pad = 1.5, lat0 = Math.min(...lats) - pad, lat1 = Math.max(...lats) + pad, lon0 = Math.min(...lons) - pad * 2, lon1 = Math.max(...lons) + pad * 2;
+  const W = 620, H = 380;
+  const Pt = ([la, lo]) => [((lo - lon0) / (lon1 - lon0 || 1)) * W, H - ((la - lat0) / (lat1 - lat0 || 1)) * H];
+  const pts = pts0.map(s => Pt(s.ll));
   const path = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
-  const labelLeft = { phl: true, dc: true, tor: true };
-  return `<svg viewBox="-20 -10 ${W + 40} ${H + 20}" role="img" aria-label="Tour routing from Toronto to Asheville">
+  return `<svg viewBox="-20 -10 ${W + 40} ${H + 20}" role="img" aria-label="Tour routing">
     <path d="${path}" fill="none" stroke="var(--faint)" stroke-width="2" stroke-dasharray="5 6"/>
-    ${pts.map((p, i) => { const s = SHOWS[i]; const left = labelLeft[s.id]; return `
-      <g>
-        <circle cx="${p[0]}" cy="${p[1]}" r="13" fill="${s.today ? 'var(--tape)' : s.status === 'hold' ? 'var(--hold-soft)' : 'var(--text)'}" stroke="${s.status === 'hold' ? 'var(--hold)' : 'none'}" stroke-width="1.5"/>
-        <text x="${p[0]}" y="${p[1] + 4.5}" text-anchor="middle" font-size="12" font-weight="700" fill="${s.today ? 'var(--tape-ink)' : s.status === 'hold' ? 'var(--hold)' : 'var(--bg)'}" font-family="var(--font-ui)">${i + 1}</text>
-        <text x="${p[0] + (left ? -20 : 20)}" y="${p[1] + 4}" text-anchor="${left ? 'end' : 'start'}" font-size="13" font-weight="600" fill="var(--text)" font-family="var(--font-ui)">${esc(s.city.split(',')[0])}</text>
+    ${pts.map((p, i) => { const s = pts0[i]; const left = p[0] > W * .7; const today = s.date === NOW.date; const hold = s.status !== 'confirmed'; return `
+      <g data-show="${s.id}" style="cursor:pointer">
+        <circle cx="${p[0]}" cy="${p[1]}" r="13" fill="${today ? 'var(--tape)' : hold ? 'var(--hold-soft)' : 'var(--text)'}" stroke="${hold ? 'var(--hold)' : 'none'}" stroke-width="1.5"/>
+        <text x="${p[0]}" y="${p[1] + 4.5}" text-anchor="middle" font-size="12" font-weight="700" fill="${today ? 'var(--tape-ink)' : hold ? 'var(--hold)' : 'var(--bg)'}" font-family="var(--font-ui)">${i + 1}</text>
+        <text x="${p[0] + (left ? -20 : 20)}" y="${p[1] + 4}" text-anchor="${left ? 'end' : 'start'}" font-size="13" font-weight="600" fill="var(--text)" font-family="var(--font-ui)">${esc(cityOf(s))}</text>
         <text x="${p[0] + (left ? -20 : 20)}" y="${p[1] + 19}" text-anchor="${left ? 'end' : 'start'}" font-size="11" fill="var(--muted)" font-family="var(--font-ui)">${fmtDate(s.date)}</text>
       </g>`; }).join('')}
   </svg>`;
@@ -689,463 +1140,531 @@ function showTabs() {
   const t = [];
   if (can('costs')) t.push(['deal', 'Deal']);
   if (can('advance')) t.push(['advance', 'Advance'], ['supply', 'Who brings what'], ['docs', 'Docs']);
-  if (can('day')) t.push(['contacts', 'Contacts'], ['sheet', 'Day sheet']);
+  if (can('day')) t.push(['sheet', 'Day sheet'], ['contacts', 'Contacts']);
   return t;
 }
-
 V.show = () => {
-  // venue people only ever see their own show
-  if (PEOPLE[me()].kind === 'venue') S.showId = 'nyc';
+  if (isVenue()) S.showId = 'nyc';
+  if (!show(S.showId)) S.showId = DB.shows[0].id;
   const s = show(S.showId);
-  const isNyc = s.id === 'nyc';
   const tabs = showTabs();
   if (!tabs.some(t => t[0] === S.showTab)) S.showTab = tabs[0][0];
-  const editAdv = can('advance', 'edit');
+  const editAdv = canEdit('advance'), editDay = canEdit('day');
   let body = '';
   if (S.showTab === 'deal') {
     const fee = showFee(s);
-    body = `<div class="grid2">
-      <div class="stack"><dl class="kv">
-        <dt>Deal</dt><dd>${esc(dealText(s.deal))}</dd>
-        <dt>Guarantee</dt><dd>${money(s.deal.g)}</dd>
-        ${s.deal.pct ? `<dt>Artist %</dt><dd>${s.deal.pct}% of net after show expenses</dd>` : ''}
-        <dt>Deposit</dt><dd>${s.deal.dep ? money(s.deal.dep) + (s.done[1] ? ' · received' : ' · not yet') : 'None'}</dd>
-        <dt>Capacity</dt><dd>${s.cap.toLocaleString()}</dd>
-        <dt>${s.settled ? 'Settled at' : isNyc ? 'Tracking to' : 'Expected'}</dt><dd><b>${money(fee)}</b></dd>
-      </dl>
-      ${isNyc ? `<button class="btn btn-tape" data-go="settle">${icon('settle')} Open tonight's settlement</button>` : ''}</div>
-      <div class="note">Real build: the ticketing page (Ticketmaster, AXS, Dice) and the venue site open here as embeds or new-tab buttons — GigTrip never copies ticket counts from them.</div>
-    </div>`;
+    body = `<div class="grid2"><div class="stack"><dl class="kv">
+        <dt>Deal</dt><dd>${esc(dealText(s.deal, s.cur))}</dd><dt>Guarantee</dt><dd>${money(s.deal.g, false, s.cur)}</dd>
+        ${s.deal.pct && s.deal.type !== 'flat' && s.deal.type !== 'fest' ? `<dt>Artist %</dt><dd>${s.deal.pct}%</dd>` : ''}
+        <dt>Deposit</dt><dd>${s.deal.dep ? `${money(s.deal.dep, false, s.cur)} · ${s.deal.depPaid ? 'received' : 'due ' + short(s.deal.depDue)}` : 'None'}</dd>
+        <dt>Capacity</dt><dd>${s.cap.toLocaleString()}</dd><dt>Currency</dt><dd>${s.cur}</dd>
+        <dt>${s.settled != null ? 'Settled at' : 'Expected'}</dt><dd><b>${money(fee, false, s.cur)}</b></dd></dl>
+      <div class="addbar">${isMgr() ? `<button class="btn btn-secondary btn-sm" data-act="show" data-id="${s.id}">${icon('edit')} Edit deal + details</button>` : ''}<button class="btn btn-tape btn-sm" data-act="gosettle" data-id="${s.id}">${icon('settle')} Settlement</button></div></div>
+      <div class="note">Real build: the ticketing page (Ticketmaster, AXS, Dice) and venue site open here as embeds or new-tab buttons — GigTrip never copies ticket counts from them.</div></div>`;
   } else if (S.showTab === 'advance') {
-    body = `<div class="list">${ADVANCE.map(([lbl, who], i) => `
-      <label class="check ${s.done[i] ? 'done' : ''}"><input type="checkbox" id="adv-${s.id}-${i}" data-adv="${i}" ${s.done[i] ? 'checked' : ''} ${editAdv ? '' : 'disabled'}>
-        <span class="grow"><span class="lbl">${esc(lbl)}</span><br><span class="small muted">${esc(PEOPLE[who].name)} · due ${dueFor(s, i)}</span></span></label>`).join('')}</div>
-      <p class="note">This replaces the per-show ClickUp list. Items come from a template the manager edits once.</p>`;
+    const list = showTasks(s.id).sort((a, b) => a.due.localeCompare(b.due));
+    body = `${list.length ? `<div>${list.map(t => { const late = t.status !== 'Done' && t.due < NOW.date; return `
+      <div class="task ${t.status === 'Done' ? 'done' : ''}">
+        <input type="checkbox" id="tk-${t.id}" data-taskdone="${t.id}" ${t.status === 'Done' ? 'checked' : ''} ${editAdv ? '' : 'disabled'} aria-label="Done: ${esc(t.label)}" style="width:20px;height:20px;accent-color:var(--good)">
+        <div class="grow" data-act="task" data-id="${t.id}"><span class="lbl">${esc(t.label)}</span><div class="small muted">${esc(P(t.owner).name)} · <span class="${late ? 'late' : ''}">${late ? 'overdue · ' : 'due '}${short(t.due)}</span>${t.comments.length ? ` · ${icon('comment')} ${t.comments.length}` : ''}</div></div>
+        ${editAdv ? `<label class="sr" for="ts-${t.id}">Status</label><select class="pillsel" id="ts-${t.id}" data-taskst="${t.id}">${TASK_ST.map(x => `<option ${t.status === x ? 'selected' : ''}>${x}</option>`).join('')}</select>` : `<span class="chip plain">${t.status}</span>`}
+      </div>`; }).join('')}</div>` : '<p class="muted">No advance tasks yet.</p>'}
+      ${editAdv ? `<div class="addbar" style="margin-top:12px">${addBtn('newTask', 'Add task', s.id)}${list.length ? '' : addBtn('applyAdv', 'Use advance template', s.id)}</div>` : ''}
+      <p class="note">Replaces the per-show ClickUp list: owner, due date, status and comments on every task.</p>`;
   } else if (S.showTab === 'supply') {
     body = whoBringsWhat();
   } else if (S.showTab === 'docs') {
-    const docs = isNyc ? NYC.docs : [['Hospitality rider', 'v3', 'ok'], ['Tech rider + input list', 'v5', 'ok'], ['Stage plot', 'v5', 'ok'], ['Contract', s.done[0] ? 'Signed' : 'Waiting on promoter', s.done[0] ? 'ok' : 'pending']].concat(s.fest ? [['Artist credentials + wristbands', 'From festival advance', 'pending']] : []);
-    const shown = can('costs') ? docs : docs.filter(d => !/Contract|Settlement/.test(d[0]));
-    body = `<div class="list">${shown.map(([n, meta, st]) => `
-      <div class="li click" data-toast="Opens ${esc(n)} (mock)"><span class="avatar" style="background:var(--surface-2);border-radius:10px">${icon('settle')}</span>
-        <div class="grow"><b>${esc(n)}</b><div class="small muted">${esc(meta)}</div></div>
-        <span class="chip ${st === 'ok' ? 'st-confirmed' : 'st-pending'}">${st === 'ok' ? 'Ready' : 'Waiting'}</span></div>`).join('')}</div>`;
+    const docs = DB.docs.filter(d => d.show === s.id).filter(d => can('costs') || !/Contract|Settlement/.test(d.name));
+    body = `${editAdv ? uploadZone('docs', s.id) : ''}
+      <div class="list">${docs.map(d => { const f = d.file && FILES[d.file]; return `
+        <div class="li click" data-act="doc" data-id="${d.id}">${f && f.type.startsWith('image/') ? `<img class="thumb" src="${f.url}" alt="">` : `<span class="thumb">${icon('file')}</span>`}
+          <div class="grow"><b>${esc(d.name)}</b><div class="small muted">${esc(d.meta)}${f ? '' : d.file ? ' · re-upload to view' : ''}</div></div>
+          <span class="chip ${d.status === 'ok' ? 'st-confirmed' : 'st-pending'}">${d.status === 'ok' ? 'Ready' : 'Waiting'}</span></div>`; }).join('') || '<p class="muted">No documents yet.</p>'}</div>`;
   } else if (S.showTab === 'contacts') {
-    body = contactsList(isNyc ? NYC.contacts : [['Promoter rep', 'Added during advance', '—']]);
+    const list = DB.contacts.filter(c => c.show === s.id);
+    body = `<div class="list">${list.map(c => `<div class="li"><span class="avatar" style="background:var(--surface-2)">${esc(initials(c.name))}</span>
+      <div class="grow"><b>${esc(c.name)}</b><div class="small muted">${esc(c.role)}</div></div><span class="mono small" style="user-select:all">${esc(c.ph)}</span>${editAdv ? editBtn('contact', c.id) : ''}</div>`).join('') || '<p class="muted">No contacts yet.</p>'}</div>
+      ${editAdv ? `<div class="addbar" style="margin-top:10px">${addBtn('newContact', 'Add contact', s.id)}</div>` : ''}`;
   } else {
-    body = isNyc ? daySheet() : `<p class="muted">The day sheet fills in as the show is advanced. Slots come from a template: lobby call, load-in, soundcheck, doors, set, curfew, settlement.</p>`;
+    const has = DB.slots.some(x => x.show === s.id);
+    body = `${has ? daySheet(s.id, editDay) : '<p class="muted">No day sheet yet. Start from your template, then adjust times.</p>'}
+      ${editDay ? `<div class="addbar" style="margin-top:12px">${addBtn('newSlot', 'Add time', s.id)}${has ? '' : addBtn('applySlots', 'Use day-sheet template', s.id, 'btn-tape')}</div>` : ''}`;
   }
-  const venue = PEOPLE[me()].kind === 'venue';
   return `
-  <div class="head"><div><div class="eyebrow">${venue ? 'Your show' : `${esc(TOUR.name)} · show ${SHOWS.indexOf(s) + 1} of ${SHOWS.length}`}</div>
-    <h1 class="display">${esc(s.city.split(',')[0])}</h1>
-    <div class="sub muted">${fmtDate(s.date)} · ${esc(s.venue)} · cap ${s.cap.toLocaleString()}${s.fest ? ' · ' + esc(s.fest) : ''}</div></div>
-    <div class="row">${s.settled ? '<span class="chip st-settled">Settled</span>' : statusChip(s)}
-      ${venue ? '' : `<label class="viewas" for="pick">Show <select id="pick">${SHOWS.map(x => `<option value="${x.id}" ${x.id === s.id ? 'selected' : ''}>${fmtDate(x.date)} · ${esc(x.city.split(',')[0])}</option>`).join('')}</select></label>`}</div></div>
+  <div class="head"><div><div class="eyebrow">${isVenue() ? 'Your show' : `${esc(artist(s.artist).name)}${s.tour ? ' · ' + esc(tour(s.tour)?.name || '') : ' · one-off'}`}</div>
+    <h1 class="display">${esc(cityOf(s))}</h1>
+    <div class="sub muted">${fmtDate(s.date)} · ${esc(s.venue)} · cap ${s.cap.toLocaleString()}${s.note ? ' · ' + esc(s.note) : ''}</div></div>
+    <div class="row wrap">${s.settled != null ? '<span class="chip st-settled">Settled</span>' : statusChip(s)}
+      ${isVenue() ? '' : `<label class="viewas" for="pick">Show <select id="pick">${DB.shows.slice().sort((a, b) => a.date.localeCompare(b.date)).map(x => `<option value="${x.id}" ${x.id === s.id ? 'selected' : ''}>${short(x.date)} · ${esc(cityOf(x))} · ${esc(artist(x.artist).name)}</option>`).join('')}</select></label>`}
+      ${isMgr() ? editBtn('show', s.id, 'Edit show') : ''}</div></div>
   <section class="card stack">
-    <div class="tabs" role="tablist">${tabs.map(([k, l]) => `<button role="tab" aria-selected="${S.showTab === k}" data-tab="${k}">${k === 'advance' ? `${l} ${pctDone(s)}%` : l}</button>`).join('')}</div>
+    <div class="tabs" role="tablist">${tabs.map(([k, l]) => `<button role="tab" aria-selected="${S.showTab === k}" data-tab="${k}">${k === 'advance' ? `${l} ${pctDone(s.id)}%` : l}</button>`).join('')}</div>
     ${body}
   </section>`;
 };
-function dueFor(s, i) {
-  const d = dt(s.date); d.setDate(d.getDate() - (i < 2 ? 45 : i < 6 ? 21 : 7));
-  return `${MON[d.getMonth()]} ${d.getDate()}`;
-}
-function contactsList(list) {
-  return `<div class="list">${list.map(([n, r, ph]) => `
-    <div class="li"><span class="avatar" style="background:var(--surface-2)">${esc(initials(n))}</span>
-      <div class="grow"><b>${esc(n)}</b><div class="small muted">${esc(r)}</div></div>
-      <span class="mono small" style="user-select:all">${esc(ph)}</span></div>`).join('')}</div>`;
-}
+
 function whoBringsWhat() {
-  const venueIds = Object.keys(PEOPLE).filter(k => PEOPLE[k].kind === 'venue' && SUP[k]);
-  const tourIds = Object.keys(PEOPLE).filter(k => PEOPLE[k].kind !== 'venue' && SUP[k] && SUP[k].length);
-  const block = ids => ids.map(k => `<div class="stack" style="gap:4px"><div class="row" style="gap:10px">${avatar(k)}<div><b>${esc(PEOPLE[k].name)}</b><div class="small muted">${esc(PEOPLE[k].role)}</div></div></div>
-    <ul class="supply" style="padding-left:46px">${SUP[k].map(x => `<li class="${x.ok ? 'ok' : ''}"><span class="grow">${esc(x.t)}</span>${x.ok ? '<span class="chip st-confirmed plain">Confirmed</span>' : '<span class="chip st-pending plain">Not yet</span>'}</li>`).join('')}</ul></div>`).join('');
-  return `<div class="cols2"><div class="stack"><div class="minihead">Venue provides</div>${block(venueIds)}</div>
-    <div class="stack"><div class="minihead">Tour brings</div>${block(tourIds)}</div></div>
-    <p class="note">Set by management on each person's card in ${isMgr() ? '<a href="#party">Party</a>' : 'Party'}. Each person confirms their own items.</p>`;
+  const ids = Object.keys(DB.people).filter(k => DB.supply.some(x => x.person === k));
+  const block = list => list.map(k => `<div class="stack" style="gap:4px"><div class="row" style="gap:10px">${avatar(k)}<div><b>${esc(P(k).name)}</b><div class="small muted">${esc(P(k).role)}</div></div></div>
+    <ul class="supply" style="padding-left:46px">${DB.supply.filter(x => x.person === k).map(x => `<li class="${x.ok ? 'ok' : ''}"><span class="grow">${esc(x.label)}</span>${x.ok ? '<span class="chip st-confirmed plain">Confirmed</span>' : '<span class="chip st-pending plain">Not yet</span>'}${isMgr() ? editBtn('supply', x.id) : ''}</li>`).join('')}</ul></div>`).join('');
+  return `<div class="cols2"><div class="stack"><div class="minihead">Venue provides</div>${block(ids.filter(k => P(k).kind === 'venue'))}</div>
+    <div class="stack"><div class="minihead">Tour brings</div>${block(ids.filter(k => P(k).kind !== 'venue'))}</div></div>
+    ${isMgr() ? `<div class="addbar">${addBtn('newSupply', 'Add an item for someone')}</div>` : ''}
+    <p class="note">Each person confirms their own items on their Today screen.</p>`;
 }
 
-function daySheet() {
-  const next = NYC.slots.findIndex(x => toMin(x[0]) > NOW.min);
-  const nowIdx = next - 1;
-  return `<div class="sheet">${NYC.slots.map(([t, what, who, key], i) => `
-    <div class="slot ${i < nowIdx ? 'past' : ''} ${i === nowIdx ? 'now' : ''} ${key ? 'key' : ''}">
-      <span class="t">${t}</span><div><div class="what">${esc(what)}${i === nowIdx ? ' <span class="chip st-pending plain">Now</span>' : ''}</div><div class="small muted">${esc(who)}</div></div>
-    </div>`).join('')}</div>
-    <p class="small muted" style="margin:10px 0 0">Tomorrow: ${esc(NYC.tomorrow)}</p>`;
+function daySheet(showId, edit) {
+  const slots = DB.slots.filter(x => x.show === showId).sort((a, b) => a.time.localeCompare(b.time));
+  const today = show(showId).date === NOW.date;
+  const next = slots.findIndex(x => toMin(x.time) > NOW.min);
+  const nowIdx = today ? (next === -1 ? slots.length - 1 : next - 1) : -2;
+  return `<div class="sheet">${slots.map((x, i) => `
+    <div class="slot ${i < nowIdx ? 'past' : ''} ${i === nowIdx ? 'now' : ''} ${x.key ? 'key' : ''}">
+      <span class="t">${x.time}</span><div class="row between" style="align-items:flex-start"><div><div class="what">${esc(x.label)}${i === nowIdx ? ' <span class="chip st-pending plain">Now</span>' : ''}</div><div class="small muted">${esc(x.who || '')}</div></div>${edit ? editBtn('slot', x.id, `Edit ${x.label}`) : ''}</div>
+    </div>`).join('')}</div>`;
 }
 
 function mySupplyCard() {
-  const id = me(), list = SUP[id];
-  if (!list || !list.length) return '';
-  const venue = PEOPLE[id].kind === 'venue';
-  return `<section class="card stack"><div class="row between"><h2>${venue ? 'Venue provides' : "You're bringing"}</h2><span class="small muted">${list.filter(x => x.ok).length} of ${list.length} confirmed</span></div>
-    <ul class="supply">${list.map((x, i) => `<li class="${x.ok ? 'ok' : ''}"><input type="checkbox" id="sup-${id}-${i}" data-sup="${id}" data-i="${i}" ${x.ok ? 'checked' : ''}><label class="grow" for="sup-${id}-${i}">${esc(x.t)}</label></li>`).join('')}</ul>
-    <p class="small muted" style="margin:0">Set by ${esc(PEOPLE.rae.name)}. Tick each one when it's packed or ready.</p></section>`;
+  const id = me(), list = DB.supply.filter(x => x.person === id);
+  if (!list.length) return '';
+  return `<section class="card stack"><div class="row between"><h2>${isVenue() ? 'Venue provides' : "You're bringing"}</h2><span class="small muted">${list.filter(x => x.ok).length} of ${list.length} confirmed</span></div>
+    <ul class="supply">${list.map(x => `<li class="${x.ok ? 'ok' : ''}"><input type="checkbox" id="sup-${x.id}" data-sup="${x.id}" ${x.ok ? 'checked' : ''}><label class="grow" for="sup-${x.id}">${esc(x.label)}</label></li>`).join('')}</ul>
+    <p class="small muted" style="margin:0">Set by management. Tick each one when it's packed or ready.</p></section>`;
 }
 
 V.today = () => {
-  const s = show('nyc');
-  const next = NYC.slots.find(x => toMin(x[0]) > NOW.min);
-  const mins = toMin(next[0]) - NOW.min;
-  const p = PEOPLE[me()];
-  const venue = p.kind === 'venue';
+  const s = DB.shows.find(x => x.date === NOW.date && x.status !== 'cancelled') || show('nyc');
+  const slots = DB.slots.filter(x => x.show === s.id).sort((a, b) => a.time.localeCompare(b.time));
+  const next = slots.find(x => toMin(x.time) > NOW.min);
+  const p = P(me());
+  const venue = isVenue();
+  const hotel = DB.travel.find(x => x.type === 'hotel' && x.date <= NOW.date && seesTravel(x, me()));
+  const contacts = DB.contacts.filter(c => c.show === s.id);
   return `
   <div class="ribbon"><span class="tapechip">Show day</span><span>Mock clock: ${fmtDate(NOW.date)}, ${ampm('16:05')}</span></div>
   <section class="laminate">
-    <div class="band"><span>${venue ? 'Venue · production' : 'All access'}</span><span>${esc(TOUR.name)}</span></div>
+    <div class="band"><span>${venue ? 'Venue · production' : 'All access'}</span><span>${esc(tour(s.tour)?.name || artist(s.artist).name)}</span></div>
     <div class="body">
-      <div><div class="eyebrow">${esc(ARTISTS.jv)} · ${venue ? 'at your venue' : `show ${SHOWS.indexOf(s) + 1} of ${SHOWS.length}`}</div>
-        <h1 class="display">${esc(s.city.split(',')[0])}</h1>
-        <div class="muted">${esc(s.venue)} · doors 7:00 pm · curfew 10:30 pm</div></div>
-      <div class="next"><span class="t">${next[0]}</span><div><b>${esc(next[1])}</b><div class="small muted">in ${mins} min · ${esc(next[2])}</div></div></div>
+      <div><div class="eyebrow">${esc(artist(s.artist).name)} · ${venue ? 'at your venue' : esc(s.venue)}</div>
+        <h1 class="display">${esc(cityOf(s))}</h1>
+        <div class="muted">${esc(s.venue)} · ${slots.filter(x => /Doors|Curfew/.test(x.label)).map(x => `${x.label.toLowerCase()} ${ampm(x.time)}`).join(' · ')}</div></div>
+      ${next ? `<div class="next"><span class="t">${next.time}</span><div><b>${esc(next.label)}</b><div class="small muted">in ${toMin(next.time) - NOW.min} min · ${esc(next.who || '')}</div></div></div>` : ''}
     </div>
   </section>
   <div class="grid2 wide-left">
-    <section class="card"><div class="row between" style="margin-bottom:6px"><h2>Day sheet</h2><button class="btn btn-secondary btn-sm" data-toast="Adds every show day to your calendar (mock)">Add to calendar</button></div>${daySheet()}</section>
+    <section class="card"><div class="row between" style="margin-bottom:6px"><h2>Day sheet</h2>${canEdit('day') ? addBtn('newSlot', 'Add', s.id) : `<button class="btn btn-secondary btn-sm" data-toast="Adds every show day to your calendar (mock)">Add to calendar</button>`}</div>${daySheet(s.id, canEdit('day'))}</section>
     <div class="stack">
       ${mySupplyCard()}
       ${venue ? '' : `<section class="card stack"><h2>Venue</h2>
-        <div><b>${esc(s.venue)}</b><div class="small muted" style="user-select:all">${esc(NYC.address)}</div></div>
-        <dl class="kv small"><dt>Wi-Fi</dt><dd style="user-select:all">${esc(NYC.wifi)}</dd><dt>Hospitality</dt><dd>${esc(NYC.hospitality)}</dd></dl>
-        <div class="note">${esc(NYC.parking)}</div>
-        <a class="btn btn-outline btn-sm" href="https://www.google.com/maps/search/?api=1&query=Canal+St+New+York" target="_blank" rel="noopener">Directions ↗</a></section>`}
-      ${!venue && can('travel') ? `<section class="card stack"><h2>Hotel</h2>
-        <div><b>${esc(NYC.hotel.name)}</b><div class="small muted">${esc(NYC.hotel.addr)} · ${NYC.hotel.nights}</div></div>
-        ${p.room ? `<div class="row"><span class="chip plain">Your room ${p.room}</span></div>` : ''}</section>` : ''}
-      <section class="card"><h2 style="margin-bottom:4px">Day-of contacts</h2>${contactsList(venue ? NYC.contacts.slice(2, 3) : NYC.contacts.slice(0, 2))}</section>
+        <div><b>${esc(s.venue)}</b><div class="small muted" style="user-select:all">${esc(s.address)}</div></div>
+        <dl class="kv small">${s.wifi ? `<dt>Wi-Fi</dt><dd style="user-select:all">${esc(s.wifi)}</dd>` : ''}${s.hospitality ? `<dt>Hospitality</dt><dd>${esc(s.hospitality)}</dd>` : ''}</dl>
+        ${s.parking ? `<div class="note">${esc(s.parking)}</div>` : ''}
+        <a class="btn btn-outline btn-sm" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.address || s.venue + ' ' + s.city)}" target="_blank" rel="noopener">Directions ↗</a></section>`}
+      ${!venue && hotel && can('travel') ? `<section class="card stack"><h2>Hotel</h2><div><b>${esc(hotel.label)}</b><div class="small muted">${esc(hotel.detail)}</div></div>${p.room ? `<div class="row"><span class="chip plain">Your room ${esc(p.room)}</span></div>` : ''}</section>` : ''}
+      <section class="card"><h2 style="margin-bottom:4px">Day-of contacts</h2><div class="list">${(venue ? contacts.filter(c => /Tour manager/.test(c.role)) : contacts.slice(0, 2)).map(c => `<div class="li"><div class="grow"><b>${esc(c.name)}</b><div class="small muted">${esc(c.role)}</div></div><span class="mono small" style="user-select:all">${esc(c.ph)}</span></div>`).join('')}</div></section>
     </div>
   </div>`;
 };
 
 V.settle = () => {
-  const s = show('nyc'), st = NYC.settle, r = settle(st, s.deal);
-  const edit = can('costs', 'edit');
-  const past = SHOWS.filter(x => x.settled);
-  const venue = PEOPLE[me()].kind === 'venue';
+  if (isVenue()) S.showId = 'nyc';
+  let s = show(S.showId);
+  if (!s || s.status === 'cancelled') s = show('nyc');
+  const st = sheetFor(s), r = settle(s), edit = canEdit('costs');
+  const exps = DB.showExp.filter(e => e.show === s.id);
+  const d = s.deal;
   return `
-  <div class="head"><div><div class="eyebrow">Tonight · ${esc(s.venue)}</div><h1 class="display">Settlement</h1>
-    <div class="sub muted">${edit ? 'Type the final numbers from the box office; everything else recalculates.' : 'The tour manager fills this in; you see it live and sign it together.'}</div></div></div>
+  <div class="head"><div><div class="eyebrow">${fmtDate(s.date)} · ${esc(s.venue)}</div><h1 class="display">Settlement</h1>
+    <div class="sub muted">${edit ? 'Type the final box-office numbers; everything recalculates.' : 'The tour manager fills this in; you see it live and sign it together.'}</div></div>
+    ${isVenue() ? '' : `<label class="viewas" for="setpick">Show <select id="setpick">${DB.shows.filter(x => x.status !== 'cancelled').sort((a, b) => a.date.localeCompare(b.date)).map(x => `<option value="${x.id}" ${x.id === s.id ? 'selected' : ''}>${short(x.date)} · ${esc(cityOf(x))}</option>`).join('')}</select></label>`}</div>
   <div class="grid2 wide-left">
     <section class="card stack">
       <div class="row wrap" style="gap:12px">
-        <label class="field" for="sold" style="flex:1;min-width:130px">Tickets sold (cap ${s.cap.toLocaleString()})<input id="sold" inputmode="numeric" value="${st.sold}" ${edit ? '' : 'disabled'}></label>
-        <label class="field" for="price" style="flex:1;min-width:110px">Ticket price ($)<input id="price" inputmode="decimal" value="${(st.price / 100).toFixed(2)}" ${edit ? '' : 'disabled'}></label>
-        <label class="field" for="feeper" style="flex:1;min-width:110px">Fees per ticket ($)<input id="feeper" inputmode="decimal" value="${(st.feePer / 100).toFixed(2)}" ${edit ? '' : 'disabled'}></label>
+        <label class="field" for="sold" style="flex:1;min-width:120px">Tickets sold (cap ${s.cap.toLocaleString()})<input id="sold" inputmode="numeric" value="${st.sold}" ${edit ? '' : 'disabled'}></label>
+        <label class="field" for="price" style="flex:1;min-width:100px">Avg ticket price<input id="price" inputmode="decimal" value="${(st.price / 100).toFixed(2)}" ${edit ? '' : 'disabled'}></label>
+        <label class="field" for="feeper" style="flex:1;min-width:100px">Fees per ticket<input id="feeper" inputmode="decimal" value="${(st.feePer / 100).toFixed(2)}" ${edit ? '' : 'disabled'}></label>
+        <label class="field" for="wh" style="flex:1;min-width:100px">Withholding tax<input id="wh" inputmode="decimal" value="${((st.withholding || 0) / 100).toFixed(2)}" ${edit ? '' : 'disabled'}></label>
       </div>
-      <dl class="kv" id="settle-sheet">${settleRows(r, st, s.deal)}</dl>
-      <div class="row wrap"><button class="btn btn-primary" data-toast="Both sign on the TM's phone; PDF goes to Rae (mock)">Sign ${venue ? 'as promoter' : 'with promoter'}</button>
+      <dl class="kv" id="settle-sheet">${settleRows(s, r)}</dl>
+      <div class="row wrap">${edit ? `<button class="btn btn-primary" data-act="markSettled" data-id="${s.id}">${s.settled != null ? 'Update settled amount' : 'Mark as settled'}</button>` : `<button class="btn btn-primary" data-toast="Both sign on the TM's phone; PDF goes to management (mock)">Sign as promoter</button>`}
         <button class="btn btn-secondary" data-toast="Makes a printable sheet like GroupTrip's expense report (mock)">Printable sheet</button></div>
     </section>
     <div class="stack">
+      <section class="card stack"><div class="row between"><h2>Show expenses</h2>${edit ? addBtn('newExp', 'Add', s.id) : ''}</div>
+        <div class="list">${exps.map(e => `<div class="li"><div class="grow">${esc(e.label)}</div><span class="num">${money(e.cents, true, s.cur)}</span>${edit ? editBtn('showExp', e.id) : ''}</div>`).join('') || '<p class="small muted" style="margin:0">None yet — add the promoter\'s agreed expenses.</p>'}</div></section>
       <section class="card stack"><h2>The deal</h2>
-        <dl class="kv"><dt>Type</dt><dd>Guarantee vs %</dd><dt>Guarantee</dt><dd>${money(s.deal.g)}</dd><dt>Artist %</dt><dd>${s.deal.pct}% of net after expenses</dd><dt>Deposit paid</dt><dd>${money(s.deal.dep)}</dd></dl>
-        <div class="note">Artist earns whichever is higher: the guarantee, or ${s.deal.pct}% of what's left after the promoter's agreed expenses.</div></section>
-      ${venue ? '' : `<section class="card"><h2 style="margin-bottom:4px">Already settled</h2><div class="list">
-        ${past.map(x => `<div class="li">${dateBox(x.date)}<div class="grow"><b>${esc(x.city.split(',')[0])}</b><div class="small muted">${esc(dealText(x.deal))}</div></div><b class="num">${money(x.settled)}</b></div>`).join('')}</div></section>`}
+        <dl class="kv"><dt>Type</dt><dd>${esc((DEALS.find(x => x[0] === d.type) || [])[1] || '')}</dd><dt>Guarantee</dt><dd>${money(d.g, false, s.cur)}</dd>${d.type === 'vs' || d.type === 'door' ? `<dt>Artist %</dt><dd>${d.pct}%</dd>` : ''}<dt>Deposit paid</dt><dd>${d.depPaid ? money(d.dep, false, s.cur) : 'None yet'}</dd></dl>
+        ${isMgr() ? `<button class="btn btn-secondary btn-sm" data-act="show" data-id="${s.id}">${icon('edit')} Edit deal</button>` : ''}</section>
     </div>
   </div>`;
 };
-function settleRows(r, st, d) {
+function settleRows(s, r) {
+  const d = s.deal, c = s.cur;
+  const vs = d.type === 'vs', door = d.type === 'door';
   return `
-    <dt>Gross box office</dt><dd>${money(r.gross, true)}</dd>
-    <dt>Ticketing + facility fees</dt><dd>−${money(r.fees, true)}</dd>
-    <dt><b>Net box office</b></dt><dd><b>${money(r.net, true)}</b></dd>
-    ${st.expenses.map(([n, c]) => `<dt class="small">&nbsp;&nbsp;${esc(n)}</dt><dd class="small muted">−${money(c, true)}</dd>`).join('')}
-    <dt>Show expenses</dt><dd>−${money(r.exp, true)}</dd>
-    <dt><b>Net after expenses</b></dt><dd><b>${money(r.after, true)}</b></dd>
-    <dt>${d.pct}% to artist</dt><dd>${money(r.share, true)}</dd>
-    <dt>Guarantee</dt><dd>${money(d.g, true)}</dd>
-    <dt class="total">Artist earns</dt><dd class="total">${money(r.earns, true)} <span class="chip ${r.versusWins ? 'st-confirmed' : 'st-hold'} plain" style="margin-left:6px">${r.versusWins ? d.pct + '% wins' : 'Guarantee'}</span></dd>
-    <dt>Less deposit</dt><dd>−${money(d.dep, true)}</dd>
-    <dt class="total">Due tonight</dt><dd class="total">${money(r.due, true)}</dd>`;
+    <dt>Gross box office</dt><dd>${money(r.gross, true, c)}</dd>
+    <dt>Ticketing + facility fees</dt><dd>−${money(r.fees, true, c)}</dd>
+    <dt><b>Net box office</b></dt><dd><b>${money(r.net, true, c)}</b></dd>
+    ${vs ? `<dt>Show expenses</dt><dd>−${money(r.exp, true, c)}</dd><dt><b>Net after expenses</b></dt><dd><b>${money(r.after, true, c)}</b></dd>
+      <dt>${d.pct}% to artist</dt><dd>${money(r.share, true, c)}</dd><dt>Guarantee</dt><dd>${money(d.g, true, c)}</dd>` : ''}
+    ${door ? `<dt>${d.pct}% of net box office</dt><dd>${money(r.share, true, c)}</dd>` : ''}
+    <dt class="total">Artist earns</dt><dd class="total">${money(r.earns, true, c)}${vs ? ` <span class="chip ${r.versusWins ? 'st-confirmed' : 'st-hold'} plain" style="margin-left:6px">${r.versusWins ? d.pct + '% wins' : 'Guarantee'}</span>` : ''}</dd>
+    <dt>Less deposit</dt><dd>−${money(r.dep, true, c)}</dd>
+    ${r.wh ? `<dt>Less withholding</dt><dd>−${money(r.wh, true, c)}</dd>` : ''}
+    <dt class="total">Due tonight</dt><dd class="total">${money(r.due, true, c)}</dd>`;
 }
 
+V.money = () => {
+  const tabs = [['deposits', 'Deposits due'], ['commission', 'Commissions'], ['budget', 'Tour budget']];
+  let body = '';
+  const edit = isMgr();
+  if (S.moneyTab === 'deposits') {
+    const rows = DB.shows.filter(s => s.deal.dep && s.status !== 'cancelled').sort((a, b) => (a.deal.depDue || '9').localeCompare(b.deal.depDue || '9'));
+    const state = s => s.deal.depPaid ? ['Received', 'st-confirmed'] : !s.deal.depDue ? ['No date', 'st-pencil'] : daysUntil(s.deal.depDue) < 0 ? ['Overdue', 'st-cancelled'] : daysUntil(s.deal.depDue) <= 14 ? ['Due soon', 'st-pending'] : ['Upcoming', 'st-hold'];
+    const out = rows.filter(s => !s.deal.depPaid);
+    body = `<div class="stats">
+        <div class="card stat"><span class="eyebrow">Outstanding</span><b>${money(out.reduce((a, s) => a + s.deal.dep, 0))}</b></div>
+        <div class="card stat"><span class="eyebrow">Overdue</span><b style="color:var(--bad)">${money(out.filter(s => s.deal.depDue && daysUntil(s.deal.depDue) < 0).reduce((a, s) => a + s.deal.dep, 0))}</b></div>
+        <div class="card stat"><span class="eyebrow">Received</span><b>${money(rows.filter(s => s.deal.depPaid).reduce((a, s) => a + s.deal.dep, 0))}</b></div></div>
+      <div class="scroll-x"><table><thead><tr><th>Due</th><th>Artist</th><th>Show</th><th class="r">Deposit</th><th>Status</th><th></th></tr></thead>
+      <tbody>${rows.map(s => { const [l, c] = state(s); return `<tr><td>${short(s.deal.depDue)}</td><td>${esc(artist(s.artist).name)}</td><td>${short(s.date)} · ${esc(cityOf(s))}</td><td class="r">${money(s.deal.dep, false, s.cur)}</td><td><span class="chip ${c}">${l}</span></td>
+        <td>${edit && !s.deal.depPaid ? `<button class="btn btn-outline btn-sm" data-act="depPaid" data-id="${s.id}">Mark received</button>` : ''}</td></tr>`; }).join('')}</tbody></table></div>
+      <p class="note">Real build: "Needs attention" and a push reminder 7 days before each deposit is due.</p>`;
+  } else if (S.moneyTab === 'commission') {
+    const a = artist(S.commArtist);
+    const rows = DB.shows.filter(s => s.artist === S.commArtist && s.settled != null).sort((x, y) => x.date.localeCompare(y.date));
+    const { agentPct, mgmtPct } = DB.settings;
+    const sum = rows.reduce((t, s) => { const ag = pctOf(s.settled, agentPct), mg = pctOf(s.settled, mgmtPct); t.fee += s.settled; t.ag += ag; t.mg += mg; t.net += s.settled - ag - mg; return t; }, { fee: 0, ag: 0, mg: 0, net: 0 });
+    body = `<div class="row wrap between"><div class="seg" data-filter="commArtist">${DB.artists.map(x => `<button aria-pressed="${S.commArtist === x.id}" data-v="${x.id}">${esc(x.name)}</button>`).join('')}</div>
+        <button class="btn btn-secondary btn-sm" data-toast="Statement PDF for ${esc(a.name)} (mock)">Send statement</button></div>
+      <div class="scroll-x"><table><thead><tr><th>Date</th><th>Show</th><th class="r">Fee</th><th class="r">Agent ${agentPct}%</th><th class="r">Mgmt ${mgmtPct}%</th><th class="r">To artist</th></tr></thead>
+        <tbody>${rows.map(s => `<tr><td>${short(s.date)}</td><td>${esc(cityOf(s))} · ${esc(s.venue)}</td><td class="r">${money(s.settled)}</td><td class="r">${money(pctOf(s.settled, agentPct))}</td><td class="r">${money(pctOf(s.settled, mgmtPct))}</td><td class="r">${money(s.settled - pctOf(s.settled, agentPct) - pctOf(s.settled, mgmtPct))}</td></tr>`).join('') || `<tr><td colspan="6" class="muted">No settled shows yet.</td></tr>`}</tbody>
+        <tfoot><tr><td colspan="2">Total</td><td class="r">${money(sum.fee)}</td><td class="r">${money(sum.ag)}</td><td class="r">${money(sum.mg)}</td><td class="r">${money(sum.net)}</td></tr></tfoot></table></div>
+      <p class="note">Commission rates are set in Settings. Amounts are before the artist's own costs; mixed currencies are shown as settled.</p>`;
+  } else {
+    if (!tour(S.tourId)) S.tourId = DB.tours[0]?.id;
+    const t = tour(S.tourId);
+    const shows = DB.shows.filter(s => s.tour === t.id && s.status !== 'cancelled');
+    const fees = shows.reduce((a, s) => a + showFee(s), 0), feesSettled = shows.filter(s => s.settled != null).reduce((a, s) => a + s.settled, 0);
+    const lines = DB.budget.filter(b => b.tour === t.id);
+    const comm = [[`Agent commission (${DB.settings.agentPct}%)`, pctOf(fees, DB.settings.agentPct), pctOf(feesSettled, DB.settings.agentPct)], [`Management commission (${DB.settings.mgmtPct}%)`, pctOf(fees, DB.settings.mgmtPct), pctOf(feesSettled, DB.settings.mgmtPct)]];
+    const costB = lines.reduce((a, l) => a + l.budget, 0) + comm.reduce((a, c) => a + c[1], 0);
+    const costA = lines.reduce((a, l) => a + l.actual, 0) + comm.reduce((a, c) => a + c[2], 0);
+    body = `<div class="row wrap between"><label class="viewas" for="btour">Tour <select id="btour">${DB.tours.map(x => `<option value="${x.id}" ${x.id === t.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label>${edit ? addBtn('newBudget', 'Add line', t.id) : ''}</div>
+      <div class="stats">
+        <div class="card stat"><span class="eyebrow">Show fees</span><b>${money(fees)}</b></div>
+        <div class="card stat"><span class="eyebrow">Net costs (budget)</span><b>${money(costB)}</b></div>
+        <div class="card stat"><span class="eyebrow">Projected profit</span><b style="color:${fees - costB >= 0 ? 'var(--good)' : 'var(--bad)'}">${money(fees - costB)}</b></div>
+        <div class="card stat"><span class="eyebrow">Spent so far</span><b>${money(costA)}</b></div></div>
+      <div class="scroll-x"><table><thead><tr><th>Category</th><th class="r">Budget</th><th class="r">So far</th><th style="width:26%">Used</th><th></th></tr></thead>
+        <tbody>${lines.map(l => `<tr><td>${esc(l.cat)}</td><td class="r">${money(l.budget)}</td><td class="r">${money(l.actual)}</td><td>${l.budget > 0 ? `<div class="bar ${l.actual > l.budget ? 'over' : ''}"><i style="width:${Math.min(100, Math.round(l.actual / l.budget * 100))}%"></i></div>` : '<span class="small muted">income</span>'}</td><td>${edit ? editBtn('budget', l.id) : ''}</td></tr>`).join('')}
+          ${comm.map(([n, b, a]) => `<tr><td>${n}</td><td class="r">${money(b)}</td><td class="r">${money(a)}</td><td><div class="bar"><i style="width:${b ? Math.round(a / b * 100) : 0}%"></i></div></td><td class="small muted">auto</td></tr>`).join('')}</tbody>
+        <tfoot><tr><td>Total</td><td class="r">${money(costB)}</td><td class="r">${money(costA)}</td><td colspan="2"></td></tr></tfoot></table></div>
+      <p class="note">Negative lines are income (merch). Actuals fill in from crew expenses, per diems and settlements in the real build.</p>`;
+  }
+  return `
+  <div class="head"><div><div class="eyebrow">Northlight Mgmt</div><h1 class="display">Money</h1><div class="sub muted">Deposits, commissions and tour budgets across the roster.</div></div></div>
+  <section class="card stack"><div class="tabs" role="tablist">${tabs.map(([k, l]) => `<button role="tab" aria-selected="${S.moneyTab === k}" data-mtab="${k}">${l}</button>`).join('')}</div>${body}</section>`;
+};
+
 V.guests = () => {
-  const s = show('nyc');
-  const used = GUESTS.filter(g => g.status !== 'declined').reduce((a, g) => a + 1 + g.plus, 0);
-  const venue = PEOPLE[me()].kind === 'venue';
-  const approve = can('guests', 'edit');
-  const list = approve ? GUESTS : venue ? GUESTS.filter(g => g.status === 'approved') : GUESTS.filter(g => g.by === me());
-  const title = approve ? "Everyone's requests" : venue ? 'Approved list for the box office' : 'Your requests';
+  if (isVenue() || !isMgr() && !canEdit('guests')) S.showId = 'nyc';
+  const s = show(S.showId) || show('nyc');
+  const list0 = DB.guests.filter(g => g.show === s.id);
+  const used = list0.filter(g => g.status !== 'declined').reduce((a, g) => a + 1 + (+g.plus || 0), 0);
+  const approve = canEdit('guests');
+  const venue = isVenue();
+  const list = approve ? list0 : venue ? list0.filter(g => g.status === 'approved') : list0.filter(g => g.by === me());
   return `
   <div class="head"><div><div class="eyebrow">${fmtDate(s.date)} · ${esc(s.venue)}</div><h1 class="display">Guest list</h1>
-    <div class="sub muted">${used} of ${GUEST_CAP} spots used · closes 5:00 pm</div></div></div>
-  <div class="bar ${used > GUEST_CAP ? 'over' : ''}"><i style="width:${Math.min(100, used / GUEST_CAP * 100)}%"></i></div>
+    <div class="sub muted">${used} of ${s.guestCap} spots used · closes 5:00 pm</div></div>
+    ${approve && !venue ? `<label class="viewas" for="gpick">Show <select id="gpick">${DB.shows.filter(x => x.status === 'confirmed' && x.date >= NOW.date).map(x => `<option value="${x.id}" ${x.id === s.id ? 'selected' : ''}>${short(x.date)} · ${esc(cityOf(x))}</option>`).join('')}</select></label>` : ''}</div>
+  <div class="bar ${used > s.guestCap ? 'over' : ''}"><i style="width:${Math.min(100, used / (s.guestCap || 1) * 100)}%"></i></div>
   <div class="grid2 wide-left">
-    <section class="card"><h2 style="margin-bottom:4px">${title}</h2>
+    <section class="card"><h2 style="margin-bottom:4px">${approve ? "Everyone's requests" : venue ? 'Approved list for the box office' : 'Your requests'}</h2>
       ${list.length ? `<div class="list">${list.map(g => `
-        <div class="li"><div class="grow"><b>${esc(g.name)}</b>${g.plus ? ` <span class="muted">+${g.plus}</span>` : ''}<div class="small muted">for ${esc(PEOPLE[g.by].name)}</div></div>
-          ${approve && g.status === 'pending' ? `<button class="btn btn-primary btn-sm" data-guest="${GUESTS.indexOf(g)}" data-act="approved">Approve</button><button class="btn btn-outline btn-sm" data-guest="${GUESTS.indexOf(g)}" data-act="declined">Decline</button>` : `<span class="chip st-${g.status === 'approved' ? 'confirmed' : g.status === 'declined' ? 'cancelled' : 'pending'}">${g.status[0].toUpperCase() + g.status.slice(1)}</span>`}
-        </div>`).join('')}</div>` : '<p class="muted">You haven\'t asked for anyone yet.</p>'}
+        <div class="li"><div class="grow"><b>${esc(g.name)}</b>${+g.plus ? ` <span class="muted">+${g.plus}</span>` : ''}<div class="small muted">for ${esc(P(g.by).name)}</div></div>
+          ${approve && g.status === 'pending' ? `<button class="btn btn-primary btn-sm" data-act="guestSet" data-id="${g.id}" data-v="approved">Approve</button><button class="btn btn-outline btn-sm" data-act="guestSet" data-id="${g.id}" data-v="declined">Decline</button>` : `<span class="chip st-${g.status === 'approved' ? 'confirmed' : g.status === 'declined' ? 'cancelled' : 'pending'}">${g.status[0].toUpperCase() + g.status.slice(1)}</span>`}
+          ${approve ? editBtn('guest', g.id) : ''}
+        </div>`).join('')}</div>` : '<p class="muted">Nobody on the list yet.</p>'}
     </section>
-    ${venue ? `<section class="card stack"><h2>For the box office</h2><p class="muted" style="margin:0">The final list locks at 5:00 pm and appears here. Wristbands at will-call from 6:30 pm.</p></section>` : `
-    <form class="card stack" id="guestform"><h2>Request a spot</h2>
+    ${venue ? `<section class="card stack"><h2>For the box office</h2><p class="muted" style="margin:0">The final list locks at 5:00 pm. Wristbands at will-call from 6:30 pm.</p></section>` : `
+    <form class="card stack" id="guestform"><h2>${approve ? 'Add someone' : 'Request a spot'}</h2>
       <label class="field" for="gname">Name on the list<input id="gname" required placeholder="e.g. Sofia Lindqvist" autocomplete="off"></label>
       <label class="field" for="gplus">Plus-ones<select id="gplus"><option value="0">Just them</option><option value="1">+1</option><option value="2">+2</option></select></label>
       <button class="btn btn-tape" type="submit">${approve ? 'Add to the list' : 'Send to Dana'}</button>
-      <p class="small muted" style="margin:0">Dana approves; the venue gets the final list at 5 pm.</p>
     </form>`}
   </div>`;
 };
 
 V.travel = () => {
-  const p = PEOPLE[me()];
+  const p = P(me()), mgr = isMgr(), edit = canEdit('travel');
+  const items = DB.travel.filter(x => edit || seesTravel(x, me())).sort((a, b) => a.date.localeCompare(b.date));
+  const group = (type, title) => { const l = items.filter(x => x.type === type || (type === 'other' && !['flight', 'van', 'hotel'].includes(x.type))); return l.length ? `<section class="card"><h2 style="margin-bottom:4px">${title}</h2><div class="list">${l.map(x => `
+    <div class="li">${type === 'flight' ? `<div class="datebox"><div class="m">${MON[dt(x.date).getMonth()]}</div><div class="d">${dt(x.date).getDate()}</div></div>` : ''}<div class="grow ${x.date < NOW.date ? 'muted' : ''}"><b>${esc(x.label)}</b><div class="small muted">${fmtDate(x.date)}${x.time ? ' · ' + x.time : ''}${x.detail ? ' · ' + esc(x.detail) : ''}${edit ? ' · ' + esc(whoLabel(x.who)) : ''}</div></div>
+      ${x.date < NOW.date ? '<span class="chip st-settled">Done</span>' : ''}${edit ? editBtn('travel', x.id) : ''}</div>`).join('')}</div></section>` : ''; };
   return `
-  <div class="head"><div><div class="eyebrow">${esc(p.name)} · ${esc(p.role)}</div><h1 class="display">My travel</h1>
-    <div class="sub muted">Van legs, flights and rooms — only yours.</div></div></div>
-  <div class="grid2">
-    <div class="stack">${TRAVEL.flights.map(f => `
-      <section class="card"><div class="row between small muted"><span>${f.date} · ${f.no}</span><span>Seat ${f.seat}</span></div>
-        <div class="pass" style="margin-top:8px"><div><div class="code">${f.from}</div><div class="mono">${f.dep}</div></div>
-          <div class="mid">${icon('travel')}</div>
-          <div class="r"><div class="code">${f.to}</div><div class="mono">${f.arr}</div></div></div>
-        ${f.next ? `<div class="small muted" style="margin-top:8px">${esc(f.next)}</div>` : ''}
-        <div class="perf"></div><div class="row between small"><span class="muted">Confirmation</span><span class="mono" style="user-select:all">${f.conf}</span></div>
-      </section>`).join('')}
-      <p class="note">Flight times fill in from the flight number, same as GroupTrip.</p></div>
-    <div class="stack">
-      <section class="card"><h2 style="margin-bottom:4px">Van</h2><div class="list">${TRAVEL.van.map(([d, route, call, drive, done]) => `
-        <div class="li"><div class="grow ${done ? 'muted' : ''}"><b>${esc(route)}</b><div class="small muted">${d} · ${call} · ${drive}</div></div>${done ? '<span class="chip st-settled">Done</span>' : ''}</div>`).join('')}</div></section>
-      <section class="card"><h2 style="margin-bottom:4px">Rooms</h2><div class="list">${TRAVEL.hotels.map(([d, h]) => `
-        <div class="li"><div class="grow"><b>${esc(h)}</b><div class="small muted">${d}${p.room ? ' · Room ' + p.room : ''}</div></div></div>`).join('')}</div></section>
-    </div>
-  </div>`;
+  <div class="head"><div><div class="eyebrow">${mgr || edit ? 'Everyone\'s travel' : esc(p.name) + ' · ' + esc(p.role)}</div><h1 class="display">${mgr || edit ? 'Travel' : 'My travel'}</h1>
+    <div class="sub muted">${edit ? 'Each item shows only for the people it applies to.' : 'Only yours.'}</div></div>${edit ? addBtn('newTravel', 'Add travel', '', 'btn-tape') : ''}</div>
+  <div class="grid2"><div class="stack">${group('flight', 'Flights')}<p class="note">Real build: flight times fill in from the flight number, as in GroupTrip.</p></div>
+    <div class="stack">${group('van', 'Van')}${group('hotel', 'Hotels')}${group('other', 'Other')}
+      ${!edit && p.room ? `<p class="note">Your room tonight: ${esc(p.room)}</p>` : ''}</div></div>`;
 };
 
 V.mymoney = () => {
-  const p = PEOPLE[me()];
-  const days = DAYS_SO_FAR;
-  const perDiems = PER_DIEM * days;
-  const artist = p.kind === 'artist';
-  const pay = p.pay ? p.pay * SHOWS_PLAYED : 0;
+  const p = P(me()), artistView = p.kind === 'artist';
+  const shows = DB.shows.filter(s => s.tour === 't1' && s.date <= NOW.date && s.status === 'confirmed').length;
+  const exps = DB.myexp.filter(x => x.person === me());
+  const owed = exps.filter(x => x.status === 'waiting').reduce((a, x) => a + x.cents, 0);
   return `
   <div class="head"><div><div class="eyebrow">${esc(p.name)} · only you see this</div><h1 class="display">My money</h1>
-    <div class="sub muted">Your pay, per diems and expenses on ${esc(TOUR.name)}. Nobody else's.</div></div></div>
+    <div class="sub muted">Your pay, per diems and expenses. Nobody else's.</div></div>${addBtn('newMyExp', 'Add expense', '', 'btn-tape')}</div>
   <div class="stats">
-    ${artist ? '' : `<div class="card stat"><span class="eyebrow">Pay so far</span><b>${money(pay)}</b><span class="small muted">${money(p.pay)} × ${SHOWS_PLAYED} shows</span></div>`}
-    <div class="card stat"><span class="eyebrow">Per diems</span><b>${money(perDiems)}</b><span class="small muted">$50 × ${days} days</span></div>
-    <div class="card stat"><span class="eyebrow">Expenses owed back</span><b>${money(14260)}</b><span class="small muted">1 waiting on Dana</span></div>
+    ${artistView ? '' : `<div class="card stat"><span class="eyebrow">Pay so far</span><b>${money((p.pay || 0) * shows)}</b><span class="small muted">${money(p.pay || 0)} × ${shows} shows</span></div>`}
+    <div class="card stat"><span class="eyebrow">Per diems</span><b>${money(DB.settings.perDiem * 8)}</b><span class="small muted">${money(DB.settings.perDiem)} × 8 days</span></div>
+    <div class="card stat"><span class="eyebrow">Owed back</span><b>${money(owed, true)}</b></div>
   </div>
-  <section class="card"><h2 style="margin-bottom:4px">Expenses</h2><div class="list">
-    <div class="li"><div class="grow"><b>Replacement ${p.tech ? 'SDI cable' : 'strings'}</b><div class="small muted">Apr 10 · Boston · receipt attached</div></div><b class="num">${money(8760)}</b><span class="chip st-pending">Waiting</span></div>
-    <div class="li"><div class="grow"><b>Cab to venue</b><div class="small muted">Apr 8 · Toronto</div></div><b class="num">${money(5500)}</b><span class="chip st-confirmed">Paid back</span></div>
-  </div><button class="btn btn-secondary btn-sm" style="margin-top:10px" data-toast="Snap a receipt, pick a category — same as GroupTrip business expenses (mock)">Add expense</button></section>
-  ${artist ? `<p class="note">Your show earnings come through ${esc(PEOPLE.rae.name)} after each settlement. Management can also let you see show costs and profit.</p>` : `<p class="note">Management decides whether you see this page at all.</p>`}`;
+  <section class="card"><h2 style="margin-bottom:4px">Expenses</h2><div class="list">${exps.map(x => { const f = x.file && FILES[x.file]; return `
+    <div class="li">${f && f.type.startsWith('image/') ? `<img class="thumb" src="${f.url}" alt="Receipt">` : `<span class="thumb">${icon('settle')}</span>`}
+      <div class="grow"><b>${esc(x.label)}</b><div class="small muted">${short(x.date)}${f ? ' · receipt attached' : ''}</div></div><b class="num">${money(x.cents, true)}</b>
+      <span class="chip ${x.status === 'paid' ? 'st-confirmed' : 'st-pending'}">${x.status === 'paid' ? 'Paid back' : 'Waiting'}</span>${editBtn('myexp', x.id)}</div>`; }).join('') || '<p class="muted">No expenses yet.</p>'}</div></section>
+  <p class="note">${artistView ? 'Show earnings reach you through management after each settlement. Management can also let you see costs and profit.' : 'Management decides whether you see this page at all.'}</p>`;
 };
 
-V.budget = () => {
-  const fees = SHOWS.reduce((a, s) => a + showFee(s), 0);
-  const feesSettled = SHOWS.filter(s => s.settled).reduce((a, s) => a + s.settled, 0);
-  const lines = [
-    ...BUDGET,
-    [`Agent commission (${AGENT_PCT}% of fees)`, pctOf(fees, AGENT_PCT), pctOf(feesSettled, AGENT_PCT)],
-    [`Management commission (${MGMT_PCT}% of fees)`, pctOf(fees, MGMT_PCT), pctOf(feesSettled, MGMT_PCT)],
-  ];
-  const costB = lines.reduce((a, l) => a + l[1], 0), costA = lines.reduce((a, l) => a + l[2], 0);
-  const income = fees + MERCH.budget;
-  return `
-  <div class="head"><div><div class="eyebrow">${esc(TOUR.name)} · to date Apr 12</div><h1 class="display">Tour budget</h1>
-    <div class="sub muted">Budget vs actual. Actuals come from expenses, per diems and settlements.</div></div></div>
-  <div class="stats">
-    <div class="card stat"><span class="eyebrow">Projected income</span><b>${money(income)}</b></div>
-    <div class="card stat"><span class="eyebrow">Budgeted costs</span><b>${money(costB)}</b></div>
-    <div class="card stat"><span class="eyebrow">Projected net</span><b style="color:${income - costB >= 0 ? 'var(--good)' : 'var(--bad)'}">${money(income - costB)}</b></div>
-    <div class="card stat"><span class="eyebrow">Spent so far</span><b>${money(costA)}</b></div>
-  </div>
-  <section class="card"><h2 style="margin-bottom:8px">Income</h2><div class="scroll-x"><table>
-    <thead><tr><th>Source</th><th class="r">Budget</th><th class="r">So far</th></tr></thead>
-    <tbody><tr><td>Show fees (${SHOWS.length} shows)</td><td class="r">${money(fees)}</td><td class="r">${money(feesSettled)}</td></tr>
-      <tr><td>Merch (net)</td><td class="r">${money(MERCH.budget)}</td><td class="r">${money(MERCH.actual)}</td></tr></tbody>
-    <tfoot><tr><td>Total</td><td class="r">${money(income)}</td><td class="r">${money(feesSettled + MERCH.actual)}</td></tr></tfoot></table></div></section>
-  <section class="card"><h2 style="margin-bottom:8px">Costs</h2><div class="scroll-x"><table>
-    <thead><tr><th>Category</th><th class="r">Budget</th><th class="r">Spent</th><th style="width:30%">Used</th></tr></thead>
-    <tbody>${lines.map(([n, b, a]) => `<tr><td>${esc(n)}</td><td class="r">${money(b)}</td><td class="r">${money(a)}</td>
-      <td><div class="bar ${a > b ? 'over' : ''}"><i style="width:${Math.min(100, Math.round(a / b * 100))}%"></i></div></td></tr>`).join('')}</tbody>
-    <tfoot><tr><td>Total</td><td class="r">${money(costB)}</td><td class="r">${money(costA)}</td><td class="small muted">${Math.round(costA / costB * 100)}% used · ${Math.round(DAYS_SO_FAR / ROAD_DAYS * 100)}% of tour done</td></tr></tfoot></table></div></section>
-  <p class="note">Crew enter expenses with receipt photos on their phone (GroupTrip's business expenses). Per diems are paid out automatically per road day.</p>`;
-};
-
-// ---- party: expandable cards; management sets role, access and what each person brings ----
 function personCard(k) {
-  const p = PEOPLE[k];
-  const mgr = isMgr();
-  const venueViewer = PEOPLE[me()].kind === 'venue';
-  const showPhone = !venueViewer || p.kind === 'venue' || p.kind === 'tm';
-  const list = SUP[k] || [];
-  const custom = Object.keys(p.over).length;
+  const p = P(k), mgr = isMgr(), mine = k === me();
+  const showPhone = !isVenue() || p.kind === 'venue' || p.kind === 'tm';
+  const list = DB.supply.filter(x => x.person === k);
+  const custom = Object.keys(p.over || {}).length;
   const supplyLabel = p.kind === 'venue' ? 'Venue provides' : 'Brings';
-  const mine = k === me();
   return `<details class="pcard" data-person="${k}" ${S.open.has(k) ? 'open' : ''}>
     <summary>${avatar(k)}<div class="grow"><b>${esc(p.name)}</b>${mine ? ' <span class="chip plain">You</span>' : ''}<div class="small muted">${esc(p.role)}${list.length ? ` · ${supplyLabel.toLowerCase()} ${list.length} item${list.length > 1 ? 's' : ''}` : ''}</div></div>
       ${mgr && custom ? '<span class="chip st-pending plain">Custom access</span>' : ''}${icon('chev', 'chev')}</summary>
     <div class="more">
-      <dl class="kv small">
-        ${showPhone ? `<dt>Phone</dt><dd class="mono" style="user-select:all">${p.ph}</dd>` : ''}
-        <dt>Role</dt><dd>${mgr && p.kind !== 'manager' ? `<select class="lvl" id="kind-${k}" data-kind="${k}">${Object.entries(KINDS).filter(([x]) => x !== 'manager').map(([x, l]) => `<option value="${x}" ${p.kind === x ? 'selected' : ''}>${l}</option>`).join('')}</select>` : esc(KINDS[p.kind])}</dd>
-        ${p.room && (mgr || can('travel', 'edit')) ? `<dt>Room</dt><dd>${p.room}</dd>` : ''}
-      </dl>
+      <div class="row between"><dl class="kv small" style="flex:1">
+        ${showPhone ? `<dt>Phone</dt><dd class="mono" style="user-select:all">${esc(p.ph || '—')}</dd>` : ''}
+        <dt>Access role</dt><dd>${esc(KINDS[p.kind])}</dd>
+        ${p.room && (mgr || canEdit('travel')) ? `<dt>Room</dt><dd>${esc(p.room)}</dd>` : ''}
+        ${p.pay && mgr ? `<dt>Pay per show</dt><dd>${money(p.pay)}</dd>` : ''}</dl>
+        ${mgr ? `<button class="btn btn-outline btn-sm" data-act="person" data-id="${k}" style="margin-left:12px">${icon('edit')} Edit</button>` : ''}</div>
       <div class="stack" style="gap:6px">
         <div class="minihead">${supplyLabel}</div>
-        ${list.length ? `<ul class="supply">${list.map((x, i) => `<li class="${x.ok ? 'ok' : ''}">
-          ${mine ? `<input type="checkbox" id="psup-${k}-${i}" data-sup="${k}" data-i="${i}" ${x.ok ? 'checked' : ''}>` : ''}
-          <span class="grow">${esc(x.t)}</span>
+        ${list.length ? `<ul class="supply">${list.map(x => `<li class="${x.ok ? 'ok' : ''}">
+          ${mine ? `<input type="checkbox" id="psup-${x.id}" data-sup="${x.id}" ${x.ok ? 'checked' : ''}>` : ''}
+          <span class="grow">${esc(x.label)}</span>
           ${mine ? '' : x.ok ? '<span class="chip st-confirmed plain">Confirmed</span>' : '<span class="chip st-pending plain">Not yet</span>'}
-          ${mgr ? `<button class="x" type="button" data-unsup="${k}" data-i="${i}" aria-label="Remove ${esc(x.t)}">×</button>` : ''}</li>`).join('')}</ul>`
+          ${mgr ? `<button class="x" type="button" data-act="unsup" data-id="${x.id}" aria-label="Remove ${esc(x.label)}">×</button>` : ''}</li>`).join('')}</ul>`
           : `<p class="small muted" style="margin:0">Nothing set yet.</p>`}
         ${mgr ? `<form class="addrow" data-addsup="${k}"><input id="add-${k}" placeholder="${p.kind === 'venue' ? 'e.g. Projector + screen' : 'e.g. HDMI → SDI converter'}" autocomplete="off" aria-label="Add an item for ${esc(p.name)}"><button class="btn btn-secondary btn-sm" type="submit">Add</button></form>` : ''}
       </div>
       ${mgr && p.kind !== 'manager' ? `<div class="stack" style="gap:6px">
-        <div class="row between"><span class="minihead">What ${esc(p.name.split(' ')[0])} can see</span>${custom ? `<button class="btn btn-outline btn-sm" data-reset="${k}">Back to ${esc(KINDS[p.kind])} defaults</button>` : ''}</div>
+        <div class="row between"><span class="minihead">What ${esc(p.name.split(' ')[0])} can see</span>${custom ? `<button class="btn btn-outline btn-sm" data-act="resetAccess" data-id="${k}">Back to ${esc(KINDS[p.kind])} defaults</button>` : ''}</div>
         <div class="accgrid">${AREAS.map(([a, l]) => { const o = p.over[a]; const v = level(k, a); return `<span>${l}</span>
           <select class="lvl ${o ? 'custom' : ''}" data-l="${v}" id="ov-${k}-${a}" data-over="${k}" data-area="${a}" aria-label="${esc(l)} for ${esc(p.name)}">
-            ${['off', 'view', 'edit'].map(x => `<option value="${x}" ${v === x ? 'selected' : ''}>${x === 'off' ? 'Hidden' : x === 'view' ? 'View' : 'Edit'}${!o && ACCESS[p.kind][a] === x ? ' (default)' : ''}</option>`).join('')}</select>`; }).join('')}</div>
+            ${['off', 'view', 'edit'].map(x => `<option value="${x}" ${v === x ? 'selected' : ''}>${x === 'off' ? 'Hidden' : x === 'view' ? 'View' : 'Edit'}${!o && (DB.access[p.kind] || {})[a] === x ? ' (default)' : ''}</option>`).join('')}</select>`; }).join('')}</div>
         <p class="small muted" style="margin:0">Yellow outline = changed just for ${esc(p.name.split(' ')[0])}.</p></div>` : ''}
     </div></details>`;
 }
-
 V.party = () => {
-  const venueViewer = PEOPLE[me()].kind === 'venue';
-  const ids = g => Object.keys(PEOPLE).filter(k => PEOPLE[k].group === g);
-  const road = venueViewer ? ids('road').filter(k => PEOPLE[k].kind === 'tm' || PEOPLE[k].tech) : ids('road');
-  const office = ids('office'), venue = ids('venue');
-  const sec = (title, list, extra = '') => `<section class="card"><h2 style="margin-bottom:4px">${title}</h2><div class="list">${list.map(personCard).join('')}</div>${extra}</section>`;
+  const ids = g => Object.keys(DB.people).filter(k => DB.people[k].group === g);
+  const road = isVenue() ? ids('road').filter(k => P(k).kind === 'tm' || P(k).tech) : ids('road');
+  const sec = (title, list) => `<section class="card"><h2 style="margin-bottom:4px">${title}</h2><div class="list">${list.map(personCard).join('') || '<p class="muted">Nobody yet.</p>'}</div></section>`;
   return `
-  <div class="head"><div><div class="eyebrow">${esc(TOUR.name)}</div><h1 class="display">${venueViewer ? 'Tour team' : 'Touring party'}</h1>
-    <div class="sub muted">${venueViewer ? 'The people you\'ll work with today and what they bring.' : isMgr() ? 'Tap a person to set what they bring and what they can see.' : 'Tap a person to see what they\'re bringing.'}</div></div>
-    ${isMgr() ? `<div class="row wrap"><button class="btn btn-secondary" data-go="access">${icon('access')} Role defaults</button><button class="btn btn-tape" data-toast="Copies a join link for this tour (mock)">Invite someone</button></div>` : ''}</div>
-  ${venueViewer ? sec('Venue', venue) + sec('Tour team', road) : `<div class="grid2">
+  <div class="head"><div><div class="eyebrow">${esc(tour('t1')?.name || '')}</div><h1 class="display">${isVenue() ? 'Tour team' : 'Touring party'}</h1>
+    <div class="sub muted">${isVenue() ? "The people you'll work with and what they bring." : isMgr() ? 'Tap a person to set what they bring and what they can see.' : "Tap a person to see what they're bringing."}</div></div>
+    ${isMgr() ? `<div class="addbar"><button class="btn btn-secondary btn-sm" data-go="access">${icon('access')} Role defaults</button>${addBtn('newPerson', 'Add someone', '', 'btn-tape')}</div>` : ''}</div>
+  ${isVenue() ? sec('Venue', ids('venue')) + sec('Tour team', road) : `<div class="grid2">
     <div class="stack">${sec('On the road', road)}</div>
-    <div class="stack">${sec('Venue — tonight', venue)}${sec('Office', office)}</div></div>`}`;
+    <div class="stack">${sec('Venue — tonight', ids('venue'))}${sec('Office', ids('office'))}</div></div>`}`;
 };
 
 V.access = () => {
   const cols = ['tm', 'artist', 'crew', 'venue', 'agent'];
-  const custom = Object.keys(PEOPLE).filter(k => Object.keys(PEOPLE[k].over).length);
+  const custom = Object.keys(DB.people).filter(k => Object.keys(DB.people[k].over || {}).length);
   return `
   <div class="head"><div><div class="eyebrow">Management only</div><h1 class="display">Who sees what</h1>
-    <div class="sub muted">Defaults for each role on ${esc(TOUR.name)}. Change one person on their card in Party.</div></div></div>
+    <div class="sub muted">Defaults for each role. Change one person on their card in Party.</div></div></div>
   <section class="card"><div class="scroll-x"><table>
     <thead><tr><th>Area</th><th>Management</th>${cols.map(c => `<th>${KINDS[c]}</th>`).join('')}</tr></thead>
     <tbody>${AREAS.map(([a, l]) => `<tr><td style="white-space:normal;min-width:180px">${l}</td><td><span class="chip st-confirmed plain">Edit</span></td>
-      ${cols.map(c => `<td><select class="lvl" data-l="${ACCESS[c][a]}" id="acc-${c}-${a}" data-acc="${c}" data-area="${a}" aria-label="${esc(l)} for ${KINDS[c]}">
-        ${['off', 'view', 'edit'].map(x => `<option value="${x}" ${ACCESS[c][a] === x ? 'selected' : ''}>${x === 'off' ? 'Hidden' : x === 'view' ? 'View' : 'Edit'}</option>`).join('')}</select></td>`).join('')}</tr>`).join('')}</tbody>
+      ${cols.map(c => `<td><select class="lvl" data-l="${DB.access[c][a]}" id="acc-${c}-${a}" data-acc="${c}" data-area="${a}" aria-label="${esc(l)} for ${KINDS[c]}">
+        ${['off', 'view', 'edit'].map(x => `<option value="${x}" ${DB.access[c][a] === x ? 'selected' : ''}>${x === 'off' ? 'Hidden' : x === 'view' ? 'View' : 'Edit'}</option>`).join('')}</select></td>`).join('')}</tr>`).join('')}</tbody>
   </table></div>
-  <div class="row wrap" style="margin-top:14px"><span class="small muted">Try it:</span>${['tm', 'artist', 'crew', 'venue'].map(c => `<button class="btn btn-outline btn-sm" data-preview="${c}">See it as ${KINDS[c]}</button>`).join('')}</div></section>
+  <div class="row wrap" style="margin-top:14px"><span class="small muted">Try it:</span>${['tm', 'artist', 'crew', 'venue'].map(c => `<button class="btn btn-outline btn-sm" data-act="preview" data-id="${c}">See it as ${KINDS[c]}</button>`).join('')}</div></section>
   <div class="grid2">
     <section class="card stack"><h2>Money has three levels</h2>
-      <dl class="kv small"><dt>My money</dt><dd>own pay, per diems, expenses</dd><dt>Show costs</dt><dd>deals, venue expenses, settlement</dd><dt>Profit</dt><dd>net per show and tour, commissions, budget</dd></dl>
-      <p class="note">So a tour manager can settle a show without seeing what the tour makes, and crew can see their own pay and nothing else.</p></section>
+      <dl class="kv small"><dt>My money</dt><dd>own pay, per diems, expenses</dd><dt>Show costs</dt><dd>deals, venue expenses, settlement</dd><dt>Profit</dt><dd>budget, commissions, net</dd></dl>
+      <p class="note">A tour manager can settle a show without seeing what the tour makes; crew see their own pay and nothing else.</p></section>
     <section class="card"><h2 style="margin-bottom:4px">People with their own access</h2>
-      ${custom.length ? `<div class="list">${custom.map(k => `<div class="li click" data-open="${k}">${avatar(k)}<div class="grow"><b>${esc(PEOPLE[k].name)}</b><div class="small muted">${Object.entries(PEOPLE[k].over).map(([a, v]) => `${AREAS.find(x => x[0] === a)[1].split(' (')[0]}: ${v === 'off' ? 'hidden' : v}`).join(' · ')}</div></div></div>`).join('')}</div>`
+      ${custom.length ? `<div class="list">${custom.map(k => `<div class="li click" data-act="openPerson" data-id="${k}">${avatar(k)}<div class="grow"><b>${esc(P(k).name)}</b><div class="small muted">${Object.entries(P(k).over).map(([a, v]) => `${AREAS.find(x => x[0] === a)[1].split(' (')[0]}: ${v === 'off' ? 'hidden' : v}`).join(' · ')}</div></div></div>`).join('')}</div>`
         : '<p class="muted" style="margin:0">Nobody yet — everyone follows their role.</p>'}</section>
   </div>`;
 };
 
+V.activity = () => {
+  const att = attention();
+  return `
+  <div class="head"><div><div class="eyebrow">What changed and what's waiting</div><h1 class="display">Activity</h1></div></div>
+  <div class="grid2">
+    <section class="card"><h2 style="margin-bottom:4px">Needs attention · ${att.length}</h2><div class="list">${att.map(a => `
+      <div class="li click" ${a.act ? `data-act="${a.act}" data-id="${a.id}"` : `data-go="${a.go}"`}><div class="grow"><span class="chip ${/overdue|Overdue/.test(a.kind) ? 'st-cancelled' : 'st-pending'} plain">${a.kind}</span><div><b>${esc(a.text)}</b></div><div class="small muted">${esc(a.sub)}</div></div>${icon('chev')}</div>`).join('') || '<p class="muted">All clear.</p>'}</div></section>
+    <section class="card"><h2 style="margin-bottom:4px">Recent</h2><div class="list">${DB.activity.filter(a => isMgr() || !/\$|Settled|Budget|Deposit/.test(a.text)).slice(0, 30).map(a => `
+      <div class="li">${avatar(a.who)}<div class="grow"><div>${esc(a.text)}</div><div class="small muted">${esc(P(a.who).name)} · ${esc(a.at)}</div></div></div>`).join('')}</div></section>
+  </div>
+  <p class="note">Real build: each of these also arrives as a phone notification (GroupTrip's push), filtered by what each person can see.</p>`;
+};
+
+V.settings = () => `
+  <div class="head"><div><div class="eyebrow">Management only</div><h1 class="display">Settings</h1><div class="sub muted">Templates used for every new show, and your rates.</div></div></div>
+  <div class="grid2">
+    <section class="card stack"><div class="row between"><h2>Advance template</h2>${addBtn('newTmplAdv', 'Add')}</div>
+      <div class="list">${DB.templates.advance.map(t => `<div class="li"><div class="grow"><b>${esc(t.label)}</b><div class="small muted">${esc(P(t.owner).name)} · ${t.before} days before</div></div>${editBtn('tmplAdv', t.id)}</div>`).join('')}</div></section>
+    <div class="stack">
+      <section class="card stack"><div class="row between"><h2>Day-sheet template</h2>${addBtn('newTmplSlot', 'Add')}</div>
+        <div class="list">${DB.templates.slots.map(t => `<div class="li"><span class="mono">${t.time}</span><div class="grow">${esc(t.label)}</div>${editBtn('tmplSlot', t.id)}</div>`).join('')}</div></section>
+      <section class="card stack"><div class="row between"><h2>Rates</h2><button class="btn btn-secondary btn-sm" data-act="rates">${icon('edit')} Edit</button></div>
+        <dl class="kv"><dt>Per diem</dt><dd>${money(DB.settings.perDiem)} / day</dd><dt>Agent commission</dt><dd>${DB.settings.agentPct}%</dd><dt>Management commission</dt><dd>${DB.settings.mgmtPct}%</dd></dl></section>
+      <section class="card stack"><h2>Sample data</h2><p class="small muted" style="margin:0">Your edits are saved in this browser only. Start over any time.</p>
+        <button class="btn btn-danger btn-sm" data-act="reset">Reset sample data</button></section>
+    </div>
+  </div>`;
+
+V.more = () => `<div class="head"><h1 class="display">More</h1></div>
+  <section class="card more-list">${navFor().map(([k, l]) => `<a href="#${k}">${icon(k in ICONS ? k : 'about')}<span>${l}</span></a>`).join('')}</section>`;
+
 V.about = () => `
-  <div class="head"><div><div class="eyebrow">Prototype · sample data</div><h1 class="display">What is GigTrip?</h1></div></div>
+  <div class="head"><div><div class="eyebrow">Prototype V1 · sample data</div><h1 class="display">What is GigTrip?</h1></div></div>
   <section class="card prose">
-    <p><b>GigTrip is for artist managers and everyone who makes a show happen.</b> It puts the dates sheet, each show's deal and settlement, the advance checklist, who brings what, day sheets, travel and guest lists in one place — instead of Excel for dates and money, ClickUp for advancing, and group texts for everything else.</p>
-    <p><b>Management decides who sees what.</b> The tour manager, artist, band and crew, and the venue each get only what they need. Costs and profit can be hidden separately.</p>
-    <p>It's built on <a href="https://timdreamboat.github.io/grouptrip/" target="_blank" rel="noopener">GroupTrip</a>, which already handles travel, shared plans, people and expenses for groups.</p>
-    <p class="muted">Use <b>View as</b> at the top to switch between management, the tour manager, the artist, band &amp; crew (you're Nico, the VJ) and the venue (you're Greg, production manager). Everyone, venues and numbers here are made up.</p>
+    <p><b>GigTrip is for artist managers and everyone who makes a show happen.</b> Your dates sheet, offers, deals and settlements, advance tasks, who brings what, day sheets, travel and guest lists — in one place, instead of Excel, ClickUp and group texts.</p>
+    <p><b>Management edits everything and decides who sees what.</b> Add artists, tours and shows; import your Excel dates; upload riders and contracts; set templates. The tour manager, artist, band &amp; crew and the venue each see only what you allow — costs and profit can be hidden separately.</p>
+    <p>Built on <a href="https://timdreamboat.github.io/grouptrip/" target="_blank" rel="noopener">GroupTrip</a>, which already runs travel, notifications, calendars and expenses for groups.</p>
+    <p class="muted">Use <b>View as</b> to switch between management, tour manager, artist, band &amp; crew (you're Nico, the VJ) and venue (Greg, production manager). All people, venues and numbers are made up. Edits stay in this browser — reset them in Settings.</p>
   </section>`;
 
 // ---------- router ----------
 function route() {
   const nav = navFor();
   let r = location.hash.slice(1);
-  if (!V[r] || !nav.some(n => n[0] === r)) r = nav[0][0];
-  const links = list => list.map(([k, l]) => `<a href="#${k}" ${k === r ? 'aria-current="page"' : ''}>${icon(k)}<span>${l}</span></a>`).join('');
+  if (r !== 'more' && (!V[r] || !nav.some(n => n[0] === r))) r = nav[0][0];
+  const links = list => list.map(([k, l]) => `<a href="#${k}" ${k === r ? 'aria-current="page"' : ''}>${icon(k in ICONS ? k : 'about')}<span>${l}</span></a>`).join('');
   $('#sidenav').innerHTML = links(nav);
-  $('#tabbar').innerHTML = links(nav.filter(n => n[0] !== 'about').slice(0, 5));
+  const main = nav.filter(n => n[0] !== 'about');
+  $('#tabbar').innerHTML = main.length > 5 ? links(main.slice(0, 4)) + `<a href="#more" ${r === 'more' ? 'aria-current="page"' : ''}>${icon('more')}<span>More</span></a>` : links(main);
+  const att = attention().length;
+  $('#bellslot').innerHTML = canEdit('advance') ? `<a class="iconbtn bell" href="#activity" aria-label="Activity, ${att} need attention">${icon('activity')}${att ? `<span class="badge">${att}</span>` : ''}</a>` : '';
   $('#main').innerHTML = V[r]();
   $('#role').value = S.role;
 }
 function go(r) { if (location.hash.slice(1) === r) route(); else location.hash = r; }
-function setRole(r) { S.role = r; store.set('role', r); go(navFor()[0][0]); }
-
+function setRole(r) { S.role = r; S.sel.clear(); store.set('role', r); go(navFor()[0][0]); }
 addEventListener('hashchange', () => { route(); scrollTo(0, 0); });
 $('#role').addEventListener('change', e => setRole(e.target.value));
 
-document.addEventListener('toggle', e => {
-  const d = e.target;
-  if (d.matches && d.matches('details.pcard')) d.open ? S.open.add(d.dataset.person) : S.open.delete(d.dataset.person);
-}, true);
+// ---------- actions ----------
+const ACT = {
+  newShow: () => E.show(null), newShowFor: id => E.show(null, { artist: id, tour: DB.tours.find(t => t.artist === id)?.id || '' }), newShowTour: id => E.show(null, { tour: id, artist: tour(id).artist }),
+  show: id => E.show(id), artist: id => E.artist(id), newArtist: () => E.artist(null), tour: id => E.tour(id), newTour: id => E.tour(null, { artist: id || 'jv' }),
+  gotour: id => { S.tourId = id; go('tour'); }, offer: id => E.offer(id), newOffer: () => E.offer(null),
+  task: id => E.task(id), newTask: id => E.task(null, { show: id }), slot: id => E.slot(id), newSlot: id => E.slot(null, { show: id }),
+  doc: id => E.doc(id), contact: id => E.contact(id), newContact: id => E.contact(null, { show: id }), person: id => E.person(id), newPerson: () => E.person(null),
+  guest: id => E.guest(id), travel: id => E.travel(id), newTravel: () => E.travel(null), supply: id => E.supply(id), newSupply: () => E.supply(null),
+  budget: id => E.budget(id), newBudget: id => E.budget(null, { tour: id }), showExp: id => E.showExp(id), newExp: id => E.showExp(null, { show: id }),
+  myexp: id => E.myexp(id), newMyExp: () => E.myexp(null), tmplAdv: id => E.tmpl(id, 'advance'), newTmplAdv: () => E.tmpl(null, 'advance'), tmplSlot: id => E.tmpl(id, 'slots'), newTmplSlot: () => E.tmpl(null, 'slots'),
+  import: () => openImport(), export: () => openExport(),
+  gosettle: id => { S.showId = id; go('settle'); },
+  sort: k => { S.sort = { k, dir: S.sort.k === k ? -S.sort.dir : 1 }; route(); },
+  bulkStatus: () => { const st = $('#bulkst').value; S.sel.forEach(id => { const s = show(id); if (s) s.status = st; }); commit(`${S.sel.size} shows set to ${st}`, `Set ${S.sel.size} shows to ${st}`); S.sel.clear(); route(); },
+  bulkClear: () => { S.sel.clear(); route(); },
+  acceptOffer: id => {
+    const o = DB.offers.find(x => x.id === id); o.status = 'accepted';
+    const s = { id: uid('sh'), artist: o.artist, tour: '', date: o.date, city: o.city, venue: o.venue, cap: o.cap, status: 'hold', hold: 1, cur: 'USD', address: '', wifi: '', parking: '', hospitality: '', note: `From ${o.promoter}`, guestCap: 24, settled: null, deal: { type: 'vs', g: o.g || 0, pct: 85, dep: Math.round((o.g || 0) / 2), depDue: addDays(o.date, -30), depPaid: false } };
+    const key = Object.keys(CITIES).find(c => s.city.toLowerCase().startsWith(c)); if (key) s.ll = CITIES[key];
+    DB.shows.push(s); DB.templates.advance.forEach(t => DB.tasks.push({ id: uid('k'), show: s.id, label: t.label, owner: t.owner, due: addDays(s.date, -t.before), status: 'To do', comments: [] }));
+    commit(`${o.city} is on the season board as Hold 1`, `Accepted offer: ${o.city} · ${o.venue} (Hold 1)`);
+  },
+  declineOffer: id => { const o = DB.offers.find(x => x.id === id); o.status = 'declined'; commit(`Declined ${o.city}`, `Declined offer: ${o.city}`); },
+  depPaid: id => { const s = show(id); s.deal.depPaid = true; commit('Deposit marked received', `Deposit received: ${money(s.deal.dep, false, s.cur)} from ${s.venue}`); },
+  markSettled: id => { const s = show(id); s.settled = settle(s).earns; commit(`Settled at ${money(s.settled, true, s.cur)}`, `Settled ${cityOf(s)}: ${money(s.settled, false, s.cur)}`); },
+  guestSet: (id, el) => { const g = DB.guests.find(x => x.id === id); g.status = el.dataset.v; commit(g.status === 'approved' ? 'Approved — on the list' : 'Declined', `${g.status === 'approved' ? 'Approved' : 'Declined'} guest ${g.name}`); },
+  applyAdv: id => { const s = show(id); DB.templates.advance.forEach(t => DB.tasks.push({ id: uid('k'), show: id, label: t.label, owner: t.owner, due: addDays(s.date, -t.before), status: 'To do', comments: [] })); commit('Advance tasks added from your template'); },
+  applySlots: id => { DB.templates.slots.forEach(t => DB.slots.push({ id: uid('s'), show: id, time: t.time, label: t.label, who: '', key: false })); commit('Day sheet started from your template — tap ✎ to adjust times'); },
+  unsup: id => { const x = DB.supply.find(y => y.id === id); DB.supply = DB.supply.filter(y => y !== x); commit(`Removed “${x.label}”`); },
+  resetAccess: id => { DB.people[id].over = {}; commit('Back to role defaults'); },
+  preview: k => { setRole(k); toast(`Now seeing GigTrip as ${KINDS[k]}`); },
+  openPerson: id => { S.open.add(id); go('party'); },
+  rates: () => openForm({ title: 'Rates', value: DB.settings, fields: [{ k: 'perDiem', label: 'Per diem ($ per day)', type: 'money', full: true }, { k: 'agentPct', label: 'Agent commission %', type: 'number' }, { k: 'mgmtPct', label: 'Management commission %', type: 'number' }], onSave(o) { Object.assign(DB.settings, o); toast('Rates saved'); } }),
+  reset: (id, el) => { if (!el.dataset.sure) { el.dataset.sure = '1'; el.textContent = 'Tap again to reset everything'; return; } DB = seed(); save(); S.showId = 'nyc'; S.tourId = 't1'; route(); toast('Sample data restored'); },
+};
 
 document.addEventListener('click', e => {
-  const t = e.target.closest('[data-go],[data-show],[data-tab],[data-toast],[data-offer],[data-guest],[data-filter] button,[data-unsup],[data-reset],[data-preview],[data-open]');
-  if (!t) return;
+  const t = e.target.closest('[data-act],[data-go],[data-show],[data-tab],[data-mtab],[data-toast],[data-filter] button');
+  if (!t || t.closest('dialog')) return;
+  if (e.target.closest('input,select,textarea,label.upload') && !e.target.closest('[data-act] input')) return;
+  if (t.dataset.act) { e.preventDefault(); const f = ACT[t.dataset.act]; if (f) f(t.dataset.id, t); return; }
   if (t.dataset.toast) return toast(t.dataset.toast);
   if (t.dataset.show) { S.showId = t.dataset.show; S.showTab = ''; return navFor().some(n => n[0] === 'show') ? go('show') : toast('Management and the tour manager open the show page'); }
   if (t.dataset.go) return go(t.dataset.go);
   if (t.dataset.tab) { S.showTab = t.dataset.tab; return route(); }
-  if (t.dataset.preview) { setRole(t.dataset.preview); return toast(`Now seeing GigTrip as ${KINDS[t.dataset.preview]}`); }
-  if (t.dataset.open) { S.open.add(t.dataset.open); return go('party'); }
-  if (t.dataset.unsup) { e.preventDefault(); const it = SUP[t.dataset.unsup].splice(+t.dataset.i, 1)[0]; toast(`Removed “${it.t}”`); return route(); }
-  if (t.dataset.reset) { e.preventDefault(); PEOPLE[t.dataset.reset].over = {}; toast('Back to role defaults'); return route(); }
-  if (t.dataset.offer) {
-    const o = OFFERS.find(x => x.id === t.dataset.offer);
-    if (t.dataset.act === 'counter') return toast(`Counter sent to ${o.promoter} (mock)`);
-    o.status = t.dataset.act === 'hold' ? 'hold' : 'declined';
-    if (o.status === 'hold') o.hold = 1;
-    toast(o.status === 'hold' ? `${o.city} is on the season board as Hold 1` : `Declined ${o.city}`);
-    return route();
-  }
-  if (t.dataset.guest) { GUESTS[+t.dataset.guest].status = t.dataset.act; toast(t.dataset.act === 'approved' ? 'Approved — on the list' : 'Declined'); return route(); }
+  if (t.dataset.mtab) { S.moneyTab = t.dataset.mtab; return route(); }
   const f = t.closest('[data-filter]');
-  if (f) { S[f.dataset.filter] = t.dataset.v; route(); }
+  if (f) { S[f.dataset.filter] = t.dataset.v; S.sel.clear(); route(); }
 });
+document.addEventListener('toggle', e => { const d = e.target; if (d.matches && d.matches('details.pcard')) d.open ? S.open.add(d.dataset.person) : S.open.delete(d.dataset.person); }, true);
 document.addEventListener('change', e => {
-  const d = e.target.dataset;
-  if (d.adv) {
-    const s = show(S.showId); s.done[+d.adv] = e.target.checked;
-    route(); toast(e.target.checked ? 'Marked done' : 'Marked not done');
-  }
-  if (e.target.id === 'pick') { S.showId = e.target.value; route(); }
-  if (d.sup) { const it = SUP[d.sup][+d.i]; it.ok = e.target.checked; toast(it.ok ? 'Confirmed — management can see it' : 'Marked not ready'); route(); }
-  if (d.acc) { ACCESS[d.acc][d.area] = e.target.value; toast(`${KINDS[d.acc]}: ${AREAS.find(a => a[0] === d.area)[1].split(' (')[0]} → ${e.target.selectedOptions[0].text}`); route(); }
-  if (d.over) {
-    const p = PEOPLE[d.over];
-    if (e.target.value === ACCESS[p.kind][d.area]) delete p.over[d.area]; else p.over[d.area] = e.target.value;
-    toast(`${p.name.split(' ')[0]}'s access updated`); route();
-  }
-  if (d.kind) { PEOPLE[d.kind].kind = e.target.value; toast(`${PEOPLE[d.kind].name} is now ${KINDS[e.target.value]}`); route(); }
+  const el = e.target, d = el.dataset;
+  if (el.closest('dialog')) return;
+  if (el.id === 'pick') { S.showId = el.value; return route(); }
+  if (el.id === 'setpick' || el.id === 'gpick') { S.showId = el.value; return route(); }
+  if (el.id === 'tourpick' || el.id === 'btour') { S.tourId = el.value; return route(); }
+  if (el.id === 'selall') { DB.shows.forEach(s => el.checked ? S.sel.add(s.id) : S.sel.delete(s.id)); return route(); }
+  if (d.sel) { el.checked ? S.sel.add(d.sel) : S.sel.delete(d.sel); return route(); }
+  if (d.taskdone) { const t = DB.tasks.find(x => x.id === d.taskdone); t.status = el.checked ? 'Done' : 'To do'; return commit(el.checked ? 'Done' : 'Reopened', `${el.checked ? 'Finished' : 'Reopened'} "${t.label}" (${cityOf(show(t.show))})`); }
+  if (d.taskst) { const t = DB.tasks.find(x => x.id === d.taskst); t.status = el.value; return commit(`Status: ${el.value}`, `"${t.label}" → ${el.value}`); }
+  if (d.sup) { const it = DB.supply.find(x => x.id === d.sup); it.ok = el.checked; return commit(it.ok ? 'Confirmed — management can see it' : 'Marked not ready', `${it.ok ? 'Confirmed' : 'Unconfirmed'} "${it.label}"`); }
+  if (d.acc) { DB.access[d.acc][d.area] = el.value; return commit(`${KINDS[d.acc]}: ${AREAS.find(a => a[0] === d.area)[1].split(' (')[0]} → ${el.selectedOptions[0].text}`, `Changed ${KINDS[d.acc]} access: ${AREAS.find(a => a[0] === d.area)[1]} → ${el.value}`); }
+  if (d.over) { const p = DB.people[d.over]; if (el.value === (DB.access[p.kind] || {})[d.area]) delete p.over[d.area]; else p.over[d.area] = el.value; return commit(`${p.name.split(' ')[0]}'s access updated`, `Changed ${p.name}'s access: ${d.area} → ${el.value}`); }
+  if (d.upload) uploadFiles(d.upload, d.id, el.files);
 });
 document.addEventListener('input', e => {
-  if (!['sold', 'price', 'feeper'].includes(e.target.id)) return;
-  const st = NYC.settle;
+  if (e.target.id === 'q') { S.q = e.target.value; const pos = e.target.selectionStart; route(); const q = $('#q'); q.focus(); q.setSelectionRange(pos, pos); return; }
+  if (!['sold', 'price', 'feeper', 'wh'].includes(e.target.id)) return;
+  const s = show(S.showId) && show(S.showId).status !== 'cancelled' ? show(S.showId) : show('nyc');
+  const st = sheetFor(s);
   const cents = v => Math.round(parseFloat(String(v).replace(/[^0-9.]/g, '')) * 100);
-  const sold = parseInt($('#sold').value.replace(/\D/g, ''), 10), price = cents($('#price').value), fee = cents($('#feeper').value);
+  const sold = parseInt($('#sold').value.replace(/\D/g, ''), 10), price = cents($('#price').value), fee = cents($('#feeper').value), wh = cents($('#wh').value);
   if (Number.isFinite(sold)) st.sold = sold;
   if (Number.isFinite(price)) st.price = price;
   if (Number.isFinite(fee)) st.feePer = fee;
-  $('#settle-sheet').innerHTML = settleRows(settle(st, show('nyc').deal), st, show('nyc').deal);
+  st.withholding = Number.isFinite(wh) ? wh : 0;
+  save();
+  $('#settle-sheet').innerHTML = settleRows(s, settle(s));
 });
 document.addEventListener('submit', e => {
   const f = e.target;
+  if (f.closest('dialog')) return;
   if (f.dataset.addsup) {
     e.preventDefault();
-    const k = f.dataset.addsup, input = f.querySelector('input'), txt = input.value.trim();
+    const k = f.dataset.addsup, txt = f.querySelector('input').value.trim();
     if (!txt) return;
-    (SUP[k] ||= []).push({ t: txt, ok: false });
-    S.open.add(k);
-    toast(`Added for ${PEOPLE[k].name.split(' ')[0]} — shows on their Today screen`);
-    route();
-    const again = document.getElementById('add-' + k); if (again) again.focus();
+    DB.supply.push({ id: uid('u'), person: k, label: txt, ok: false }); S.open.add(k);
+    commit(`Added for ${P(k).name.split(' ')[0]} — shows on their Today screen`, `${P(k).name} to bring: ${txt}`);
+    document.getElementById('add-' + k)?.focus();
     return;
   }
   if (f.id !== 'guestform') return;
   e.preventDefault();
-  const name = $('#gname').value.trim();
-  if (!name) return;
-  const approve = can('guests', 'edit');
-  GUESTS.push({ name, plus: +$('#gplus').value, by: me(), status: approve ? 'approved' : 'pending' });
-  toast(approve ? 'Added to the list' : 'Sent to Dana for approval');
-  route();
+  const name = $('#gname').value.trim(); if (!name) return;
+  const approve = canEdit('guests'), s = show(S.showId) || show('nyc');
+  DB.guests.push({ id: uid('g'), show: s.id, name, plus: +$('#gplus').value, by: me(), status: approve ? 'approved' : 'pending' });
+  commit(approve ? 'Added to the list' : 'Sent to Dana for approval', `${approve ? 'Added' : 'Asked for'} guest ${name} (${cityOf(s)})`);
 });
+['dragover', 'dragleave', 'drop'].forEach(ev => document.addEventListener(ev, e => {
+  const z = e.target.closest && e.target.closest('[data-drop]');
+  if (!z) return;
+  e.preventDefault();
+  z.classList.toggle('drag', ev === 'dragover');
+  if (ev === 'drop') uploadFiles(z.dataset.drop, z.dataset.id, e.dataTransfer.files);
+}));
 
 route();
 </script>
