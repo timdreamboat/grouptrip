@@ -125,15 +125,33 @@ New tables, all locked behind `SECURITY DEFINER` functions like GroupTrip:
 - `budget_lines` (trip_id, category, budget_cents); actuals come from
   expenses + per diems + settlements
 
-## 7. Who sees what
+## 7. Roles and who sees what (owner, 2026-09-23)
+Roles: **management team, tour manager, artist, crew, venue/promoter**. Each
+person sees only what they need or what management allows. Management sets
+everything: who is on each tour, their role, and per-role or per-person access.
 
-| | Manager | TM | Band/crew | Agent/promoter link |
-|---|---|---|---|---|
-| Season board, offers | ✓ | — | — | — |
-| Deals, settlement, budget | ✓ | ✓ | — | — |
-| Advance checklist, docs | ✓ | ✓ | read | read (their show) |
-| Day sheet, travel, party | ✓ | ✓ | ✓ | day sheet only |
-| Guest list | ✓ approve | ✓ approve | request | — |
+Money is split into three levels so costs and profit can be hidden separately:
+**My money** (own pay, per diems, expenses) · **Show costs** (deals, venue
+expenses, settlement, tour spending) · **Profit** (net per show/tour,
+commissions, budget vs actual).
+
+Proposed defaults ("optional" = off unless management switches it on):
+
+| Area | Management | Tour manager | Artist | Crew | Venue / promoter |
+|---|---|---|---|---|---|
+| Season board, offers, holds | Full | — | Optional | — | — |
+| Day sheet, schedule | Full | Edit | View | View | Their show |
+| Advance checklist, docs | Full | Edit | — | Tech items | Their show |
+| Travel | Full | Edit | Own | Own | — |
+| Guest list | Approve | Approve | Request | Request | Final list |
+| My money | Full | Own | Own | Own | — |
+| Show costs + settlement | Full | Edit (settles) | Optional | — | Their show |
+| Profit + tour budget | Full | Optional | Optional | — | — |
+| Invite people, set roles/access | Full | — | — | — | — |
+
+Data: `members.role` plus an `access` override per member (JSON of area →
+none/view/edit), checked in `_get_trip_all` so hidden money never reaches the
+device. Open questions on roles live in the follow-up doc.
 
 ## 8. Where it lives (real build)
 - Same repo, new folder `gigtrip/` that imports shared modules from `app/`
@@ -151,12 +169,11 @@ New tables, all locked behind `SECURITY DEFINER` functions like GroupTrip:
   promoter read-only links, guest list.
 - Later: merch counts, import from Excel/CSV, ClickUp import.
 
-## 10. Questions for managers (feedback round)
-1. Do you manage more than one artist? Should the board show the whole roster?
-2. What columns are in your Excel dates sheet today? Which ClickUp lists and
-   custom fields do you rely on?
-3. Who settles on the night — TM, manager or business manager? Which currency
-   and withholding taxes come up (e.g. Canada ↔ US)?
-4. Should band and crew ever see money (their own pay, per diems)?
-5. Do agents/promoters need to log in, or is a shared day-sheet link enough?
-6. What would make you switch from Excel on day one? (Import? Printing?)
+## 10. Questions for managers
+Tracked in the follow-up doc (answers, status):
+https://claude.ai/code/artifact/2a7d6d1a-a745-42c3-838a-98c4fc68f470
+- Multiple artists / roster view — **yes** (2026-09-23)
+- Band/crew see money — **partially**, details TBD
+- Excel columns + ClickUp lists — TBD
+- Who settles, currency, withholding — TBD
+- Agent/promoter/venue login vs shared link — TBD
