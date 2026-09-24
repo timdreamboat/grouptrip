@@ -206,6 +206,13 @@ the top bar switches back. Managers land on the artist's page; tour managers
 land on Today. A tour manager only sees the artists they're assigned to
 (`members.artists`). Roles with one artist (artist, crew, venue) skip home.
 
+**Artist profile picture** (owner, 2026-09-23): management sets it by tapping
+the picture on the artist page or in the artist form (with preview and
+"Remove picture"). The device crops it to a square and shrinks it to 320px
+before upload, as GroupTrip does for photos; it shows on the artist home
+cards, the top-bar switcher and the artist page. Real build: `artists.photo_path`
+in the org's storage folder.
+
 ## Build plan: mock → live site
 Day 1 (live on GitHub Pages under `/gigtrip/`, same Supabase project):
 usernames (reuse), artists/tours/shows, tasks + comments, docs upload

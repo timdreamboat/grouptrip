@@ -283,6 +283,7 @@ tfoot td { font-weight: 700; border-bottom: 0; }
 
 /* ---- V1: editing, dialogs, uploads, tables ---- */
 dialog.sheet { border: 0; padding: 0; background: var(--surface); color: var(--text); border-radius: 22px; width: min(580px, calc(100% - 24px)); max-height: calc(100% - 40px); box-shadow: 0 18px 48px rgba(0, 0, 0, .28); }
+dialog.sheet:not([open]) { display: none; }
 dialog.sheet::backdrop { background: rgba(10, 10, 12, .45); }
 dialog.sheet > form { padding: 20px; display: grid; gap: 14px; }
 @media (max-width: 640px) { dialog.sheet { margin: auto auto 0; width: 100%; max-width: 100%; border-radius: 22px 22px 0 0; padding-bottom: env(safe-area-inset-bottom, 0px); } }
@@ -336,6 +337,12 @@ textarea.csv { font: 13px/1.5 var(--font-mono); min-height: 180px; }
 .acard { min-width: 0; display: flex; gap: 12px; align-items: center; text-align: left; padding: 12px; border-radius: 18px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; width: 100%; color: var(--text); }
 .acard:hover { border-color: var(--line-strong); }
 .acard[aria-current="true"] { box-shadow: inset 0 0 0 2px var(--tape); }
+.bigph { width: 76px; height: 76px; border-radius: 20px; flex: none; font-size: 26px; }
+.avedit { position: relative; cursor: pointer; flex: none; display: block; border-radius: 20px; }
+.avedit input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.avedit .cam { position: absolute; right: -4px; bottom: -4px; width: 28px; height: 28px; border-radius: 50%; background: var(--text); color: var(--bg); display: grid; place-items: center; border: 2px solid var(--bg); }
+.avedit .cam svg { width: 14px; height: 14px; }
+.avedit:focus-within { outline: 3px solid var(--ring); outline-offset: 2px; }
 .acard .ph { width: 54px; height: 54px; border-radius: 14px; flex: none; }
 .acard .grow { flex: 1; min-width: 0; }
 .acard .grow > div { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -652,7 +659,8 @@ const hasHome = () => isMgr() || myArtists().length > 1;
 function cur() { const list = myArtists(); if (!hasHome()) return list[0]?.id || 'jv'; return list.some(a => a.id === S.artistId) ? S.artistId : 'all'; }
 const inCur = id => cur() === 'all' ? myArtists().some(a => a.id === id) : id === cur();
 const curShows = () => DB.shows.filter(s => inCur(s.artist)).sort((a, b) => a.date.localeCompare(b.date));
-const artistPh = (a, cls = 'ph') => { const f = a.photo && FILES[a.photo]; return f ? `<img class="${cls} aph" src="${f.url}" alt="">` : `<span class="${cls} aph" style="background:linear-gradient(135deg,hsl(${a.hue} 85% 62%),hsl(${(a.hue + 40) % 360} 80% 52%))">${esc(initials(a.name))}</span>`; };
+const photoUrl = a => !a.photo ? null : String(a.photo).startsWith('data:') ? a.photo : FILES[a.photo]?.url || null;
+const artistPh = (a, cls = 'ph') => { const u = photoUrl(a); return u ? `<img class="${cls} aph" src="${u}" alt="">` : `<span class="${cls} aph" style="background:linear-gradient(135deg,hsl(${a.hue} 85% 62%),hsl(${(a.hue + 40) % 360} 80% 52%))">${esc(initials(a.name))}</span>`; };
 
 // ---------- money ----------
 function sheetFor(s) { return DB.sheets[s.id] ||= { sold: Math.round(s.cap * .9), price: 3500, feePer: 300, withholding: 0 }; }
@@ -731,10 +739,11 @@ function fieldHtml(f, v) {
   const mode = f.type === 'money' ? 'decimal' : f.type === 'number' ? 'numeric' : '';
   return `<label class="${cls}" for="${id}">${f.label}<input id="${id}" name="${f.k}" type="${type}" ${mode ? `inputmode="${mode}"` : ''} value="${esc(shown)}" placeholder="${esc(f.ph || '')}" ${f.req ? 'required' : ''} autocomplete="off"></label>`;
 }
-function openForm({ title, fields, value = {}, submit = 'Save', onSave, onDelete, extra = '', wide }) {
+function openForm({ title, fields, value = {}, submit = 'Save', onSave, onDelete, extra = '', top = '', wide }) {
   const d = $('#dlg');
   d.innerHTML = `<form id="dlgform" novalidate>
     <div class="row between"><h2>${esc(title)}</h2><button type="button" class="iconbtn" data-close aria-label="Close">×</button></div>
+    ${top}
     ${fields.length ? `<div class="fgrid">${fields.map(f => fieldHtml(f, getp(value, f.k))).join('')}</div>` : ''}
     ${extra}
     <div class="row between wrap">${onDelete ? '<button type="button" class="btn btn-danger btn-sm" data-del>Delete</button>' : '<span></span>'}
@@ -813,16 +822,25 @@ E.artist = id => {
   const a = id ? artist(id) : null;
   openForm({
     title: a ? `Edit ${a.name}` : 'Add an artist', value: a || { hue: Math.floor(Math.random() * 360) },
-    fields: [{ k: 'name', label: 'Artist name', req: true, full: true }, { k: 'genre', label: 'Genre' }, { k: 'home', label: 'Home base' }, { k: 'agent', label: 'Booking agent', full: true }, { k: 'photo', label: 'Press photo', type: 'file', accept: 'image/*', full: true }],
-    onSave(o) {
+    top: `<div class="row" style="gap:16px"><span id="avprev">${artistPh(a || { name: '?', hue: 40 }, 'bigph')}</span>
+      <div class="stack" style="gap:6px"><b>Profile picture</b><span class="small muted">Square works best — we crop to the middle.</span>
+        <div class="row wrap" style="gap:8px"><label class="btn btn-secondary btn-sm" for="f-avatar" style="position:relative">${icon('upload')} ${photoUrl(a || {}) ? 'Change' : 'Choose'} picture<input type="file" id="f-avatar" name="avatar" accept="image/*" style="position:absolute;inset:0;opacity:0;cursor:pointer"></label>
+        ${photoUrl(a || {}) ? '<label class="small" for="f-avrm" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="f-avrm" name="avrm"> Remove picture</label>' : ''}</div></div></div>`,
+    fields: [{ k: 'name', label: 'Artist name', req: true, full: true }, { k: 'genre', label: 'Genre' }, { k: 'home', label: 'Home base' }, { k: 'agent', label: 'Booking agent', full: true }],
+    onSave(o, form) {
       const t = a || { id: uid('ar'), hue: Math.floor(Math.random() * 360), photo: null };
-      const file = o.photo; delete o.photo;
       Object.assign(t, o);
-      if (file) { const fid = uid('f'); FILES[fid] = { url: URL.createObjectURL(file), name: file.name, type: file.type, size: file.size }; t.photo = fid; }
+      if (form.elements.avrm?.checked) t.photo = null;
+      const file = form.elements.avatar.files[0];
+      if (file) setArtistPhoto(t, file);
       if (!a) DB.artists.push(t);
       log(`${a ? 'Updated' : 'Added'} artist ${t.name}`); toast(a ? 'Saved' : `${t.name} added to the roster`);
     },
     onDelete: a && (() => { if (DB.shows.some(s => s.artist === a.id)) { toast('Move or delete their shows first'); return; } DB.artists = DB.artists.filter(x => x !== a); log(`Removed artist ${a.name}`); }),
+  });
+  $('#f-avatar').addEventListener('change', e => {
+    const f = e.target.files[0]; if (!f) return;
+    toAvatar(f).then(u => { $('#avprev').innerHTML = `<img class="bigph aph" src="${u}" alt="">`; }, () => toast("That file isn't a picture we can read"));
   });
 };
 E.tour = (id, preset = {}) => {
@@ -969,6 +987,23 @@ E.tmpl = (id, kind) => {
     onSave(o) { const x = t || { id: uid('a') }; Object.assign(x, o); if (!t) list.push(x); if (kind === 'slots') list.sort((a, b) => a.time.localeCompare(b.time)); toast('Template saved — used for new shows'); },
     onDelete: t && (() => { DB.templates[kind] = list.filter(x => x !== t); }) });
 };
+// profile picture: center-crop to a square and shrink to 320px, stored on the artist
+function toAvatar(file) {
+  return new Promise((ok, fail) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      const n = Math.min(img.naturalWidth, img.naturalHeight), c = document.createElement('canvas');
+      c.width = c.height = 320;
+      c.getContext('2d').drawImage(img, (img.naturalWidth - n) / 2, (img.naturalHeight - n) / 2, n, n, 0, 0, 320, 320);
+      URL.revokeObjectURL(url); ok(c.toDataURL('image/jpeg', .85));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); fail(new Error('not an image')); };
+    img.src = url;
+  });
+}
+function setArtistPhoto(a, file) {
+  toAvatar(file).then(u => { a.photo = u; commit(`New picture for ${a.name}`, `Changed ${a.name}'s profile picture`); }, () => toast("That file isn't a picture we can read"));
+}
 function attachFile(obj, file) {
   const fid = uid('f');
   FILES[fid] = { url: URL.createObjectURL(file), name: file.name, type: file.type, size: file.size };
@@ -1143,7 +1178,7 @@ V.overview = () => {
   const earned = shows.filter(s => s.settled != null).reduce((x, s) => x + s.settled, 0);
   const att = attention().filter(x => x.artist === a.id);
   return `
-  <div class="head"><div class="row" style="gap:14px">${artistPh(a, 'ph')}<div><div class="eyebrow">${esc([a.genre, a.home].filter(Boolean).join(' · '))}</div><h1 class="display">${esc(a.name)}</h1></div></div>
+  <div class="head"><div class="row" style="gap:14px">${isMgr() ? `<label class="avedit" for="av-${a.id}" title="Change picture">${artistPh(a, 'bigph')}<span class="cam">${icon('upload')}</span><input type="file" accept="image/*" id="av-${a.id}" data-artistphoto="${a.id}" aria-label="Change ${esc(a.name)}'s picture"></label>` : artistPh(a, 'bigph')}<div><div class="eyebrow">${esc([a.genre, a.home].filter(Boolean).join(' · '))}</div><h1 class="display">${esc(a.name)}</h1></div></div>
     <div class="addbar">${editBtn('artist', a.id, `Edit ${a.name}`)}${addBtn('newTour', 'Add tour', a.id)}${addBtn('newShowFor', 'Add show', a.id, 'btn-tape')}</div></div>
   <div class="stats">
     <div class="card stat"><span class="eyebrow">Confirmed</span><b>${shows.filter(s => s.status === 'confirmed').length}</b></div>
@@ -1763,6 +1798,7 @@ document.addEventListener('change', e => {
   if (d.acc) { DB.access[d.acc][d.area] = el.value; return commit(`${KINDS[d.acc]}: ${AREAS.find(a => a[0] === d.area)[1].split(' (')[0]} → ${el.selectedOptions[0].text}`, `Changed ${KINDS[d.acc]} access: ${AREAS.find(a => a[0] === d.area)[1]} → ${el.value}`); }
   if (d.over) { const p = DB.people[d.over]; if (el.value === (DB.access[p.kind] || {})[d.area]) delete p.over[d.area]; else p.over[d.area] = el.value; return commit(`${p.name.split(' ')[0]}'s access updated`, `Changed ${p.name}'s access: ${d.area} → ${el.value}`); }
   if (d.upload) uploadFiles(d.upload, d.id, el.files);
+  if (d.artistphoto && el.files[0]) setArtistPhoto(artist(d.artistphoto), el.files[0]);
 });
 document.addEventListener('input', e => {
   if (e.target.id === 'hq') { S.hq = e.target.value; const pos = e.target.selectionStart; route(); const q = $('#hq'); q.focus(); q.setSelectionRange(pos, pos); return; }
