@@ -196,6 +196,16 @@ build reuses GroupTrip's "add form doubles as edit form" pattern.
   `travel`, `budget`, `showExp`, `sheets`, `myexp`, `templates`, `settings`,
   `access`, `activity`.
 
+### Artist home + switcher (owner, 2026-09-23)
+Managers and tour managers can work with 10+ artists. **Artists** is the
+home page: search, sort (next show / needs attention / A–Z), a card per
+artist (show today, next show, confirmed/holds, alert count) and an "All
+artists" option. Picking one sets the artist for every screen (season,
+tours, shows, settlement, guests, money, travel, party); an artist chip in
+the top bar switches back. Managers land on the artist's page; tour managers
+land on Today. A tour manager only sees the artists they're assigned to
+(`members.artists`). Roles with one artist (artist, crew, venue) skip home.
+
 ## Build plan: mock → live site
 Day 1 (live on GitHub Pages under `/gigtrip/`, same Supabase project):
 usernames (reuse), artists/tours/shows, tasks + comments, docs upload
