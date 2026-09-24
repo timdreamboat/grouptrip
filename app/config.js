@@ -23,5 +23,6 @@ export const EMAIL_ENABLED = false;
 
 // Sign-in options shown to people. Each must also be switched on in the
 // Supabase dashboard (Authentication → Sign In / Providers, and → Passkeys).
-// Apple needs an Apple Developer account ($99/year) — off until the owner approves.
-export const SIGN_IN = { google: true, apple: false, passkeys: true };
+// Buttons whose option isn't switched on in Supabase yet explain that instead
+// of failing. Apple also needs an Apple Developer account ($99/year).
+export const SIGN_IN = { google: true, apple: true, passkeys: true };

@@ -54,12 +54,27 @@ function friendly(error) {
   if (code === 'email_address_not_authorized' || /sending.*email|smtp/i.test(msg)) return "We couldn't send the email just now. Try again in a minute, or continue with Google.";
   if (code === 'over_email_send_rate_limit') return 'Too many codes sent — please wait a bit, or continue with Google.';
   if (/rate limit|security purposes/i.test(msg)) return 'Please wait a minute before asking for another code.';
-  if (code === 'passkey_disabled') return "Passkeys aren't switched on yet.";
+  if (code === 'passkey_disabled') return NOT_READY.passkeys;
   if (code === 'webauthn_credential_not_found') return "This passkey isn't linked to an account. Sign in with your email and add it again.";
   if (/NotAllowedError|cancel|abort/i.test(msg + (error?.name || ''))) return 'Cancelled';
   return msg || 'Something went wrong. Please try again.';
 }
 const check = ({ data, error }) => { if (error) throw new Error(friendly(error)); return data; };
+
+// Which options are switched on in Supabase right now ({ google, apple, passkeys }).
+let settings;
+export function ready() {
+  settings ??= fetch(`${SUPABASE_URL}/auth/v1/settings`, { headers: { apikey: SUPABASE_KEY } })
+    .then((r) => r.json())
+    .then((j) => ({ google: Boolean(j.external?.google), apple: Boolean(j.external?.apple), passkeys: Boolean(j.passkeys_enabled) }))
+    .catch(() => { settings = null; return { google: true, apple: true, passkeys: true }; });
+  return settings;
+}
+export const NOT_READY = {
+  google: 'Google sign-in is almost ready — continue with email for now.',
+  apple: 'Apple sign-in is almost ready — continue with email for now.',
+  passkeys: 'Passkey sign-in is almost ready — continue with email for now.',
+};
 
 // ---------- email code (any email) ----------
 export async function sendCode(email) {

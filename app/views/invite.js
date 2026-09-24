@@ -84,6 +84,7 @@ export function render(root, trip, onJoined) {
   // Google/Apple: leave the page; app.js finishes the join when they're back.
   const withProvider = async (btn, provider) => {
     const w = who({ nameOptional: true }); if (!w) return;
+    if (!(await auth.ready())[provider]) return toast(auth.NOT_READY[provider], { error: true });
     try { sessionStorage.setItem('grouptrip.pending-join', JSON.stringify({ code: trip.id, ...w })); } catch { /* ignore */ }
     await busy(btn, () => auth.signInWith(provider));
   };

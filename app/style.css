@@ -414,6 +414,7 @@ dialog.sheet::backdrop { background: rgba(8, 8, 10, .45); -webkit-backdrop-filte
   box-shadow: var(--shadow-lg); display: flex; align-items: center; gap: 8px; max-width: calc(100vw - 32px);
   animation: toast-in .3s cubic-bezier(.2, .9, .3, 1);
 }
+.toast[popover] { top: auto; right: auto; margin: 0; border: 0; overflow: visible; }
 .toast.error { background: var(--bad); color: #fff; }
 .toast.out { opacity: 0; transform: translate(-50%, 8px); transition: all .25s ease; }
 body:has(.page-action) .toast { bottom: calc(156px + var(--safe-b)); }
@@ -802,3 +803,4 @@ button.admin-row:hover { background: var(--surface-2); }
 .signin-link { display: flex; margin: 12px auto 0; }
 .signin-row { display: flex; justify-content: space-between; gap: 8px; }
 .join-alt { display: grid; gap: 8px; text-align: center; }
+.signin-error { margin: 12px 0 0; padding: 10px 12px; border-radius: 12px; font-size: 14px; background: color-mix(in srgb, var(--bad) 14%, transparent); color: var(--text); }

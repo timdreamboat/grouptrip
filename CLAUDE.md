@@ -71,8 +71,8 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
 - Accounts (v7, owner 2026-09-23): organizers MUST sign in (Supabase Auth);
   invited people choose "Join as a guest" (name + email, no code; seat token
   saved on that device only) or "Join with an account". Sign-in: passkey,
-  Google, Apple (off until the owner approves the $99/yr Apple Developer
-  account), or a 6-digit email code for any email; after an email sign-in we
+  Google, Apple (button shown; needs the $99/yr Apple Developer account to
+  work), or a 6-digit email code for any email; after an email sign-in we
   offer "Add a passkey". Consumer-first flow (owner, 2026-09-23): one
   sheet for sign-in and sign-up, Google first, "Continue with email", code
   auto-submits, resend timer, webmail shortcut, remembered email + "Last
@@ -80,7 +80,10 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
   at the end ("Save your trip"; draft survives the Google round-trip).
   Invite page: name + email → "Join trip" (guest) or "Join with Google". `app/auth.js` wraps supabase-js (loaded lazily from
   jsDelivr, pinned version, so offline still works); `SIGN_IN` in config.js
-  toggles options. Every seat (member) still has a secret token that all the
+  toggles options; `auth.ready()` reads Supabase's /auth/v1/settings so a
+  button whose option isn't switched on says so in the sheet instead of
+  sending people to an error page. Toasts are popovers (top layer) so they
+  show above open sheets. Every seat (member) still has a secret token that all the
   share-code functions check, plus `members.user_id`: a seat linked to an
   account only works for that account (`_actor`, `_get_trip_all`), so copied
   links/shared devices can't act as an organizer. `my_trips()` returns the

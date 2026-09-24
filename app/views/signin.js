@@ -46,6 +46,7 @@ export function signIn({ title = 'Welcome to GroupTrip', reason = 'Sign in or cr
               <button class="btn btn-primary btn-lg btn-block">Continue with email${badge('email')}</button>
             </form>
             ${auth.passkeysSupported() ? `<button type="button" class="btn btn-ghost btn-sm signin-link" data-passkey>${icon('lock')}Sign in with a passkey${badge('passkey')}</button>` : ''}
+            <p class="signin-error" role="alert" hidden></p>
           </div>
           <form class="form" id="code-form" hidden>
             <div style="text-align:center">
@@ -78,17 +79,33 @@ export function signIn({ title = 'Welcome to GroupTrip', reason = 'Sign in or cr
         };
         dlg.addEventListener('close', () => { passkeyAbort.abort(); clearInterval(timer); if (!done) resolve(false); }, { once: true });
 
-        dlg.querySelectorAll('[data-provider]').forEach((b) => b.onclick = () => busy(b, () => auth.signInWith(b.dataset.provider)));
+        // Problems show right here in the sheet, where people are looking.
+        const errorBox = dlg.querySelector('.signin-error');
+        const showError = (msg) => { errorBox.textContent = msg; errorBox.hidden = !msg; };
+        const attempt = async (btn, fn) => {
+          showError('');
+          btn.disabled = true;
+          try { return await fn(); }
+          catch (err) { if (err.message !== 'Cancelled') showError(err.message); return false; }
+          finally { btn.disabled = false; }
+        };
+
+        dlg.querySelectorAll('[data-provider]').forEach((b) => b.onclick = () => attempt(b, async () => {
+          const p = b.dataset.provider;
+          if (!(await auth.ready())[p]) throw new Error(auth.NOT_READY[p]);
+          await auth.signInWith(p);
+        }));
 
         // Passkeys: offered quietly in the email field's autofill; or on request.
-        auth.conditionalPasskeysAvailable().then((ok) => {
-          if (!ok) return;
+        auth.ready().then(async (r) => {
+          if (!r.passkeys || !(await auth.conditionalPasskeysAvailable())) return;
           auth.signInWithPasskey({ conditional: true, signal: passkeyAbort.signal }).then(() => finish(false)).catch(() => {});
         });
         dlg.querySelector('[data-passkey]')?.addEventListener('click', async (e) => {
           passkeyAbort.abort();
-          const ok = await busy(e.currentTarget, async () => {
-            try { await auth.signInWithPasskey(); } catch (err) { if (err.message === 'Cancelled') return false; throw err; }
+          const ok = await attempt(e.currentTarget, async () => {
+            if (!(await auth.ready()).passkeys) throw new Error(auth.NOT_READY.passkeys);
+            await auth.signInWithPasskey();
             return true;
           });
           if (ok) finish(false);
@@ -108,8 +125,8 @@ export function signIn({ title = 'Welcome to GroupTrip', reason = 'Sign in or cr
         emailForm.onsubmit = async (e) => {
           e.preventDefault();
           email = emailForm.elements.email.value.trim();
-          if (!email || !emailForm.elements.email.checkValidity()) return toast('Enter your email', { error: true });
-          const ok = await busy(emailForm.querySelector('.btn'), () => auth.sendCode(email));
+          if (!email || !emailForm.elements.email.checkValidity()) return showError('Enter your email address.');
+          const ok = await attempt(emailForm.querySelector('.btn'), () => auth.sendCode(email).then(() => true));
           if (!ok) return;
           start.hidden = true; codeForm.hidden = false;
           dlg.querySelector('#code-sent').innerHTML = `We sent a code to <b>${esc(email)}</b>. Enter it below — check spam if it's not there in a minute.`;

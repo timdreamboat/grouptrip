@@ -137,7 +137,11 @@ export function toast(message, { error = false } = {}) {
   el.className = `toast${error ? ' error' : ''}`;
   el.setAttribute('role', 'status');
   el.innerHTML = `${icon(error ? 'x' : 'check')}<span>${esc(message)}</span>`;
+  // As a popover it sits in the top layer, above any open sheet (a plain
+  // element would be hidden behind the sheet's backdrop).
+  el.setAttribute('popover', 'manual');
   document.body.append(el);
+  try { el.showPopover(); } catch { /* older browsers: normal stacking */ }
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 260); }, 2600);
 }
