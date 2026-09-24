@@ -153,6 +153,23 @@ Data: `members.role` plus an `access` override per member (JSON of area →
 none/view/edit), checked in `_get_trip_all` so hidden money never reaches the
 device. Open questions on roles live in the follow-up doc.
 
+### Who brings what (owner, 2026-09-23)
+Management sets, for every person (and the venue), what they're expected to
+supply — e.g. the venue provides stage, PA, lighting rig and LED wall; the VJ
+brings the media server, HDMI→SDI converter and cables to connect to it.
+- Shows on the person's card in Party (tap to expand) and on their Today
+  screen as "You're bringing" / "Venue provides", where they tick each item
+  confirmed.
+- The show page has a "Who brings what" tab: venue provides vs tour brings,
+  with confirmed / not yet — the gear side of advancing.
+- Data: `supply_items` (trip_id, member_id, show_id nullable = every show,
+  label, confirmed_at), set by management.
+
+In the mock, "View as" covers Manager, Tour manager, Artist, Band & crew
+(Nico, the VJ) and Venue (Greg, production manager). Management changes role
+defaults on the **Access** screen and one person's access on their card;
+menus follow what each viewer is allowed to see.
+
 ## 8. Where it lives (real build)
 - Same repo, new folder `gigtrip/` that imports shared modules from `app/`
   (`store.js`, `ui.js`, `money.js`, `style.css` tokens) and adds GigTrip

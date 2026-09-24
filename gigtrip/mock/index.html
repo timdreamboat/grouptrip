@@ -91,7 +91,7 @@ h3 { font-size: 15px; font-weight: 600; margin: 0; }
 .logo { width: 30px; height: 30px; border-radius: 8px; background: var(--tape); color: var(--tape-ink); display: grid; place-items: center; font: 900 17px/1 var(--font-display); transform: rotate(-4deg); }
 .brand b { font: 800 21px/1 var(--font-display); text-transform: uppercase; letter-spacing: .02em; }
 .top .spacer { flex: 1; }
-.viewas { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+.viewas { display: flex; align-items: center; gap: 6px; white-space: nowrap; font-size: 13px; color: var(--muted); }
 .viewas select { height: 34px; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--surface); padding: 0 10px; font-weight: 600; font-size: 13px; color: var(--text); }
 main { padding: 18px 16px 110px; max-width: 1080px; width: 100%; margin: 0 auto; display: grid; gap: 18px; align-content: start; }
 .ribbon { font-size: 12.5px; color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
@@ -248,6 +248,34 @@ tfoot td { font-weight: 700; border-bottom: 0; }
 .prose { max-width: 66ch; display: grid; gap: 12px; }
 .prose p, .prose ol, .prose ul { margin: 0; }
 .prose li + li { margin-top: 6px; }
+
+/* party cards (expand for details) */
+.pcard { border-top: 1px solid var(--line); }
+.pcard:first-child { border-top: 0; }
+.pcard > summary { list-style: none; display: flex; align-items: center; gap: 14px; padding: 12px 0; cursor: pointer; }
+.pcard > summary::-webkit-details-marker { display: none; }
+.pcard > summary .grow { flex: 1; min-width: 0; }
+.pcard > summary .chev { color: var(--faint); transition: transform .15s; }
+.pcard[open] > summary .chev { transform: rotate(90deg); }
+.pcard .more { padding: 0 0 16px 50px; display: grid; gap: 14px; }
+@media (max-width: 520px) { .pcard .more { padding-left: 0; } }
+.supply { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.supply li { display: flex; align-items: center; gap: 10px; padding: 6px 0; font-size: 14px; }
+.supply li .grow { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.supply li.ok .grow { color: var(--muted); }
+.supply input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--good); flex: none; margin: 0; }
+.supply .x { border: 0; background: none; color: var(--faint); cursor: pointer; font-size: 18px; line-height: 1; padding: 2px 6px; border-radius: 8px; }
+.supply .x:hover { color: var(--bad); background: var(--bad-soft); }
+.addrow { display: flex; gap: 8px; }
+.addrow input { flex: 1; min-width: 0; height: 36px; border-radius: 10px; border: 1px solid var(--line-strong); background: var(--surface); padding: 0 10px; font-size: 14px; }
+.lvl { height: 32px; border-radius: 10px; border: 1px solid var(--line-strong); background: var(--surface); padding: 0 8px; font-size: 13px; font-weight: 600; }
+.lvl[data-l="off"] { color: var(--faint); }
+.lvl[data-l="edit"] { color: var(--good); }
+.lvl.custom { box-shadow: inset 0 0 0 2px var(--tape); }
+.accgrid { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; align-items: center; font-size: 13.5px; }
+.minihead { font-size: 11.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.cols2 { display: grid; gap: 18px; }
+@media (min-width: 760px) { .cols2 { grid-template-columns: 1fr 1fr; } }
 </style>
 
 <div class="shell">
@@ -267,7 +295,9 @@ tfoot td { font-weight: 700; border-bottom: 0; }
         <select id="role">
           <option value="manager">Manager</option>
           <option value="tm">Tour manager</option>
-          <option value="band">Band / crew</option>
+          <option value="artist">Artist</option>
+          <option value="crew">Band &amp; crew</option>
+          <option value="venue">Venue</option>
         </select>
       </label>
     </header>
@@ -282,22 +312,68 @@ tfoot td { font-weight: 700; border-bottom: 0; }
 const NOW = { date: '2027-04-12', min: 16 * 60 + 5 };   // mock clock: Mon Apr 12, 4:05 pm
 const ARTISTS = { jv: 'Juniper Vale', co: 'The Coastlines' };
 const TOUR = { name: 'Low Tide Tour', season: 'Spring 2027', artist: 'jv' };
+
+// kind = the role that sets default access. over = this person's own changes, set by management.
+const KINDS = { manager: 'Management', tm: 'Tour manager', artist: 'Artist', crew: 'Band & crew', venue: 'Venue', agent: 'Agent' };
 const PEOPLE = {
-  rae:   { name: 'Rae Collins',  role: 'Manager · Northlight Mgmt', road: false, ph: '(416) 555-0110', hue: 30 },
-  jordan:{ name: 'Jordan Blake', role: 'Agent · Fieldhouse Agency', road: false, ph: '(212) 555-0177', hue: 260 },
-  juni:  { name: 'Juniper Vale', role: 'Artist', road: true, ph: '(416) 555-0101', hue: 48, room: '614' },
-  theo:  { name: 'Theo Marsh',   role: 'Guitar', road: true, ph: '(416) 555-0122', hue: 200, room: '612' },
-  priya: { name: 'Priya Anand',  role: 'Bass', road: true, ph: '(647) 555-0134', hue: 330, room: '615' },
-  sam:   { name: 'Sam Okafor',   role: 'Drums', road: true, ph: '(416) 555-0145', hue: 150, room: '612' },
-  dana:  { name: 'Dana Reyes',   role: 'Tour manager', road: true, ph: '(416) 555-0156', hue: 10, room: '610' },
-  luis:  { name: 'Luis Ortega',  role: 'FOH engineer', road: true, ph: '(514) 555-0167', hue: 100, room: '611' },
-  kit:   { name: 'Kit Brennan',  role: 'Lighting (LD)', road: true, ph: '(416) 555-0178', hue: 280, room: '611' },
-  mo:    { name: 'Mo Haddad',    role: 'Backline tech', road: true, ph: '(905) 555-0189', hue: 180, room: '616' },
-  ellie: { name: 'Ellie Park',   role: 'Merch', road: true, ph: '(647) 555-0190', hue: 60, room: '615' },
+  rae:   { name: 'Rae Collins',  kind: 'manager', role: 'Manager · Northlight Mgmt', group: 'office', ph: '(416) 555-0110', hue: 30 },
+  jordan:{ name: 'Jordan Blake', kind: 'agent', role: 'Agent · Fieldhouse Agency', group: 'office', ph: '(212) 555-0177', hue: 260 },
+  juni:  { name: 'Juniper Vale', kind: 'artist', role: 'Artist', group: 'road', ph: '(416) 555-0101', hue: 48, room: '614' },
+  dana:  { name: 'Dana Reyes',   kind: 'tm', role: 'Tour manager', group: 'road', ph: '(416) 555-0156', hue: 10, room: '610' },
+  theo:  { name: 'Theo Marsh',   kind: 'crew', role: 'Guitar', group: 'road', ph: '(416) 555-0122', hue: 200, room: '612', pay: 40000 },
+  priya: { name: 'Priya Anand',  kind: 'crew', role: 'Bass', group: 'road', ph: '(647) 555-0134', hue: 330, room: '615', pay: 40000 },
+  sam:   { name: 'Sam Okafor',   kind: 'crew', role: 'Drums', group: 'road', ph: '(416) 555-0145', hue: 150, room: '612', pay: 40000 },
+  luis:  { name: 'Luis Ortega',  kind: 'crew', role: 'FOH engineer', group: 'road', ph: '(514) 555-0167', hue: 100, room: '611', pay: 45000, tech: true },
+  kit:   { name: 'Kit Brennan',  kind: 'crew', role: 'Lighting (LD)', group: 'road', ph: '(416) 555-0178', hue: 280, room: '611', pay: 40000, tech: true },
+  nico:  { name: 'Nico Laurent', kind: 'crew', role: 'VJ · visuals', group: 'road', ph: '(514) 555-0183', hue: 230, room: '616', pay: 35000, tech: true },
+  mo:    { name: 'Mo Haddad',    kind: 'crew', role: 'Backline tech', group: 'road', ph: '(905) 555-0189', hue: 180, room: '616', pay: 30000, tech: true },
+  ellie: { name: 'Ellie Park',   kind: 'crew', role: 'Merch', group: 'road', ph: '(647) 555-0190', hue: 60, room: '615', pay: 25000 },
+  greg:  { name: 'Greg Ho',      kind: 'venue', role: 'Production manager · Canal Street Ballroom', group: 'venue', ph: '(212) 555-0193', hue: 20 },
+  nina:  { name: 'Nina Alvarez', kind: 'venue', role: 'Promoter rep · Riverside Presents', group: 'venue', ph: '(212) 555-0148', hue: 340 },
 };
+Object.values(PEOPLE).forEach(p => { p.over = {}; });
+
+// What each person is expected to bring (venue people: what the venue provides). Management sets these.
+const SUPPLY = {
+  greg: ['Stage 40 × 30 ft, 4 ft high', 'House PA + FOH console (DiGiCo SD12)', 'House lighting rig + console', 'LED wall 6 × 3 m, SDI input stage left', 'Power: 200 A three-phase, stage right', 'Barricade + 6 security', 'Green room, dinner buyout for 11'],
+  nina: ['Settlement paperwork + box office report', 'Guest list at box office by 6:30 pm', '24 wristbands for guests'],
+  nico: ['Media server laptop (Resolume) + backup laptop', 'HDMI → SDI converter box', '50 ft SDI cable + HDMI spares', 'USB-C / DisplayPort adapters', 'Timecode + MIDI interface to sync with lighting'],
+  luis: ['In-ear monitor rack (6 mixes)', 'Mic package per input list', 'FOH show file on USB + backup'],
+  kit:  ['Lighting show file (grandMA3) on USB', '2 hazers + fluid'],
+  mo:   ['Guitar + bass amps', 'Drum hardware + snares', 'Spare strings, heads, sticks', 'Tuning station'],
+  theo: ['3 guitars + pedalboard'],
+  priya:['2 basses + DI box'],
+  sam:  ['Cymbals, snare, kick pedal', 'In-ear molds'],
+  juni: ['Wireless vocal mic (own capsule)', 'In-ear molds', 'Setlist for tonight'],
+  dana: ['Settlement sheet + calculator', 'Per diem cash', 'Laminates for the party'],
+  ellie:['Merch stock (see count sheet)', 'Card readers ×2', 'Display grid + lights'],
+};
+const SUP = {};
+Object.entries(SUPPLY).forEach(([k, list]) => { SUP[k] = list.map((t, i) => ({ t, ok: i < 2 && k !== 'nico' })); });
+
+// What each role can see. off / view / edit. Management always has everything.
+const AREAS = [
+  ['season', 'Season board + offers'],
+  ['day', 'Day sheet + schedule'],
+  ['advance', 'Advance checklist, docs, who brings what'],
+  ['travel', 'Travel (flights, van, rooms)'],
+  ['guests', 'Guest list (edit = approve)'],
+  ['mymoney', 'My money (own pay, per diems)'],
+  ['costs', 'Show costs + settlement'],
+  ['profit', 'Profit + tour budget'],
+];
+const ACCESS = {
+  tm:     { season: 'off',  day: 'edit', advance: 'edit', travel: 'edit', guests: 'edit', mymoney: 'view', costs: 'edit', profit: 'off' },
+  artist: { season: 'off',  day: 'view', advance: 'off',  travel: 'view', guests: 'view', mymoney: 'view', costs: 'off',  profit: 'off' },
+  crew:   { season: 'off',  day: 'view', advance: 'view', travel: 'view', guests: 'view', mymoney: 'view', costs: 'off',  profit: 'off' },
+  venue:  { season: 'off',  day: 'view', advance: 'edit', travel: 'off',  guests: 'view', mymoney: 'off',  costs: 'view', profit: 'off' },
+  agent:  { season: 'view', day: 'view', advance: 'off',  travel: 'off',  guests: 'off',  mymoney: 'off',  costs: 'view', profit: 'off' },
+};
+const LV = { off: 0, view: 1, edit: 2 };
+
 const ADVANCE = [
   ['Contract signed', 'rae'], ['Deposit received', 'rae'], ['Tech rider sent', 'luis'],
-  ['Input list + stage plot confirmed', 'luis'], ['Lighting plot + haze OK', 'kit'],
+  ['Input list + stage plot confirmed', 'luis'], ['Lighting plot + video input confirmed', 'kit'],
   ['Hospitality rider confirmed', 'dana'], ['Parking for van + trailer', 'dana'],
   ['Load-in time + dock', 'dana'], ['Hotel booked near venue', 'dana'],
   ['Guest list cap agreed', 'dana'], ['Merch split + seller confirmed', 'ellie'],
@@ -331,11 +407,10 @@ const NYC = {
   wifi: 'CanalGuest · pw: lowtide2027',
   parking: 'Van + trailer: Lispenard St loading dock. Street parking after 7 pm only.',
   hospitality: 'Dinner buyout $25/person × 11 · 2 cases water, coffee on arrival',
-  support: 'Hollow Pines',
   slots: [
     ['12:00', 'Lobby call — van to venue', 'Everyone', 'key'],
     ['13:00', 'Load-in', 'Crew · dock on Lispenard St'],
-    ['15:30', 'Line check', 'Luis, Mo'],
+    ['15:30', 'Line check + video check', 'Luis, Mo, Nico'],
     ['16:30', 'Soundcheck — Juniper Vale', 'Band', 'key'],
     ['17:30', 'Soundcheck — Hollow Pines', 'Support'],
     ['18:00', 'Dinner', 'Green room (buyout)'],
@@ -350,7 +425,7 @@ const NYC = {
   contacts: [
     ['Nina Alvarez', 'Promoter rep · Riverside Presents', '(212) 555-0148'],
     ['Greg Ho', 'Production manager', '(212) 555-0193'],
-    ['Box office', 'Canal Street Ballroom', '(212) 555-0100'],
+    ['Dana Reyes', 'Tour manager', '(416) 555-0156'],
     ['Front desk', 'The Mercer Row Hotel', '(212) 555-0161'],
   ],
   docs: [
@@ -370,6 +445,7 @@ const GUESTS = [
   { name: 'The Setlist (press)', plus: 1, by: 'rae', status: 'approved' },
   { name: 'Carol Okafor', plus: 1, by: 'sam', status: 'pending' },
   { name: 'Devon Park', plus: 0, by: 'ellie', status: 'pending' },
+  { name: 'Lena Vale', plus: 1, by: 'juni', status: 'approved' },
 ];
 const GUEST_CAP = 24;
 const TRAVEL = {
@@ -382,18 +458,15 @@ const TRAVEL = {
     { date: 'Fri Apr 16', from: 'DCA', to: 'YYZ', dep: '10:40', arr: '12:15', no: 'AC 8783', seat: '14C', conf: 'Q7RT2M' },
     { date: 'Fri Apr 23', from: 'YYZ', to: 'CLT', dep: '08:05', arr: '10:20', no: 'AA 1739', seat: '22A', conf: 'W4KD9P', next: 'Connects to AVL · AA 5210 · 11:35 → 12:30' },
   ],
-  rooms: [
-    ['Apr 11 – 13', 'The Mercer Row Hotel, New York', 'Room 612 · with Sam'],
-    ['Apr 13 – 15', 'Hotel Tinsley, Philadelphia', 'Room 318 · with Sam'],
-  ],
+  hotels: [['Apr 11 – 13', 'The Mercer Row Hotel, New York'], ['Apr 13 – 15', 'Hotel Tinsley, Philadelphia']],
 };
 // tour budget, cents. Actuals are to date (Apr 12).
-const PER_DIEM = 5000, ROAD_DAYS = 14;
+const PER_DIEM = 5000, ROAD_DAYS = 14, DAYS_SO_FAR = 8, SHOWS_PLAYED = 4;
 const BUDGET = [
   ['Crew pay', 2880000, 1645000],
   ['Travel — van, fuel, flights', 1420000, 988000],
   ['Hotels', 1260000, 734000],
-  ['Per diems ($50 × 9 people × 14 days)', PER_DIEM * 9 * ROAD_DAYS, PER_DIEM * 9 * 8],
+  ['Per diems ($50 × 10 people × 14 days)', PER_DIEM * 10 * ROAD_DAYS, PER_DIEM * 10 * DAYS_SO_FAR],
   ['Production + backline', 850000, 612000],
 ];
 const MERCH = { budget: 1860000, actual: 1124500 };
@@ -404,15 +477,18 @@ const store = {
   get(k, d) { try { const v = localStorage.getItem('gigtrip.' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v) { try { localStorage.setItem('gigtrip.' + k, JSON.stringify(v)); } catch {} },
 };
+const ME = { manager: 'rae', tm: 'dana', artist: 'juni', crew: 'nico', venue: 'greg' };
+let savedRole = store.get('role', 'manager');
+if (savedRole === 'band') savedRole = 'crew';
 const S = {
-  role: store.get('role', 'manager'),
+  role: ME[savedRole] ? savedRole : 'manager',
   showId: 'nyc',
   showTab: 'deal',
   artist: 'all', status: 'all',
-  me: { manager: 'rae', tm: 'dana', band: 'theo' },
+  open: new Set(),
 };
 SHOWS.forEach(s => { s.done = ADVANCE.map((_, i) => i < s.adv); });
-SHOWS.find(s => s.id === 'nyc').done = ADVANCE.map((a, i) => a[0] !== 'Merch split + seller confirmed');
+SHOWS.find(s => s.id === 'nyc').done = ADVANCE.map(a => a[0] !== 'Merch split + seller confirmed');
 
 // ---------- helpers ----------
 const $ = s => document.querySelector(s);
@@ -432,11 +508,21 @@ const statusChip = s => {
   return `<span class="chip st-${st}">${label}</span>`;
 };
 const initials = n => n.split(/\s+/).map(w => w[0]).slice(0, 2).join('');
-const avatar = id => { const p = PEOPLE[id]; return `<span class="avatar" style="background:hsl(${p.hue} 70% var(--av-l,86%));color:hsl(${p.hue} 60% var(--av-ink,27%))">${initials(p.name)}</span>`; };
+const avatar = id => { const p = PEOPLE[id]; return `<span class="avatar" style="background:hsl(${p.hue} 70% var(--av-l));color:hsl(${p.hue} 60% var(--av-ink))">${initials(p.name)}</span>`; };
 const pctDone = s => Math.round(s.done.filter(Boolean).length / ADVANCE.length * 100);
 const dealText = d => d.type === 'flat' ? `${money(d.g)} flat` : d.type === 'fest' ? `${money(d.g)} festival flat` : `${money(d.g)} vs ${d.pct}% of net`;
 const show = id => SHOWS.find(s => s.id === id);
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2400); }
+
+// access: management has everything; everyone else = their own change, else their role's default
+const me = () => ME[S.role];
+const isMgr = () => S.role === 'manager';
+function level(pid, area) {
+  const p = PEOPLE[pid];
+  if (p.kind === 'manager') return 'edit';
+  return p.over[area] || (ACCESS[p.kind] || {})[area] || 'off';
+}
+const can = (area, min = 'view', pid = me()) => LV[level(pid, area)] >= LV[min];
 
 // settlement math — integer cents, "versus" deal: artist earns the larger of guarantee and % of net after expenses
 function settle(s, d) {
@@ -467,15 +553,28 @@ const ICONS = {
   travel: 'M3 17h18 M5 13l14-5 1.5 2-9 5.5-2-.5-2 2H5l1-2.5z',
   guests: 'M10 6h10 M10 12h10 M10 18h10 M4 6l1 1 2-2 M4 12l1 1 2-2 M4 18l1 1 2-2',
   settle: 'M6 3h12v18l-3-2-3 2-3-2-3 2z M9 8h6 M9 12h6 M9 16h3',
+  access: 'M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z M9.5 12l2 2 3.5-4',
+  mymoney: 'M3 7h18v12H3z M3 11h18 M16 15h2',
   about: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z M12 11v5 M12 8v.01',
+  chev: 'M9 6l6 6-6 6',
 };
-const icon = n => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="${ICONS[n]}"/></svg>`;
+const icon = (n, cls = '') => `<svg class="i ${cls}" viewBox="0 0 24 24" aria-hidden="true"><path d="${ICONS[n]}"/></svg>`;
 
-const NAV = {
-  manager: [['board', 'Season'], ['offers', 'Offers'], ['tour', 'Tour'], ['show', 'Show'], ['budget', 'Budget'], ['party', 'Party'], ['about', 'About']],
-  tm: [['today', 'Today'], ['show', 'Show'], ['settle', 'Settle'], ['guests', 'Guests'], ['travel', 'Travel'], ['party', 'Party'], ['about', 'About']],
-  band: [['today', 'Today'], ['travel', 'Travel'], ['guests', 'Guests'], ['party', 'Party'], ['about', 'About']],
-};
+// navigation follows what the viewer is allowed to see
+function navFor() {
+  if (isMgr()) return [['board', 'Season'], ['offers', 'Offers'], ['tour', 'Tour'], ['show', 'Show'], ['budget', 'Budget'], ['party', 'Party'], ['access', 'Access'], ['about', 'About']];
+  const n = [];
+  if (can('day')) n.push(['today', 'Today']);
+  if (can('advance') || can('costs')) n.push(['show', 'Show']);
+  if (can('costs')) n.push(['settle', 'Settle']);
+  if (can('guests')) n.push(['guests', 'Guests']);
+  if (can('travel')) n.push(['travel', 'Travel']);
+  if (can('mymoney')) n.push(['mymoney', 'My money']);
+  if (can('season')) n.push(['board', 'Season']);
+  if (can('profit')) n.push(['budget', 'Budget']);
+  n.push(['party', PEOPLE[me()].kind === 'venue' ? 'Tour team' : 'Party'], ['about', 'About']);
+  return n;
+}
 
 // ---------- views ----------
 const V = {};
@@ -492,10 +591,11 @@ V.board = () => {
   const count = st => [...SHOWS, ...OTHER_DATES, ...OFFERS].filter(r => r.status === st).length;
   const segA = [['all', 'All artists'], ['jv', ARTISTS.jv], ['co', ARTISTS.co]];
   const segS = [['all', 'Any status'], ['confirmed', 'Confirmed'], ['hold', 'Holds'], ['offer', 'Offers'], ['pencil', 'Pencils'], ['cancelled', 'Cancelled']];
+  const showDeals = can('costs');
   return `
   <div class="head"><div><div class="eyebrow">Northlight Mgmt · roster</div><h1 class="display">Season 2027</h1>
     <div class="sub muted">Every date for every artist — the dates sheet you keep in Excel.</div></div>
-    <button class="btn btn-tape" data-go="offers">${icon('offers')} ${OFFERS.filter(o => o.status === 'offer').length} offers waiting</button></div>
+    ${isMgr() ? `<button class="btn btn-tape" data-go="offers">${icon('offers')} ${OFFERS.filter(o => o.status === 'offer').length} offers waiting</button>` : ''}</div>
   <div class="stats">
     <div class="card stat"><span class="eyebrow">Confirmed</span><b>${count('confirmed')}</b></div>
     <div class="card stat"><span class="eyebrow">Holds</span><b>${count('hold')}</b></div>
@@ -509,10 +609,10 @@ V.board = () => {
   ${Object.keys(byMonth).length ? Object.entries(byMonth).map(([k, list]) => `
     <section class="card"><h2 style="margin-bottom:6px">${MON[+k.slice(5) - 1]} ${k.slice(0, 4)}</h2>
       <div class="list">${list.map(r => `
-        <div class="li ${r.id ? 'click' : ''}" ${r.id ? `data-show="${r.fromOffer ? '' : r.id}" ${r.fromOffer ? 'data-go="offers"' : ''}` : ''}>
+        <div class="li ${r.id ? 'click' : ''}" ${r.id ? (r.fromOffer ? 'data-go="offers"' : `data-show="${r.id}"`) : ''}>
           ${dateBox(r.date, r.today)}
           <div class="grow"><div class="${r.status === 'cancelled' ? 'cancelled-text' : ''}"><b>${esc(r.city)}</b> · ${esc(r.venue)}</div>
-            <div class="small muted">${esc(ARTISTS[r.artist])}${r.tour ? ' · ' + esc(r.tour) : ''} · cap ${r.cap.toLocaleString()}${r.deal ? ' · ' + esc(typeof r.deal === 'string' ? r.deal : dealText(r.deal)) : ''}</div></div>
+            <div class="small muted">${esc(ARTISTS[r.artist])}${r.tour ? ' · ' + esc(r.tour) : ''} · cap ${r.cap.toLocaleString()}${r.deal && showDeals ? ' · ' + esc(typeof r.deal === 'string' ? r.deal : dealText(r.deal)) : ''}</div></div>
           ${statusChip(r)}
         </div>`).join('')}</div></section>`).join('') : `<p class="muted">Nothing matches those filters.</p>`}`;
 };
@@ -542,7 +642,7 @@ V.tour = () => {
   const total = SHOWS.reduce((a, s) => a + showFee(s), 0);
   return `
   <div class="head"><div><div class="eyebrow">${esc(ARTISTS[TOUR.artist])} · ${TOUR.season}</div><h1 class="display">${TOUR.name}</h1>
-    <div class="sub muted">${SHOWS.length} shows · 9 on the road · Apr 8 – 24</div></div>
+    <div class="sub muted">${SHOWS.length} shows · 10 on the road · Apr 8 – 24</div></div>
     <button class="btn btn-secondary" data-go="budget">${icon('budget')} Tour budget</button></div>
   <div class="grid2 wide-left">
     <section class="card map"><div class="row between" style="margin-bottom:8px"><h2>Routing</h2><span class="small muted">Real build: Google map embed</span></div>${routeMap()}</section>
@@ -553,12 +653,12 @@ V.tour = () => {
       <div class="note">Tonight: New York settles at 11 pm. Dana has the sheet.</div></section>
   </div>
   <section class="card"><h2 style="margin-bottom:6px">Shows</h2><div class="list">
-    ${SHOWS.map((s, i) => `
+    ${SHOWS.map(s => `
       <div class="li click" data-show="${s.id}">
         ${dateBox(s.date, s.today)}
         <div class="grow"><div><b>${esc(s.city)}</b> · ${esc(s.venue)}${s.today ? ' <span class="chip st-pending plain">Today</span>' : ''}</div>
           <div class="small muted">${s.drive ? 'From previous: ' + esc(s.drive) + ' · ' : ''}${esc(dealText(s.deal))}</div>
-          <div class="row small" style="gap:10px;margin-top:6px"><div class="bar ${pctDone(s) === 100 ? 'good' : ''}" style="width:120px"><i style="width:${pctDone(s)}%"></i></div>
+          <div class="row small wrap" style="gap:10px;margin-top:6px"><div class="bar ${pctDone(s) === 100 ? 'good' : ''}" style="width:120px"><i style="width:${pctDone(s)}%"></i></div>
             <span class="muted">${pctDone(s)}% advanced</span>
             <span class="${s.done[0] ? '' : 'muted'}">${s.done[0] ? '✓ contract' : '○ contract'}</span>
             <span class="${s.done[1] ? '' : 'muted'}">${s.done[1] ? '✓ deposit' : '○ deposit'}</span></div></div>
@@ -572,7 +672,7 @@ function routeMap() {
   const P = ([la, lo]) => [((lo - lon0) / (lon1 - lon0)) * W, H - ((la - lat0) / (lat1 - lat0)) * H];
   const pts = SHOWS.map(s => P(s.ll));
   const path = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
-  const labelLeft = { mtl: false, bos: false, nyc: false, phl: true, dc: true, fest: false, tor: true };
+  const labelLeft = { phl: true, dc: true, tor: true };
   return `<svg viewBox="-20 -10 ${W + 40} ${H + 20}" role="img" aria-label="Tour routing from Toronto to Asheville">
     <path d="${path}" fill="none" stroke="var(--faint)" stroke-width="2" stroke-dasharray="5 6"/>
     ${pts.map((p, i) => { const s = SHOWS[i]; const left = labelLeft[s.id]; return `
@@ -585,10 +685,22 @@ function routeMap() {
   </svg>`;
 }
 
+function showTabs() {
+  const t = [];
+  if (can('costs')) t.push(['deal', 'Deal']);
+  if (can('advance')) t.push(['advance', 'Advance'], ['supply', 'Who brings what'], ['docs', 'Docs']);
+  if (can('day')) t.push(['contacts', 'Contacts'], ['sheet', 'Day sheet']);
+  return t;
+}
+
 V.show = () => {
+  // venue people only ever see their own show
+  if (PEOPLE[me()].kind === 'venue') S.showId = 'nyc';
   const s = show(S.showId);
   const isNyc = s.id === 'nyc';
-  const tabs = [['deal', 'Deal'], ['advance', `Advance ${pctDone(s)}%`], ['docs', 'Docs'], ['contacts', 'Contacts'], ['sheet', 'Day sheet']];
+  const tabs = showTabs();
+  if (!tabs.some(t => t[0] === S.showTab)) S.showTab = tabs[0][0];
+  const editAdv = can('advance', 'edit');
   let body = '';
   if (S.showTab === 'deal') {
     const fee = showFee(s);
@@ -601,17 +713,20 @@ V.show = () => {
         <dt>Capacity</dt><dd>${s.cap.toLocaleString()}</dd>
         <dt>${s.settled ? 'Settled at' : isNyc ? 'Tracking to' : 'Expected'}</dt><dd><b>${money(fee)}</b></dd>
       </dl>
-      ${isNyc && S.role !== 'band' ? `<button class="btn btn-tape" data-go="settle">${icon('settle')} Open tonight's settlement</button>` : ''}</div>
+      ${isNyc ? `<button class="btn btn-tape" data-go="settle">${icon('settle')} Open tonight's settlement</button>` : ''}</div>
       <div class="note">Real build: the ticketing page (Ticketmaster, AXS, Dice) and the venue site open here as embeds or new-tab buttons — GigTrip never copies ticket counts from them.</div>
     </div>`;
   } else if (S.showTab === 'advance') {
     body = `<div class="list">${ADVANCE.map(([lbl, who], i) => `
-      <label class="check ${s.done[i] ? 'done' : ''}"><input type="checkbox" id="adv-${s.id}-${i}" data-adv="${i}" ${s.done[i] ? 'checked' : ''}>
+      <label class="check ${s.done[i] ? 'done' : ''}"><input type="checkbox" id="adv-${s.id}-${i}" data-adv="${i}" ${s.done[i] ? 'checked' : ''} ${editAdv ? '' : 'disabled'}>
         <span class="grow"><span class="lbl">${esc(lbl)}</span><br><span class="small muted">${esc(PEOPLE[who].name)} · due ${dueFor(s, i)}</span></span></label>`).join('')}</div>
       <p class="note">This replaces the per-show ClickUp list. Items come from a template the manager edits once.</p>`;
+  } else if (S.showTab === 'supply') {
+    body = whoBringsWhat();
   } else if (S.showTab === 'docs') {
     const docs = isNyc ? NYC.docs : [['Hospitality rider', 'v3', 'ok'], ['Tech rider + input list', 'v5', 'ok'], ['Stage plot', 'v5', 'ok'], ['Contract', s.done[0] ? 'Signed' : 'Waiting on promoter', s.done[0] ? 'ok' : 'pending']].concat(s.fest ? [['Artist credentials + wristbands', 'From festival advance', 'pending']] : []);
-    body = `<div class="list">${docs.map(([n, meta, st]) => `
+    const shown = can('costs') ? docs : docs.filter(d => !/Contract|Settlement/.test(d[0]));
+    body = `<div class="list">${shown.map(([n, meta, st]) => `
       <div class="li click" data-toast="Opens ${esc(n)} (mock)"><span class="avatar" style="background:var(--surface-2);border-radius:10px">${icon('settle')}</span>
         <div class="grow"><b>${esc(n)}</b><div class="small muted">${esc(meta)}</div></div>
         <span class="chip ${st === 'ok' ? 'st-confirmed' : 'st-pending'}">${st === 'ok' ? 'Ready' : 'Waiting'}</span></div>`).join('')}</div>`;
@@ -620,14 +735,15 @@ V.show = () => {
   } else {
     body = isNyc ? daySheet() : `<p class="muted">The day sheet fills in as the show is advanced. Slots come from a template: lobby call, load-in, soundcheck, doors, set, curfew, settlement.</p>`;
   }
+  const venue = PEOPLE[me()].kind === 'venue';
   return `
-  <div class="head"><div><div class="eyebrow">${esc(TOUR.name)} · show ${SHOWS.indexOf(s) + 1} of ${SHOWS.length}</div>
+  <div class="head"><div><div class="eyebrow">${venue ? 'Your show' : `${esc(TOUR.name)} · show ${SHOWS.indexOf(s) + 1} of ${SHOWS.length}`}</div>
     <h1 class="display">${esc(s.city.split(',')[0])}</h1>
     <div class="sub muted">${fmtDate(s.date)} · ${esc(s.venue)} · cap ${s.cap.toLocaleString()}${s.fest ? ' · ' + esc(s.fest) : ''}</div></div>
     <div class="row">${s.settled ? '<span class="chip st-settled">Settled</span>' : statusChip(s)}
-      <label class="viewas" for="pick">Show <select id="pick">${SHOWS.map(x => `<option value="${x.id}" ${x.id === s.id ? 'selected' : ''}>${fmtDate(x.date)} · ${esc(x.city.split(',')[0])}</option>`).join('')}</select></label></div></div>
+      ${venue ? '' : `<label class="viewas" for="pick">Show <select id="pick">${SHOWS.map(x => `<option value="${x.id}" ${x.id === s.id ? 'selected' : ''}>${fmtDate(x.date)} · ${esc(x.city.split(',')[0])}</option>`).join('')}</select></label>`}</div></div>
   <section class="card stack">
-    <div class="tabs" role="tablist">${tabs.map(([k, l]) => `<button role="tab" aria-selected="${S.showTab === k}" data-tab="${k}">${l}</button>`).join('')}</div>
+    <div class="tabs" role="tablist">${tabs.map(([k, l]) => `<button role="tab" aria-selected="${S.showTab === k}" data-tab="${k}">${k === 'advance' ? `${l} ${pctDone(s)}%` : l}</button>`).join('')}</div>
     ${body}
   </section>`;
 };
@@ -641,6 +757,15 @@ function contactsList(list) {
       <div class="grow"><b>${esc(n)}</b><div class="small muted">${esc(r)}</div></div>
       <span class="mono small" style="user-select:all">${esc(ph)}</span></div>`).join('')}</div>`;
 }
+function whoBringsWhat() {
+  const venueIds = Object.keys(PEOPLE).filter(k => PEOPLE[k].kind === 'venue' && SUP[k]);
+  const tourIds = Object.keys(PEOPLE).filter(k => PEOPLE[k].kind !== 'venue' && SUP[k] && SUP[k].length);
+  const block = ids => ids.map(k => `<div class="stack" style="gap:4px"><div class="row" style="gap:10px">${avatar(k)}<div><b>${esc(PEOPLE[k].name)}</b><div class="small muted">${esc(PEOPLE[k].role)}</div></div></div>
+    <ul class="supply" style="padding-left:46px">${SUP[k].map(x => `<li class="${x.ok ? 'ok' : ''}"><span class="grow">${esc(x.t)}</span>${x.ok ? '<span class="chip st-confirmed plain">Confirmed</span>' : '<span class="chip st-pending plain">Not yet</span>'}</li>`).join('')}</ul></div>`).join('');
+  return `<div class="cols2"><div class="stack"><div class="minihead">Venue provides</div>${block(venueIds)}</div>
+    <div class="stack"><div class="minihead">Tour brings</div>${block(tourIds)}</div></div>
+    <p class="note">Set by management on each person's card in ${isMgr() ? '<a href="#party">Party</a>' : 'Party'}. Each person confirms their own items.</p>`;
+}
 
 function daySheet() {
   const next = NYC.slots.findIndex(x => toMin(x[0]) > NOW.min);
@@ -652,17 +777,27 @@ function daySheet() {
     <p class="small muted" style="margin:10px 0 0">Tomorrow: ${esc(NYC.tomorrow)}</p>`;
 }
 
+function mySupplyCard() {
+  const id = me(), list = SUP[id];
+  if (!list || !list.length) return '';
+  const venue = PEOPLE[id].kind === 'venue';
+  return `<section class="card stack"><div class="row between"><h2>${venue ? 'Venue provides' : "You're bringing"}</h2><span class="small muted">${list.filter(x => x.ok).length} of ${list.length} confirmed</span></div>
+    <ul class="supply">${list.map((x, i) => `<li class="${x.ok ? 'ok' : ''}"><input type="checkbox" id="sup-${id}-${i}" data-sup="${id}" data-i="${i}" ${x.ok ? 'checked' : ''}><label class="grow" for="sup-${id}-${i}">${esc(x.t)}</label></li>`).join('')}</ul>
+    <p class="small muted" style="margin:0">Set by ${esc(PEOPLE.rae.name)}. Tick each one when it's packed or ready.</p></section>`;
+}
+
 V.today = () => {
   const s = show('nyc');
   const next = NYC.slots.find(x => toMin(x[0]) > NOW.min);
   const mins = toMin(next[0]) - NOW.min;
-  const myRoom = PEOPLE[S.me[S.role]].room;
+  const p = PEOPLE[me()];
+  const venue = p.kind === 'venue';
   return `
   <div class="ribbon"><span class="tapechip">Show day</span><span>Mock clock: ${fmtDate(NOW.date)}, ${ampm('16:05')}</span></div>
   <section class="laminate">
-    <div class="band"><span>All access</span><span>${esc(TOUR.name)}</span></div>
+    <div class="band"><span>${venue ? 'Venue · production' : 'All access'}</span><span>${esc(TOUR.name)}</span></div>
     <div class="body">
-      <div><div class="eyebrow">${esc(ARTISTS.jv)} · show ${SHOWS.indexOf(s) + 1} of ${SHOWS.length}</div>
+      <div><div class="eyebrow">${esc(ARTISTS.jv)} · ${venue ? 'at your venue' : `show ${SHOWS.indexOf(s) + 1} of ${SHOWS.length}`}</div>
         <h1 class="display">${esc(s.city.split(',')[0])}</h1>
         <div class="muted">${esc(s.venue)} · doors 7:00 pm · curfew 10:30 pm</div></div>
       <div class="next"><span class="t">${next[0]}</span><div><b>${esc(next[1])}</b><div class="small muted">in ${mins} min · ${esc(next[2])}</div></div></div>
@@ -671,42 +806,45 @@ V.today = () => {
   <div class="grid2 wide-left">
     <section class="card"><div class="row between" style="margin-bottom:6px"><h2>Day sheet</h2><button class="btn btn-secondary btn-sm" data-toast="Adds every show day to your calendar (mock)">Add to calendar</button></div>${daySheet()}</section>
     <div class="stack">
-      <section class="card stack"><h2>Venue</h2>
+      ${mySupplyCard()}
+      ${venue ? '' : `<section class="card stack"><h2>Venue</h2>
         <div><b>${esc(s.venue)}</b><div class="small muted" style="user-select:all">${esc(NYC.address)}</div></div>
         <dl class="kv small"><dt>Wi-Fi</dt><dd style="user-select:all">${esc(NYC.wifi)}</dd><dt>Hospitality</dt><dd>${esc(NYC.hospitality)}</dd></dl>
         <div class="note">${esc(NYC.parking)}</div>
-        <a class="btn btn-outline btn-sm" href="https://www.google.com/maps/search/?api=1&query=Canal+St+New+York" target="_blank" rel="noopener">Directions ↗</a></section>
-      <section class="card stack"><h2>Hotel</h2>
+        <a class="btn btn-outline btn-sm" href="https://www.google.com/maps/search/?api=1&query=Canal+St+New+York" target="_blank" rel="noopener">Directions ↗</a></section>`}
+      ${!venue && can('travel') ? `<section class="card stack"><h2>Hotel</h2>
         <div><b>${esc(NYC.hotel.name)}</b><div class="small muted">${esc(NYC.hotel.addr)} · ${NYC.hotel.nights}</div></div>
-        ${myRoom ? `<div class="row"><span class="chip plain">Your room ${myRoom}</span></div>` : ''}</section>
-      <section class="card"><h2 style="margin-bottom:4px">Day-of contacts</h2>${contactsList(NYC.contacts.slice(0, 2))}</section>
+        ${p.room ? `<div class="row"><span class="chip plain">Your room ${p.room}</span></div>` : ''}</section>` : ''}
+      <section class="card"><h2 style="margin-bottom:4px">Day-of contacts</h2>${contactsList(venue ? NYC.contacts.slice(2, 3) : NYC.contacts.slice(0, 2))}</section>
     </div>
   </div>`;
 };
 
 V.settle = () => {
   const s = show('nyc'), st = NYC.settle, r = settle(st, s.deal);
+  const edit = can('costs', 'edit');
   const past = SHOWS.filter(x => x.settled);
+  const venue = PEOPLE[me()].kind === 'venue';
   return `
   <div class="head"><div><div class="eyebrow">Tonight · ${esc(s.venue)}</div><h1 class="display">Settlement</h1>
-    <div class="sub muted">Type the final numbers from the box office; everything else recalculates.</div></div></div>
+    <div class="sub muted">${edit ? 'Type the final numbers from the box office; everything else recalculates.' : 'The tour manager fills this in; you see it live and sign it together.'}</div></div></div>
   <div class="grid2 wide-left">
     <section class="card stack">
       <div class="row wrap" style="gap:12px">
-        <label class="field" for="sold" style="flex:1;min-width:130px">Tickets sold (cap ${s.cap.toLocaleString()})<input id="sold" inputmode="numeric" value="${st.sold}"></label>
-        <label class="field" for="price" style="flex:1;min-width:110px">Ticket price ($)<input id="price" inputmode="decimal" value="${(st.price / 100).toFixed(2)}"></label>
-        <label class="field" for="feeper" style="flex:1;min-width:110px">Fees per ticket ($)<input id="feeper" inputmode="decimal" value="${(st.feePer / 100).toFixed(2)}"></label>
+        <label class="field" for="sold" style="flex:1;min-width:130px">Tickets sold (cap ${s.cap.toLocaleString()})<input id="sold" inputmode="numeric" value="${st.sold}" ${edit ? '' : 'disabled'}></label>
+        <label class="field" for="price" style="flex:1;min-width:110px">Ticket price ($)<input id="price" inputmode="decimal" value="${(st.price / 100).toFixed(2)}" ${edit ? '' : 'disabled'}></label>
+        <label class="field" for="feeper" style="flex:1;min-width:110px">Fees per ticket ($)<input id="feeper" inputmode="decimal" value="${(st.feePer / 100).toFixed(2)}" ${edit ? '' : 'disabled'}></label>
       </div>
       <dl class="kv" id="settle-sheet">${settleRows(r, st, s.deal)}</dl>
-      <div class="row wrap"><button class="btn btn-primary" data-toast="Both sign on the TM's phone; PDF goes to Rae (mock)">Sign with promoter</button>
+      <div class="row wrap"><button class="btn btn-primary" data-toast="Both sign on the TM's phone; PDF goes to Rae (mock)">Sign ${venue ? 'as promoter' : 'with promoter'}</button>
         <button class="btn btn-secondary" data-toast="Makes a printable sheet like GroupTrip's expense report (mock)">Printable sheet</button></div>
     </section>
     <div class="stack">
       <section class="card stack"><h2>The deal</h2>
         <dl class="kv"><dt>Type</dt><dd>Guarantee vs %</dd><dt>Guarantee</dt><dd>${money(s.deal.g)}</dd><dt>Artist %</dt><dd>${s.deal.pct}% of net after expenses</dd><dt>Deposit paid</dt><dd>${money(s.deal.dep)}</dd></dl>
         <div class="note">Artist earns whichever is higher: the guarantee, or ${s.deal.pct}% of what's left after the promoter's agreed expenses.</div></section>
-      <section class="card"><h2 style="margin-bottom:4px">Already settled</h2><div class="list">
-        ${past.map(x => `<div class="li">${dateBox(x.date)}<div class="grow"><b>${esc(x.city.split(',')[0])}</b><div class="small muted">${esc(dealText(x.deal))}</div></div><b class="num">${money(x.settled)}</b></div>`).join('')}</div></section>
+      ${venue ? '' : `<section class="card"><h2 style="margin-bottom:4px">Already settled</h2><div class="list">
+        ${past.map(x => `<div class="li">${dateBox(x.date)}<div class="grow"><b>${esc(x.city.split(',')[0])}</b><div class="small muted">${esc(dealText(x.deal))}</div></div><b class="num">${money(x.settled)}</b></div>`).join('')}</div></section>`}
     </div>
   </div>`;
 };
@@ -728,33 +866,35 @@ function settleRows(r, st, d) {
 V.guests = () => {
   const s = show('nyc');
   const used = GUESTS.filter(g => g.status !== 'declined').reduce((a, g) => a + 1 + g.plus, 0);
-  const canApprove = S.role !== 'band';
-  const me = S.me[S.role];
-  const list = canApprove ? GUESTS : GUESTS.filter(g => g.by === me);
+  const venue = PEOPLE[me()].kind === 'venue';
+  const approve = can('guests', 'edit');
+  const list = approve ? GUESTS : venue ? GUESTS.filter(g => g.status === 'approved') : GUESTS.filter(g => g.by === me());
+  const title = approve ? "Everyone's requests" : venue ? 'Approved list for the box office' : 'Your requests';
   return `
   <div class="head"><div><div class="eyebrow">${fmtDate(s.date)} · ${esc(s.venue)}</div><h1 class="display">Guest list</h1>
     <div class="sub muted">${used} of ${GUEST_CAP} spots used · closes 5:00 pm</div></div></div>
   <div class="bar ${used > GUEST_CAP ? 'over' : ''}"><i style="width:${Math.min(100, used / GUEST_CAP * 100)}%"></i></div>
   <div class="grid2 wide-left">
-    <section class="card"><h2 style="margin-bottom:4px">${canApprove ? 'Everyone\'s requests' : 'Your requests'}</h2>
+    <section class="card"><h2 style="margin-bottom:4px">${title}</h2>
       ${list.length ? `<div class="list">${list.map(g => `
         <div class="li"><div class="grow"><b>${esc(g.name)}</b>${g.plus ? ` <span class="muted">+${g.plus}</span>` : ''}<div class="small muted">for ${esc(PEOPLE[g.by].name)}</div></div>
-          ${canApprove && g.status === 'pending' ? `<button class="btn btn-primary btn-sm" data-guest="${GUESTS.indexOf(g)}" data-act="approved">Approve</button><button class="btn btn-outline btn-sm" data-guest="${GUESTS.indexOf(g)}" data-act="declined">Decline</button>` : `<span class="chip st-${g.status === 'approved' ? 'confirmed' : g.status === 'declined' ? 'cancelled' : 'pending'}">${g.status[0].toUpperCase() + g.status.slice(1)}</span>`}
+          ${approve && g.status === 'pending' ? `<button class="btn btn-primary btn-sm" data-guest="${GUESTS.indexOf(g)}" data-act="approved">Approve</button><button class="btn btn-outline btn-sm" data-guest="${GUESTS.indexOf(g)}" data-act="declined">Decline</button>` : `<span class="chip st-${g.status === 'approved' ? 'confirmed' : g.status === 'declined' ? 'cancelled' : 'pending'}">${g.status[0].toUpperCase() + g.status.slice(1)}</span>`}
         </div>`).join('')}</div>` : '<p class="muted">You haven\'t asked for anyone yet.</p>'}
     </section>
+    ${venue ? `<section class="card stack"><h2>For the box office</h2><p class="muted" style="margin:0">The final list locks at 5:00 pm and appears here. Wristbands at will-call from 6:30 pm.</p></section>` : `
     <form class="card stack" id="guestform"><h2>Request a spot</h2>
       <label class="field" for="gname">Name on the list<input id="gname" required placeholder="e.g. Sofia Lindqvist" autocomplete="off"></label>
       <label class="field" for="gplus">Plus-ones<select id="gplus"><option value="0">Just them</option><option value="1">+1</option><option value="2">+2</option></select></label>
-      <button class="btn btn-tape" type="submit">Send to Dana</button>
+      <button class="btn btn-tape" type="submit">${approve ? 'Add to the list' : 'Send to Dana'}</button>
       <p class="small muted" style="margin:0">Dana approves; the venue gets the final list at 5 pm.</p>
-    </form>
+    </form>`}
   </div>`;
 };
 
 V.travel = () => {
-  const me = PEOPLE[S.me[S.role]];
+  const p = PEOPLE[me()];
   return `
-  <div class="head"><div><div class="eyebrow">${esc(me.name)} · ${esc(me.role)}</div><h1 class="display">My travel</h1>
+  <div class="head"><div><div class="eyebrow">${esc(p.name)} · ${esc(p.role)}</div><h1 class="display">My travel</h1>
     <div class="sub muted">Van legs, flights and rooms — only yours.</div></div></div>
   <div class="grid2">
     <div class="stack">${TRAVEL.flights.map(f => `
@@ -769,24 +909,31 @@ V.travel = () => {
     <div class="stack">
       <section class="card"><h2 style="margin-bottom:4px">Van</h2><div class="list">${TRAVEL.van.map(([d, route, call, drive, done]) => `
         <div class="li"><div class="grow ${done ? 'muted' : ''}"><b>${esc(route)}</b><div class="small muted">${d} · ${call} · ${drive}</div></div>${done ? '<span class="chip st-settled">Done</span>' : ''}</div>`).join('')}</div></section>
-      <section class="card"><h2 style="margin-bottom:4px">Rooms</h2><div class="list">${TRAVEL.rooms.map(([d, h, room]) => `
-        <div class="li"><div class="grow"><b>${esc(h)}</b><div class="small muted">${d} · ${esc(room)}</div></div></div>`).join('')}</div></section>
+      <section class="card"><h2 style="margin-bottom:4px">Rooms</h2><div class="list">${TRAVEL.hotels.map(([d, h]) => `
+        <div class="li"><div class="grow"><b>${esc(h)}</b><div class="small muted">${d}${p.room ? ' · Room ' + p.room : ''}</div></div></div>`).join('')}</div></section>
     </div>
   </div>`;
 };
 
-V.party = () => {
-  const road = Object.keys(PEOPLE).filter(k => PEOPLE[k].road), office = Object.keys(PEOPLE).filter(k => !PEOPLE[k].road);
-  const row = k => { const p = PEOPLE[k]; return `<div class="li">${avatar(k)}<div class="grow"><b>${esc(p.name)}</b><div class="small muted">${esc(p.role)}${p.room && S.role !== 'band' ? ' · room ' + p.room : ''}</div></div><span class="mono small" style="user-select:all">${p.ph}</span></div>`; };
+V.mymoney = () => {
+  const p = PEOPLE[me()];
+  const days = DAYS_SO_FAR;
+  const perDiems = PER_DIEM * days;
+  const artist = p.kind === 'artist';
+  const pay = p.pay ? p.pay * SHOWS_PLAYED : 0;
   return `
-  <div class="head"><div><div class="eyebrow">${esc(TOUR.name)}</div><h1 class="display">Touring party</h1>
-    <div class="sub muted">${road.length} on the road · ${office.length} in the office. Each person's role decides what they see.</div></div>
-    ${S.role !== 'band' ? `<button class="btn btn-secondary" data-toast="Copies the crew join link (mock)">Invite crew</button>` : ''}</div>
-  <div class="grid2">
-    <section class="card"><h2 style="margin-bottom:4px">On the road</h2><div class="list">${road.map(row).join('')}</div></section>
-    <section class="card"><h2 style="margin-bottom:4px">Office</h2><div class="list">${office.map(row).join('')}</div>
-      <p class="note" style="margin-top:12px">Agents and promoters get a read-only day-sheet link — no account.</p></section>
-  </div>`;
+  <div class="head"><div><div class="eyebrow">${esc(p.name)} · only you see this</div><h1 class="display">My money</h1>
+    <div class="sub muted">Your pay, per diems and expenses on ${esc(TOUR.name)}. Nobody else's.</div></div></div>
+  <div class="stats">
+    ${artist ? '' : `<div class="card stat"><span class="eyebrow">Pay so far</span><b>${money(pay)}</b><span class="small muted">${money(p.pay)} × ${SHOWS_PLAYED} shows</span></div>`}
+    <div class="card stat"><span class="eyebrow">Per diems</span><b>${money(perDiems)}</b><span class="small muted">$50 × ${days} days</span></div>
+    <div class="card stat"><span class="eyebrow">Expenses owed back</span><b>${money(14260)}</b><span class="small muted">1 waiting on Dana</span></div>
+  </div>
+  <section class="card"><h2 style="margin-bottom:4px">Expenses</h2><div class="list">
+    <div class="li"><div class="grow"><b>Replacement ${p.tech ? 'SDI cable' : 'strings'}</b><div class="small muted">Apr 10 · Boston · receipt attached</div></div><b class="num">${money(8760)}</b><span class="chip st-pending">Waiting</span></div>
+    <div class="li"><div class="grow"><b>Cab to venue</b><div class="small muted">Apr 8 · Toronto</div></div><b class="num">${money(5500)}</b><span class="chip st-confirmed">Paid back</span></div>
+  </div><button class="btn btn-secondary btn-sm" style="margin-top:10px" data-toast="Snap a receipt, pick a category — same as GroupTrip business expenses (mock)">Add expense</button></section>
+  ${artist ? `<p class="note">Your show earnings come through ${esc(PEOPLE.rae.name)} after each settlement. Management can also let you see show costs and profit.</p>` : `<p class="note">Management decides whether you see this page at all.</p>`}`;
 };
 
 V.budget = () => {
@@ -817,52 +964,128 @@ V.budget = () => {
     <thead><tr><th>Category</th><th class="r">Budget</th><th class="r">Spent</th><th style="width:30%">Used</th></tr></thead>
     <tbody>${lines.map(([n, b, a]) => `<tr><td>${esc(n)}</td><td class="r">${money(b)}</td><td class="r">${money(a)}</td>
       <td><div class="bar ${a > b ? 'over' : ''}"><i style="width:${Math.min(100, Math.round(a / b * 100))}%"></i></div></td></tr>`).join('')}</tbody>
-    <tfoot><tr><td>Total</td><td class="r">${money(costB)}</td><td class="r">${money(costA)}</td><td class="small muted">${Math.round(costA / costB * 100)}% used · 57% of tour done</td></tr></tfoot></table></div></section>
+    <tfoot><tr><td>Total</td><td class="r">${money(costB)}</td><td class="r">${money(costA)}</td><td class="small muted">${Math.round(costA / costB * 100)}% used · ${Math.round(DAYS_SO_FAR / ROAD_DAYS * 100)}% of tour done</td></tr></tfoot></table></div></section>
   <p class="note">Crew enter expenses with receipt photos on their phone (GroupTrip's business expenses). Per diems are paid out automatically per road day.</p>`;
+};
+
+// ---- party: expandable cards; management sets role, access and what each person brings ----
+function personCard(k) {
+  const p = PEOPLE[k];
+  const mgr = isMgr();
+  const venueViewer = PEOPLE[me()].kind === 'venue';
+  const showPhone = !venueViewer || p.kind === 'venue' || p.kind === 'tm';
+  const list = SUP[k] || [];
+  const custom = Object.keys(p.over).length;
+  const supplyLabel = p.kind === 'venue' ? 'Venue provides' : 'Brings';
+  const mine = k === me();
+  return `<details class="pcard" data-person="${k}" ${S.open.has(k) ? 'open' : ''}>
+    <summary>${avatar(k)}<div class="grow"><b>${esc(p.name)}</b>${mine ? ' <span class="chip plain">You</span>' : ''}<div class="small muted">${esc(p.role)}${list.length ? ` · ${supplyLabel.toLowerCase()} ${list.length} item${list.length > 1 ? 's' : ''}` : ''}</div></div>
+      ${mgr && custom ? '<span class="chip st-pending plain">Custom access</span>' : ''}${icon('chev', 'chev')}</summary>
+    <div class="more">
+      <dl class="kv small">
+        ${showPhone ? `<dt>Phone</dt><dd class="mono" style="user-select:all">${p.ph}</dd>` : ''}
+        <dt>Role</dt><dd>${mgr && p.kind !== 'manager' ? `<select class="lvl" id="kind-${k}" data-kind="${k}">${Object.entries(KINDS).filter(([x]) => x !== 'manager').map(([x, l]) => `<option value="${x}" ${p.kind === x ? 'selected' : ''}>${l}</option>`).join('')}</select>` : esc(KINDS[p.kind])}</dd>
+        ${p.room && (mgr || can('travel', 'edit')) ? `<dt>Room</dt><dd>${p.room}</dd>` : ''}
+      </dl>
+      <div class="stack" style="gap:6px">
+        <div class="minihead">${supplyLabel}</div>
+        ${list.length ? `<ul class="supply">${list.map((x, i) => `<li class="${x.ok ? 'ok' : ''}">
+          ${mine ? `<input type="checkbox" id="psup-${k}-${i}" data-sup="${k}" data-i="${i}" ${x.ok ? 'checked' : ''}>` : ''}
+          <span class="grow">${esc(x.t)}</span>
+          ${mine ? '' : x.ok ? '<span class="chip st-confirmed plain">Confirmed</span>' : '<span class="chip st-pending plain">Not yet</span>'}
+          ${mgr ? `<button class="x" type="button" data-unsup="${k}" data-i="${i}" aria-label="Remove ${esc(x.t)}">×</button>` : ''}</li>`).join('')}</ul>`
+          : `<p class="small muted" style="margin:0">Nothing set yet.</p>`}
+        ${mgr ? `<form class="addrow" data-addsup="${k}"><input id="add-${k}" placeholder="${p.kind === 'venue' ? 'e.g. Projector + screen' : 'e.g. HDMI → SDI converter'}" autocomplete="off" aria-label="Add an item for ${esc(p.name)}"><button class="btn btn-secondary btn-sm" type="submit">Add</button></form>` : ''}
+      </div>
+      ${mgr && p.kind !== 'manager' ? `<div class="stack" style="gap:6px">
+        <div class="row between"><span class="minihead">What ${esc(p.name.split(' ')[0])} can see</span>${custom ? `<button class="btn btn-outline btn-sm" data-reset="${k}">Back to ${esc(KINDS[p.kind])} defaults</button>` : ''}</div>
+        <div class="accgrid">${AREAS.map(([a, l]) => { const o = p.over[a]; const v = level(k, a); return `<span>${l}</span>
+          <select class="lvl ${o ? 'custom' : ''}" data-l="${v}" id="ov-${k}-${a}" data-over="${k}" data-area="${a}" aria-label="${esc(l)} for ${esc(p.name)}">
+            ${['off', 'view', 'edit'].map(x => `<option value="${x}" ${v === x ? 'selected' : ''}>${x === 'off' ? 'Hidden' : x === 'view' ? 'View' : 'Edit'}${!o && ACCESS[p.kind][a] === x ? ' (default)' : ''}</option>`).join('')}</select>`; }).join('')}</div>
+        <p class="small muted" style="margin:0">Yellow outline = changed just for ${esc(p.name.split(' ')[0])}.</p></div>` : ''}
+    </div></details>`;
+}
+
+V.party = () => {
+  const venueViewer = PEOPLE[me()].kind === 'venue';
+  const ids = g => Object.keys(PEOPLE).filter(k => PEOPLE[k].group === g);
+  const road = venueViewer ? ids('road').filter(k => PEOPLE[k].kind === 'tm' || PEOPLE[k].tech) : ids('road');
+  const office = ids('office'), venue = ids('venue');
+  const sec = (title, list, extra = '') => `<section class="card"><h2 style="margin-bottom:4px">${title}</h2><div class="list">${list.map(personCard).join('')}</div>${extra}</section>`;
+  return `
+  <div class="head"><div><div class="eyebrow">${esc(TOUR.name)}</div><h1 class="display">${venueViewer ? 'Tour team' : 'Touring party'}</h1>
+    <div class="sub muted">${venueViewer ? 'The people you\'ll work with today and what they bring.' : isMgr() ? 'Tap a person to set what they bring and what they can see.' : 'Tap a person to see what they\'re bringing.'}</div></div>
+    ${isMgr() ? `<div class="row wrap"><button class="btn btn-secondary" data-go="access">${icon('access')} Role defaults</button><button class="btn btn-tape" data-toast="Copies a join link for this tour (mock)">Invite someone</button></div>` : ''}</div>
+  ${venueViewer ? sec('Venue', venue) + sec('Tour team', road) : `<div class="grid2">
+    <div class="stack">${sec('On the road', road)}</div>
+    <div class="stack">${sec('Venue — tonight', venue)}${sec('Office', office)}</div></div>`}`;
+};
+
+V.access = () => {
+  const cols = ['tm', 'artist', 'crew', 'venue', 'agent'];
+  const custom = Object.keys(PEOPLE).filter(k => Object.keys(PEOPLE[k].over).length);
+  return `
+  <div class="head"><div><div class="eyebrow">Management only</div><h1 class="display">Who sees what</h1>
+    <div class="sub muted">Defaults for each role on ${esc(TOUR.name)}. Change one person on their card in Party.</div></div></div>
+  <section class="card"><div class="scroll-x"><table>
+    <thead><tr><th>Area</th><th>Management</th>${cols.map(c => `<th>${KINDS[c]}</th>`).join('')}</tr></thead>
+    <tbody>${AREAS.map(([a, l]) => `<tr><td style="white-space:normal;min-width:180px">${l}</td><td><span class="chip st-confirmed plain">Edit</span></td>
+      ${cols.map(c => `<td><select class="lvl" data-l="${ACCESS[c][a]}" id="acc-${c}-${a}" data-acc="${c}" data-area="${a}" aria-label="${esc(l)} for ${KINDS[c]}">
+        ${['off', 'view', 'edit'].map(x => `<option value="${x}" ${ACCESS[c][a] === x ? 'selected' : ''}>${x === 'off' ? 'Hidden' : x === 'view' ? 'View' : 'Edit'}</option>`).join('')}</select></td>`).join('')}</tr>`).join('')}</tbody>
+  </table></div>
+  <div class="row wrap" style="margin-top:14px"><span class="small muted">Try it:</span>${['tm', 'artist', 'crew', 'venue'].map(c => `<button class="btn btn-outline btn-sm" data-preview="${c}">See it as ${KINDS[c]}</button>`).join('')}</div></section>
+  <div class="grid2">
+    <section class="card stack"><h2>Money has three levels</h2>
+      <dl class="kv small"><dt>My money</dt><dd>own pay, per diems, expenses</dd><dt>Show costs</dt><dd>deals, venue expenses, settlement</dd><dt>Profit</dt><dd>net per show and tour, commissions, budget</dd></dl>
+      <p class="note">So a tour manager can settle a show without seeing what the tour makes, and crew can see their own pay and nothing else.</p></section>
+    <section class="card"><h2 style="margin-bottom:4px">People with their own access</h2>
+      ${custom.length ? `<div class="list">${custom.map(k => `<div class="li click" data-open="${k}">${avatar(k)}<div class="grow"><b>${esc(PEOPLE[k].name)}</b><div class="small muted">${Object.entries(PEOPLE[k].over).map(([a, v]) => `${AREAS.find(x => x[0] === a)[1].split(' (')[0]}: ${v === 'off' ? 'hidden' : v}`).join(' · ')}</div></div></div>`).join('')}</div>`
+        : '<p class="muted" style="margin:0">Nobody yet — everyone follows their role.</p>'}</section>
+  </div>`;
 };
 
 V.about = () => `
   <div class="head"><div><div class="eyebrow">Prototype · sample data</div><h1 class="display">What is GigTrip?</h1></div></div>
   <section class="card prose">
-    <p><b>GigTrip is for artist managers and their touring party.</b> It puts the dates sheet, each show's deal and settlement, the advance checklist, day sheets, travel and guest lists in one place — instead of Excel for dates and money, ClickUp for advancing, and group texts for everything else.</p>
+    <p><b>GigTrip is for artist managers and everyone who makes a show happen.</b> It puts the dates sheet, each show's deal and settlement, the advance checklist, who brings what, day sheets, travel and guest lists in one place — instead of Excel for dates and money, ClickUp for advancing, and group texts for everything else.</p>
+    <p><b>Management decides who sees what.</b> The tour manager, artist, band and crew, and the venue each get only what they need. Costs and profit can be hidden separately.</p>
     <p>It's built on <a href="https://timdreamboat.github.io/grouptrip/" target="_blank" rel="noopener">GroupTrip</a>, which already handles travel, shared plans, people and expenses for groups.</p>
-    <p class="muted">Use <b>View as</b> at the top to switch between the manager (desk, planning the year), the tour manager (runs the show day and settles) and band/crew (just needs today). Everyone, venues and numbers here are made up.</p>
-  </section>
-  <section class="card prose"><h2>We'd love your take</h2>
-    <ol>
-      <li>Do you manage more than one artist? Should the season board show your whole roster?</li>
-      <li>What columns are in your Excel dates sheet today? Which ClickUp lists do you rely on?</li>
-      <li>Who settles on the night — tour manager, you, or a business manager? Which currencies and withholding taxes come up?</li>
-      <li>Should band and crew ever see money (their pay, per diems)?</li>
-      <li>Do agents and promoters need to log in, or is a shared day-sheet link enough?</li>
-      <li>What would make you switch from Excel on day one?</li>
-    </ol>
+    <p class="muted">Use <b>View as</b> at the top to switch between management, the tour manager, the artist, band &amp; crew (you're Nico, the VJ) and the venue (you're Greg, production manager). Everyone, venues and numbers here are made up.</p>
   </section>`;
 
 // ---------- router ----------
 function route() {
-  const nav = NAV[S.role];
+  const nav = navFor();
   let r = location.hash.slice(1);
   if (!V[r] || !nav.some(n => n[0] === r)) r = nav[0][0];
-  const links = nav.map(([k, l]) => `<a href="#${k}" ${k === r ? 'aria-current="page"' : ''}>${icon(k)}<span>${l}</span></a>`).join('');
-  $('#sidenav').innerHTML = links;
-  $('#tabbar').innerHTML = nav.filter(n => n[0] !== 'about').slice(0, 5).map(([k, l]) => `<a href="#${k}" ${k === r ? 'aria-current="page"' : ''}>${icon(k)}<span>${l}</span></a>`).join('');
+  const links = list => list.map(([k, l]) => `<a href="#${k}" ${k === r ? 'aria-current="page"' : ''}>${icon(k)}<span>${l}</span></a>`).join('');
+  $('#sidenav').innerHTML = links(nav);
+  $('#tabbar').innerHTML = links(nav.filter(n => n[0] !== 'about').slice(0, 5));
   $('#main').innerHTML = V[r]();
   $('#role').value = S.role;
-  document.title = 'GigTrip';
 }
 function go(r) { if (location.hash.slice(1) === r) route(); else location.hash = r; }
+function setRole(r) { S.role = r; store.set('role', r); go(navFor()[0][0]); }
 
 addEventListener('hashchange', () => { route(); scrollTo(0, 0); });
-$('#role').addEventListener('change', e => { S.role = e.target.value; store.set('role', S.role); go(NAV[S.role][0][0]); });
+$('#role').addEventListener('change', e => setRole(e.target.value));
+
+document.addEventListener('toggle', e => {
+  const d = e.target;
+  if (d.matches && d.matches('details.pcard')) d.open ? S.open.add(d.dataset.person) : S.open.delete(d.dataset.person);
+}, true);
 
 document.addEventListener('click', e => {
-  const t = e.target.closest('[data-go],[data-show],[data-tab],[data-toast],[data-offer],[data-guest],[data-filter] button');
+  const t = e.target.closest('[data-go],[data-show],[data-tab],[data-toast],[data-offer],[data-guest],[data-filter] button,[data-unsup],[data-reset],[data-preview],[data-open]');
   if (!t) return;
   if (t.dataset.toast) return toast(t.dataset.toast);
-  if (t.dataset.show) { S.showId = t.dataset.show; S.showTab = 'deal'; return NAV[S.role].some(n => n[0] === 'show') ? go('show') : toast('Managers and TMs open the show page'); }
+  if (t.dataset.show) { S.showId = t.dataset.show; S.showTab = ''; return navFor().some(n => n[0] === 'show') ? go('show') : toast('Management and the tour manager open the show page'); }
   if (t.dataset.go) return go(t.dataset.go);
   if (t.dataset.tab) { S.showTab = t.dataset.tab; return route(); }
+  if (t.dataset.preview) { setRole(t.dataset.preview); return toast(`Now seeing GigTrip as ${KINDS[t.dataset.preview]}`); }
+  if (t.dataset.open) { S.open.add(t.dataset.open); return go('party'); }
+  if (t.dataset.unsup) { e.preventDefault(); const it = SUP[t.dataset.unsup].splice(+t.dataset.i, 1)[0]; toast(`Removed “${it.t}”`); return route(); }
+  if (t.dataset.reset) { e.preventDefault(); PEOPLE[t.dataset.reset].over = {}; toast('Back to role defaults'); return route(); }
   if (t.dataset.offer) {
     const o = OFFERS.find(x => x.id === t.dataset.offer);
     if (t.dataset.act === 'counter') return toast(`Counter sent to ${o.promoter} (mock)`);
@@ -876,11 +1099,20 @@ document.addEventListener('click', e => {
   if (f) { S[f.dataset.filter] = t.dataset.v; route(); }
 });
 document.addEventListener('change', e => {
-  if (e.target.dataset.adv) {
-    const s = show(S.showId); s.done[+e.target.dataset.adv] = e.target.checked;
+  const d = e.target.dataset;
+  if (d.adv) {
+    const s = show(S.showId); s.done[+d.adv] = e.target.checked;
     route(); toast(e.target.checked ? 'Marked done' : 'Marked not done');
   }
   if (e.target.id === 'pick') { S.showId = e.target.value; route(); }
+  if (d.sup) { const it = SUP[d.sup][+d.i]; it.ok = e.target.checked; toast(it.ok ? 'Confirmed — management can see it' : 'Marked not ready'); route(); }
+  if (d.acc) { ACCESS[d.acc][d.area] = e.target.value; toast(`${KINDS[d.acc]}: ${AREAS.find(a => a[0] === d.area)[1].split(' (')[0]} → ${e.target.selectedOptions[0].text}`); route(); }
+  if (d.over) {
+    const p = PEOPLE[d.over];
+    if (e.target.value === ACCESS[p.kind][d.area]) delete p.over[d.area]; else p.over[d.area] = e.target.value;
+    toast(`${p.name.split(' ')[0]}'s access updated`); route();
+  }
+  if (d.kind) { PEOPLE[d.kind].kind = e.target.value; toast(`${PEOPLE[d.kind].name} is now ${KINDS[e.target.value]}`); route(); }
 });
 document.addEventListener('input', e => {
   if (!['sold', 'price', 'feeper'].includes(e.target.id)) return;
@@ -893,12 +1125,25 @@ document.addEventListener('input', e => {
   $('#settle-sheet').innerHTML = settleRows(settle(st, show('nyc').deal), st, show('nyc').deal);
 });
 document.addEventListener('submit', e => {
-  if (e.target.id !== 'guestform') return;
+  const f = e.target;
+  if (f.dataset.addsup) {
+    e.preventDefault();
+    const k = f.dataset.addsup, input = f.querySelector('input'), txt = input.value.trim();
+    if (!txt) return;
+    (SUP[k] ||= []).push({ t: txt, ok: false });
+    S.open.add(k);
+    toast(`Added for ${PEOPLE[k].name.split(' ')[0]} — shows on their Today screen`);
+    route();
+    const again = document.getElementById('add-' + k); if (again) again.focus();
+    return;
+  }
+  if (f.id !== 'guestform') return;
   e.preventDefault();
   const name = $('#gname').value.trim();
   if (!name) return;
-  GUESTS.push({ name, plus: +$('#gplus').value, by: S.me[S.role], status: S.role === 'band' ? 'pending' : 'approved' });
-  toast(S.role === 'band' ? 'Sent to Dana for approval' : 'Added to the list');
+  const approve = can('guests', 'edit');
+  GUESTS.push({ name, plus: +$('#gplus').value, by: me(), status: approve ? 'approved' : 'pending' });
+  toast(approve ? 'Added to the list' : 'Sent to Dana for approval');
   route();
 });
 
