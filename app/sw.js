@@ -1,12 +1,12 @@
 // GroupTrip service worker: makes the app installable, keeps it working
 // offline (last-seen copy of the app files), and shows push notifications.
-const CACHE = 'grouptrip-v4';
+const CACHE = 'grouptrip-v5';
 
 // The app's own files. Add new files here so they work offline too.
 const SHELL = [
   './', './index.html', './style.css', './manifest.webmanifest',
   './app.js', './config.js', './embeds.js', './money.js', './places.js', './pwa.js', './store.js', './ui.js',
-  './views/bizexpenses.js', './views/common.js', './views/cover.js', './views/create.js', './views/flights.js', './views/getapp.js', './views/home.js',
+  './views/bizexpenses.js', './views/bizreport.js', './views/common.js', './views/cover.js', './views/create.js', './views/flights.js', './views/getapp.js', './views/home.js',
   './views/invite.js', './views/lists.js', './views/me.js', './views/overview.js', './views/people.js',
   './views/photos.js', './views/plan.js', './views/polls.js', './views/stays.js', './views/trip.js',
   './views/today.js', './views/tripmap.js', './views/wallet.js',

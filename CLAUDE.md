@@ -113,7 +113,9 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
   suggestions come from `KINDS`/`words(trip)` in `views/common.js` — use it
   instead of hard-coding "crew", "Calendar", "Money". Business trips use
   `views/bizexpenses.js` (reimbursable: category, company card, receipt,
-  reimbursed flag, CSV export); non-organizers only receive their own
+  reimbursed flag, CSV export, and a printable report in `views/bizreport.js` —
+  summary, transactions, then each receipt photo; printed via the browser's
+  print dialog, "Save as PDF" downloads it; prompted once the trip has ended); non-organizers only receive their own
   expenses (enforced in `get_trip`, which wraps `_get_trip_all` — change trip
   contents in `_get_trip_all`). Family trips default expense splits to shares.
 - Hotels: `stay_guests` says who stays where (a person can be at more than

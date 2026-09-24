@@ -6,6 +6,7 @@ import { esc, icon, avatar, fmtShort, sheet, confirmSheet, busy, toast, emptySta
 import { fmt, toCents, rateTo, CURRENCIES } from '../money.js';
 import * as store from '../store.js';
 import { memberById, nameOf, firstName, CATEGORIES, categoryOf } from './common.js';
+import { openReport } from './bizreport.js';
 
 const pad = (n) => String(n).padStart(2, '0');
 const localDay = (d = new Date()) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -20,6 +21,8 @@ export function render(el, ctx) {
   const owed = list.filter(outstanding).reduce((s, e) => s + e.amount, 0);
   const missing = list.filter((e) => !e.receiptPath).length;
   const who = (id) => (id === meId ? 'You' : firstName(nameOf(trip, id)));
+  const lastDay = trip.endDate || trip.startDate;
+  const ended = Boolean(lastDay) && lastDay < localDay();
 
   const people = [...new Set(list.map((e) => e.paidBy))].map((id) => {
     const mine = list.filter((e) => e.paidBy === id);
@@ -33,12 +36,19 @@ export function render(el, ctx) {
     <header class="page-head">
       <div><h1 class="display">Expenses</h1><div class="sub">${isOrg ? 'Everything the team spent' : 'What you spent — for reimbursement'}</div></div>
       <div style="display:flex;gap:8px">
-        ${list.length ? `<button class="btn btn-secondary btn-sm" data-action="export">${icon('receipt')}Spreadsheet</button>` : ''}
+        ${list.length ? `<button class="btn btn-secondary btn-sm" data-action="report">${icon('receipt')}Report</button>
+          <button class="btn btn-secondary btn-sm" data-action="export">${icon('list')}Spreadsheet</button>` : ''}
         <button class="btn page-action" data-action="add">${icon('plus')}Add expense</button>
       </div>
     </header>
 
     <div class="stack-lg">
+      ${ended && list.length ? `
+      <div class="card report-cta">
+        <div class="grow"><div class="title">The trip's over — time for the expense report</div>
+          <div class="sub">Every ${isOrg ? '' : 'one of your '}expense${isOrg ? ' and' : 's and'} receipt photo, ready to print or save as a PDF.</div></div>
+        <button class="btn btn-primary btn-sm" data-action="report">${icon('receipt')}Expense report</button>
+      </div>` : ''}
       <div class="stat-grid">
         <div class="stat"><div class="num">${money(total)}</div><div class="lbl">${isOrg ? 'Team spend' : 'You spent'}</div></div>
         <div class="stat"><div class="num ${owed ? 'amt neg' : ''}">${money(owed)}</div><div class="lbl">${isOrg ? 'To reimburse' : 'Owed back to you'}</div></div>
@@ -110,6 +120,7 @@ export function render(el, ctx) {
     if (!t) return;
     if (t.dataset.action === 'add') return openBizExpense(ctx);
     if (t.dataset.action === 'export') return exportCsv(trip);
+    if (t.dataset.action === 'report') return openReport(ctx);
     if (t.dataset.edit) return openBizExpense(ctx, list.find((x) => x.id === t.dataset.edit));
     if (t.dataset.receipt) {
       const x = list.find((y) => y.id === t.dataset.receipt);

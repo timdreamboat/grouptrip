@@ -32,7 +32,8 @@ and what's pending**.
 - Trips with organizer vs guest roles (share link + per-person token, no accounts);
   invite page with "tap your name"; organizer "Let back in" for lost devices.
 - Trip types: Friends / Family / Business (wording, suggestions; business =
-  reimbursable expenses with CSV export, private per person; family = shares).
+  reimbursable expenses with receipt photos, CSV export and a printable
+  expense report with the receipts (print or Save as PDF), private per person; family = shares).
 - Home: planning dashboard (organizer) or RSVP + to-dos (guest); **Today**
   screen during the trip; weather (Windy embed); good-to-know notes; open polls;
   photo strip; install/notifications card.
