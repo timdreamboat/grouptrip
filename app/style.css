@@ -788,3 +788,9 @@ body.report-open { overflow: hidden; }
   .report-receipts { break-before: page; }
   .report-receipt img { max-height: 235mm; }
 }
+/* ---------- sign-in & admin ---------- */
+.brand-btn { gap: 10px; }
+.code-input { text-align: center; letter-spacing: .3em; font-variant-numeric: tabular-nums; }
+.account-btn { font-weight: 700; border-radius: 999px; }
+button.admin-row { width: 100%; text-align: left; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
+button.admin-row:hover { background: var(--surface-2); }

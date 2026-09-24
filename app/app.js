@@ -2,8 +2,12 @@
 //   #/                     your trips (or the landing page)
 //   #/new                  create a trip
 //   #/t/<code>[/<tab>]     a trip — the invite page until you've joined
-//   #/me/<code>/<token>    private "sign in as me" link for another device
+//   #/admin                every trip (admins only)
+//   #/me/<code>/<token>    old private links (before accounts) — just open the trip
 import * as store from './store.js';
+import * as auth from './auth.js';
+import { signIn, afterSignIn } from './views/signin.js';
+import * as admin from './views/admin.js';
 import { toast, esc, icon } from './ui.js';
 import * as home from './views/home.js';
 import * as create from './views/create.js';
@@ -34,12 +38,16 @@ async function route() {
   const [page, code, extra] = location.hash.replace(/^#\/?/, '').split('/');
   document.querySelectorAll('dialog.sheet').forEach((d) => d.close());
 
-  if (page === 'me' && code && extra) {
-    store.saveToken(code, extra);
-    location.replace(`#/t/${code}`);
-    return;
+  if (page === 'me' && code) { location.replace(`#/t/${code}`); return; }
+  if (page === 'new') {
+    if (!auth.signedIn() && !(await signIn({ title: 'Sign in to plan a trip', reason: 'Your trip is saved to your account, so only you can manage it — from any device.' }))) {
+      if (location.hash === '#/new') location.replace('#/');
+      return;
+    }
+    current = {};
+    return paint(() => create.render(root));
   }
-  if (page === 'new') { current = {}; return paint(() => create.render(root)); }
+  if (page === 'admin') { current = {}; return paint(() => admin.render(root)); }
   if (page === 't' && code) return openTrip(code, extra || 'home');
   current = {};
   paint(() => home.render(root));
@@ -109,6 +117,35 @@ async function enrich({ trip, isOrg, refresh }) {
 window.addEventListener('hashchange', route);
 pwa.registerServiceWorker();
 
+// "Join with an account" via Google/Apple left the page mid-join: finish joining.
+async function finishPendingJoin() {
+  let p = null;
+  try { p = JSON.parse(sessionStorage.getItem('grouptrip.pending-join')); sessionStorage.removeItem('grouptrip.pending-join'); } catch { /* ignore */ }
+  if (!p?.code || store.tokenFor(p.code)) return;
+  try {
+    await (p.memberId ? store.claimMember(p.code, p.memberId) : store.joinTrip(p.code, p.name));
+    sessionStorage.setItem('grouptrip.flash', "You're in! Welcome to the trip");
+  } catch (err) { toast(err.message, { error: true }); }
+}
+
+// Back from Google/Apple sign-in? Finish it. Signed in already? Refresh my trips list
+// from the account in the background (it may have changed on another device).
+async function start() {
+  try {
+    if (await auth.finishRedirect()) {
+      await afterSignIn();
+      toast(`Signed in as ${auth.user()?.email}`);
+      await finishPendingJoin();
+    }
+  } catch (err) { toast(err.message, { error: true }); }
+  route();
+  if (auth.signedIn()) {
+    const before = JSON.stringify(store.listTrips());
+    await store.syncMyTrips().catch(() => {});
+    if (!current.code && location.hash.replace(/^#\/?/, '') === '' && JSON.stringify(store.listTrips()) !== before) route();
+  }
+}
+
 // Pick up changes friends made while this tab was in the background.
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && current.code && current.trip?.me && !document.querySelector('dialog[open]')) {
@@ -116,4 +153,4 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
-route();
+start();

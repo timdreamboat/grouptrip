@@ -25,11 +25,12 @@ const cors = {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
 
-// Call a share-code function as the person (their token decides what they may do).
-async function rpc(fn: string, args: Record<string, unknown>) {
+// Call a share-code function as the person: their seat token plus their
+// signed-in session (passed through), so an account's seat only works for them.
+async function rpc(caller: string, fn: string, args: Record<string, unknown>) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
     method: 'POST',
-    headers: { apikey: ANON_KEY, Authorization: `Bearer ${ANON_KEY}`, 'Content-Type': 'application/json' },
+    headers: { apikey: ANON_KEY, Authorization: caller || `Bearer ${ANON_KEY}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(args),
   });
   const body = await res.json().catch(() => null);
@@ -53,10 +54,11 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ error: 'POST only' }, 405);
 
   try {
+    const caller = req.headers.get('Authorization') ?? '';
     const { action, code, token, count, id } = await req.json();
 
     if (action === 'sign') {
-      const folder = await rpc('photo_folder', { p_code: code, p_token: token });
+      const folder = await rpc(caller, 'photo_folder', { p_code: code, p_token: token });
       const n = Math.min(Math.max(Number(count) || 1, 1), 20);
       const out = [];
       for (let i = 0; i < n; i++) {
@@ -69,7 +71,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'delete') {
-      const files = await rpc('remove_photo', { p_code: code, p_token: token, p_photo: id });
+      const files = await rpc(caller, 'remove_photo', { p_code: code, p_token: token, p_photo: id });
       await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET}`, {
         method: 'DELETE',
         headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json' },
@@ -79,7 +81,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'purge') {
-      const folder = await rpc('photo_folder_to_purge', { p_code: code, p_token: token });
+      const folder = await rpc(caller, 'photo_folder_to_purge', { p_code: code, p_token: token });
       const auth = { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json' };
       for (let round = 0; round < 50; round++) { // 5,000 files max; stops if a delete fails
         const list = await fetch(`${SUPABASE_URL}/storage/v1/object/list/${BUCKET}`, {

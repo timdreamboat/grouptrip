@@ -29,8 +29,12 @@ and what's pending**.
   line; push to `main` (that deploys).
 
 ## What's built (all live)
-- Trips with organizer vs guest roles (share link + per-person token, no accounts);
-  invite page with "tap your name"; organizer "Let back in" for lost devices.
+- Accounts (2026-09-23): organizers sign in (email code / Google / passkey;
+  Apple ready but off); guests can join with just name + email or with an
+  account; admin page `#/admin` for the owner. The database was wiped for
+  this (owner: "nothing is live yet").
+- Trips with organizer vs guest roles; invite page with "tap your name";
+  organizer "Let back in" for guests/wrong-account joins.
 - Trip types: Friends / Family / Business (wording, suggestions; business =
   reimbursable expenses with receipt photos, CSV export and a printable
   expense report with the receipts (print or Save as PDF), private per person; family = shares).
@@ -65,6 +69,26 @@ and what's pending**.
   by the owner for now.
 
 ## Pending on the owner
+0. **Sign-in setup in the Supabase dashboard** (until done, only the email
+   code works, and only for a few emails an hour to the project team's own
+   addresses):
+   - Email: Authentication → Emails → SMTP → custom SMTP with Brevo (free,
+     300/day, verify a single sender — no domain needed; Resend needs your
+     own domain). Edit the "Magic Link" template so it shows the code:
+     `Your GroupTrip code is {{ .Token }}`.
+   - URLs: Authentication → URL Configuration → Site URL
+     `https://timdreamboat.github.io/grouptrip/`, redirect URLs add
+     `https://timdreamboat.github.io/grouptrip/**` and `http://localhost:8080/**`.
+   - Google: Google Cloud → OAuth client (Web), redirect URI
+     `https://fnedxcktddvioxseogng.supabase.co/auth/v1/callback`; paste the
+     client ID/secret into Authentication → Sign In / Providers → Google.
+     Set the consent screen to "In production".
+   - Passkeys: Authentication → Passkeys → enable; RP ID
+     `timdreamboat.github.io`, name `GroupTrip`, origins
+     `https://timdreamboat.github.io,http://localhost:8080`. (Changing the
+     domain later invalidates passkeys.)
+   - Apple (optional, $99/yr Apple Developer account): then set
+     `SIGN_IN.apple = true` in `app/config.js`.
 1. **Google Maps key** → paste into `app/config.js` `GOOGLE_MAPS_KEY` (and
    optionally a Map ID in `GOOGLE_MAP_ID`). Unlocks: all pins at once,
    info-window cards, Google Places lookup for plan/hotel locations,

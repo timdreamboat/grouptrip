@@ -1603,3 +1603,210 @@ begin
   end if;
   return j;
 end $$;
+
+
+-- ============ v7: accounts (owner, 2026-09-23) ============
+-- (Applied with `delete from trips;` first — the owner reset all data before launch.)
+-- Organizers must have an account (Supabase Auth: Google, Apple, email code,
+-- then optionally a passkey). Invited people choose: join with an account, or
+-- as a guest (name + email, no code — their seat token lives on that device).
+-- A seat linked to an account only works for that account, so a copied link or
+-- a shared device can't act as an organizer. Signing in later with the same
+-- email picks up your guest seats. Admins (by email) see every trip.
+
+alter table members add column if not exists user_id uuid references auth.users(id) on delete set null;
+create unique index if not exists members_trip_user on members (trip_id, user_id) where user_id is not null;
+create index if not exists members_user on members (user_id);
+create index if not exists members_email on members (lower(email));
+
+create table if not exists admins (email text primary key);
+alter table admins enable row level security;
+insert into admins (email) values ('timmdonlon@gmail.com') on conflict do nothing;
+
+-- The signed-in account's email (only emails the sign-in service has verified).
+create or replace function _my_email() returns text
+language sql stable as $$ select nullif(lower(auth.jwt()->>'email'), '') $$;
+
+create or replace function _is_admin() returns boolean
+language sql stable security definer set search_path = public as $$
+  select auth.uid() is not null and exists (select 1 from admins where lower(email) = _my_email());
+$$;
+
+create or replace function _need_user() returns uuid
+language plpgsql stable as $$
+begin
+  if auth.uid() is null then raise exception 'Please sign in first'; end if;
+  return auth.uid();
+end $$;
+
+create or replace function _clean_email(p_email text) returns text
+language plpgsql immutable as $$
+declare e text := lower(trim(coalesce(p_email, '')));
+begin
+  if e !~ '^[^@\s]+@[^@\s]+\.[^@\s]+$' then raise exception 'Enter a valid email'; end if;
+  return e;
+end $$;
+
+-- A seat token works only for the account the seat belongs to. Guest seats
+-- (no account) work with the token alone, like before.
+create or replace function _actor(p_code text, p_token text) returns members
+language plpgsql stable security definer set search_path = public as $$
+declare m members;
+begin
+  select * into m from members
+  where trip_id = _trip(p_code) and token = p_token and joined_at is not null;
+  if m.id is null then raise exception 'You need to join this trip first'; end if;
+  if m.user_id is not null and m.user_id is distinct from auth.uid() then
+    raise exception 'This trip belongs to a different account. Sign in as yourself.';
+  end if;
+  return m;
+end $$;
+
+create or replace function create_trip(p_name text, p_destination text, p_start date, p_end date, p_currency text,
+  p_organizer text, p_kind text default 'friends') returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare t trips; m members; u uuid := _need_user();
+begin
+  insert into trips (name, destination, start_date, end_date, currency, kind)
+  values (trim(p_name), nullif(trim(p_destination), ''), p_start, p_end, coalesce(nullif(upper(trim(p_currency)), ''), 'USD'),
+          case when p_kind in ('friends', 'family', 'business') then p_kind else 'friends' end)
+  returning * into t;
+  insert into members (trip_id, name, is_organizer, rsvp, joined_at, user_id, email)
+  values (t.id, trim(p_organizer), true, 'going', now(), u, _my_email())
+  returning * into m;
+  return jsonb_build_object('code', t.share_code, 'memberId', m.id, 'token', m.token);
+end $$;
+
+-- Join as yourself (signed in) or as a guest (email required, no account).
+-- Signed in and already on the trip? You get your seat back.
+drop function if exists join_trip(text, text);
+create or replace function join_trip(p_code text, p_name text, p_email text default null) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare m members; u uuid := auth.uid(); t uuid := _trip(p_code);
+  e text := case when auth.uid() is not null then _my_email() else _clean_email(p_email) end;
+begin
+  if u is not null then select * into m from members where trip_id = t and user_id = u; end if;
+  if m.id is null then
+    insert into members (trip_id, name, rsvp, joined_at, user_id, email)
+    values (t, trim(p_name), 'going', now(), u, e)
+    returning * into m;
+  end if;
+  return jsonb_build_object('memberId', m.id, 'token', m.token);
+end $$;
+
+drop function if exists claim_member(text, uuid);
+create or replace function claim_member(p_code text, p_member uuid, p_email text default null) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare m members; u uuid := auth.uid(); t uuid := _trip(p_code);
+  e text := case when auth.uid() is not null then _my_email() else _clean_email(p_email) end;
+begin
+  if u is not null then
+    select * into m from members where trip_id = t and user_id = u;
+    if m.id is not null then return jsonb_build_object('memberId', m.id, 'token', m.token); end if;
+  end if;
+  update members set joined_at = now(), user_id = u, email = coalesce(e, email),
+    rsvp = case when rsvp = 'invited' then 'going' else rsvp end
+  where id = p_member and trip_id = t and joined_at is null
+  returning * into m;
+  if m.id is null then raise exception 'That name has already been claimed. Ask the organizer for help.'; end if;
+  return jsonb_build_object('memberId', m.id, 'token', m.token);
+end $$;
+
+-- "Let back in": new token, un-joined and unlinked, so the real person can tap
+-- their name again (as a guest or with their own account).
+create or replace function reset_member(p_code text, p_token text, p_id uuid) returns void
+language plpgsql security definer set search_path = public as $$
+declare o members := _organizer(p_code, p_token);
+begin
+  if p_id = o.id then raise exception 'You''re the organizer — just sign in on your new device'; end if;
+  update members set token = replace(gen_random_uuid()::text, '-', ''), joined_at = null, user_id = null
+  where id = p_id and trip_id = o.trip_id and joined_at is not null;
+  if not found then raise exception 'They haven''t joined yet — just send them the invite link'; end if;
+  delete from push_subscriptions where member_id = p_id;
+end $$;
+
+-- The signed-in person's trips (with their seat tokens) for any device. Guest
+-- seats joined with this same email are picked up and linked to the account.
+create or replace function my_trips() returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare u uuid := _need_user(); e text := _my_email();
+begin
+  if e is not null then
+    update members m set user_id = u
+    where m.user_id is null and m.joined_at is not null and lower(m.email) = e
+      and not exists (select 1 from members x where x.trip_id = m.trip_id and x.user_id = u)
+      and m.id = (select min(y.id::text)::uuid from members y
+                  where y.trip_id = m.trip_id and y.user_id is null and y.joined_at is not null and lower(y.email) = e);
+  end if;
+  return jsonb_build_object(
+    'isAdmin', _is_admin(),
+    'email', e,
+    'trips', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'id', t.share_code, 'token', m.token, 'name', t.name, 'destination', t.destination,
+        'startDate', t.start_date, 'endDate', t.end_date, 'kind', t.kind, 'cover', t.cover_url,
+        'role', case when m.is_organizer then 'organizer' else 'guest' end, 'myName', m.name,
+        'going', (select coalesce(jsonb_agg(jsonb_build_object('name', g.name) order by g.created_at), '[]')
+                  from members g where g.trip_id = t.id and g.rsvp = 'going'))
+        order by t.start_date nulls last, t.created_at)
+      from members m join trips t on t.id = m.trip_id
+      where m.user_id = u and m.joined_at is not null), '[]'));
+end $$;
+
+-- Admin: every trip, who organizes it and how many are in.
+create or replace function admin_trips() returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+begin
+  if not _is_admin() then raise exception 'Admins only'; end if;
+  return coalesce((
+    select jsonb_agg(jsonb_build_object(
+      'id', t.share_code, 'name', t.name, 'destination', t.destination, 'kind', t.kind,
+      'startDate', t.start_date, 'endDate', t.end_date, 'createdAt', t.created_at, 'cover', t.cover_url,
+      'organizer', (select o.name from members o where o.trip_id = t.id and o.is_organizer limit 1),
+      'organizerEmail', (select o.email from members o where o.trip_id = t.id and o.is_organizer limit 1),
+      'people', (select count(*) from members p where p.trip_id = t.id and p.joined_at is not null),
+      'guests', (select count(*) from members p where p.trip_id = t.id and p.joined_at is not null and p.user_id is null),
+      'expenses', (select count(*) from expenses e where e.trip_id = t.id),
+      'spent', (select coalesce(sum(e.amount_cents), 0) from expenses e where e.trip_id = t.id),
+      'currency', t.currency)
+      order by t.created_at desc)
+    from trips t), '[]');
+end $$;
+
+-- Admins see a trip's people with emails (read-only overview).
+create or replace function admin_trip_people(p_code text) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+begin
+  if not _is_admin() then raise exception 'Admins only'; end if;
+  return coalesce((select jsonb_agg(jsonb_build_object('name', m.name, 'email', m.email, 'isOrganizer', m.is_organizer,
+      'rsvp', m.rsvp, 'joined', m.joined_at is not null, 'account', m.user_id is not null) order by m.is_organizer desc, m.created_at)
+    from members m where m.trip_id = _trip(p_code)), '[]');
+end $$;
+
+-- Admins see business-trip expenses for everyone (like the organizer).
+create or replace function get_trip(p_code text, p_token text default null) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare j jsonb := _get_trip_all(p_code, p_token); me jsonb := j->'me';
+begin
+  if j->>'kind' = 'business' and coalesce((me->>'isOrganizer')::boolean, false) = false and not _is_admin() then
+    j := jsonb_set(j, '{expenses}', coalesce((
+      select jsonb_agg(e) from jsonb_array_elements(j->'expenses') e
+      where jsonb_typeof(me) = 'object' and (e->>'paidBy' = me->>'id' or e->>'createdBy' = me->>'id')), '[]'));
+  end if;
+  return j || jsonb_build_object('viewerIsAdmin', _is_admin());
+end $$;
+
+-- The trip view only counts you as "me" if the seat is yours.
+do $$
+declare def text := pg_get_functiondef('public._get_trip_all(text,text)'::regprocedure);
+begin
+  def := replace(def,
+    'select * into me from members where trip_id = tid and token = p_token and joined_at is not null;',
+    'select * into me from members where trip_id = tid and token = p_token and joined_at is not null
+      and (user_id is null or user_id = auth.uid());');
+  if def not like '%user_id = auth.uid()%' then raise exception '_get_trip_all patch did not apply'; end if;
+  execute def;
+end $$;
+
+-- Helpers aren't callable from the outside.
+revoke execute on function _is_admin(), _need_user(), _my_email(), _clean_email(text) from public, anon, authenticated;

@@ -1,13 +1,20 @@
-// The only file that talks to the database (Supabase) and keeps
-// per-device identity. Every trip change goes through a share-code function
-// in supabase/schema.sql; the person's secret token says who is acting.
+// The only file that talks to the database (Supabase). Every trip change goes
+// through a share-code function in supabase/schema.sql; the person's seat token
+// says who is acting, and the signed-in account (auth.js) must own that seat.
 
 import { SUPABASE_URL, SUPABASE_KEY } from './config.js';
+import * as auth from './auth.js';
+
+// Signed in: the account's session. Signed out: the public key (view-only invite pages).
+async function headers() {
+  const bearer = (await auth.accessToken()) || SUPABASE_KEY;
+  return { apikey: SUPABASE_KEY, Authorization: `Bearer ${bearer}`, 'Content-Type': 'application/json' };
+}
 
 async function rpc(fn, args) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
     method: 'POST',
-    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+    headers: await headers(),
     body: JSON.stringify(args),
   });
   const body = await res.json().catch(() => null);
@@ -51,6 +58,32 @@ export function forgetTrip(code) {
 // Trips this device is a member of (for turning notifications on for all of them).
 export const joinedCodes = () => Object.keys(read(IDS, {}));
 
+// ---------- accounts ----------
+// The signed-in person's trips, from the server: saves their seat on each so
+// every trip opens as them on this device. Guest seats joined on this device
+// (no account) are kept alongside. Returns { isAdmin, email, trips }.
+const ACCOUNT = 'grouptrip.account';   // { isAdmin, email, codes: [trip codes from the account] }
+export async function syncMyTrips() {
+  const r = await rpc('my_trips', {});
+  const old = read(ACCOUNT, {}).codes ?? [];
+  const guestIds = Object.fromEntries(Object.entries(read(IDS, {})).filter(([c]) => !old.includes(c)));
+  const guestTrips = listTrips().filter((t) => !old.includes(t.id) && guestIds[t.id]);
+  const codes = r.trips.map((t) => t.id);
+  write(IDS, { ...guestIds, ...Object.fromEntries(r.trips.map((t) => [t.id, t.token])) });
+  write(TRIPS, [...r.trips.map(({ token, ...t }) => t), ...guestTrips.filter((t) => !codes.includes(t.id))]);
+  write(ACCOUNT, { isAdmin: r.isAdmin, email: r.email, codes });
+  return r;
+}
+export const account = () => (auth.signedIn() ? read(ACCOUNT, {}) : {});
+export const adminTrips = () => rpc('admin_trips', {});
+export const adminTripPeople = (code) => rpc('admin_trip_people', { p_code: code });
+// Signing out: forget the account's trips on this device (guest seats stay).
+export function forgetAccount() {
+  const codes = read(ACCOUNT, {}).codes ?? [];
+  codes.forEach((c) => forgetTrip(c));
+  try { localStorage.removeItem(ACCOUNT); } catch { /* ignore */ }
+}
+
 // ---------- reading ----------
 // Offline: every trip opened is saved on the device; with no connection we
 // show that copy (marked _offline) instead of an error.
@@ -78,15 +111,19 @@ export async function createTrip(f) {
     p_currency: f.currency || 'USD', p_organizer: f.organizer, p_kind: f.kind || 'friends',
   });
   saveToken(r.code, r.token);
+  await syncMyTrips().catch(() => {});
   return r.code;
 }
-export async function joinTrip(code, name) {
-  const r = await rpc('join_trip', { p_code: code, p_name: name });
+// Signed in: joins as the account (email ignored). Signed out: as a guest.
+export async function joinTrip(code, name, email) {
+  const r = await rpc('join_trip', { p_code: code, p_name: name, p_email: email || null });
   saveToken(code, r.token);
+  if (auth.signedIn()) await syncMyTrips().catch(() => {});
 }
-export async function claimMember(code, memberId) {
-  const r = await rpc('claim_member', { p_code: code, p_member: memberId });
+export async function claimMember(code, memberId, email) {
+  const r = await rpc('claim_member', { p_code: code, p_member: memberId, p_email: email || null });
   saveToken(code, r.token);
+  if (auth.signedIn()) await syncMyTrips().catch(() => {});
 }
 
 // ---------- acting (all need this device's token) ----------
@@ -97,19 +134,6 @@ export const getMe = (code) => act('get_me', code);
 export const savePush = (code, sub) => act('save_push', code, { p_sub: sub });
 export const removePush = (code, endpoint) => act('remove_push', code, { p_endpoint: endpoint });
 
-// "Email me my link" — from the You screen (saved email) or when locked out.
-async function emailLinkFn(body) {
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/email-link`, {
-    method: 'POST',
-    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  const out = await res.json().catch(() => null);
-  if (!res.ok) throw new Error(out?.error || 'Could not send the email. Please try again.');
-  return out;
-}
-export const sendMyLink = (code) => emailLinkFn({ action: 'send', code, token: tokenFor(code) });
-export const recoverLink = (code, email) => emailLinkFn({ action: 'recover', code, email });
 export const updateTrip = (code, trip) => act('update_trip', code, { p_trip: trip });
 export async function deleteTrip(code) {
   await photosFn({ action: 'purge', code, token: tokenFor(code) }); // remove the album's files first
@@ -156,7 +180,7 @@ export const removePoll = (code, pollId) => act('remove_poll', code, { p_poll: p
 async function photosFn(body) {
   const res = await fetch(`${SUPABASE_URL}/functions/v1/photos`, {
     method: 'POST',
-    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+    headers: await headers(),
     body: JSON.stringify(body),
   });
   const out = await res.json().catch(() => null);
@@ -230,8 +254,6 @@ export async function lookupFlight(number, date) {
 // ---------- links ----------
 const base = () => location.origin + location.pathname;
 export const inviteLink = (code) => `${base()}#/t/${code}`;
-// Opens the trip as this person on another device. Private — it signs in as them.
-export const personalLink = (code) => `${base()}#/me/${code}/${tokenFor(code)}`;
 
 // Subscribable calendar feed (Apple/Google/Outlook keep it in sync).
 export const calendarFeed = (code) => `${SUPABASE_URL}/functions/v1/calendar?trip=${code}`;

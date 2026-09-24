@@ -1,6 +1,6 @@
-// "You" settings (name, Venmo, RSVP, use on another device) and the
+// "You" settings (name, Venmo, RSVP, account) and the
 // organizer's trip editor.
-import { esc, icon, avatar, sheet, confirmSheet, busy, copy, toast, suggest } from '../ui.js';
+import { esc, icon, avatar, sheet, confirmSheet, busy, toast, suggest } from '../ui.js';
 import * as store from '../store.js';
 import { memberById, KINDS } from './common.js';
 import { locate, suggestDestinations } from '../places.js';
@@ -8,6 +8,8 @@ import { mountCoverPicker } from './cover.js';
 import * as pwa from '../pwa.js';
 import { EMAIL_ENABLED } from '../config.js';
 import { openInstallHelp } from './getapp.js';
+import * as auth from '../auth.js';
+import { signIn, openAccount } from './signin.js';
 
 export function openMe(ctx) {
   const { trip, isOrg } = ctx;
@@ -46,16 +48,15 @@ export function openMe(ctx) {
       </div>
 
       <div class="card" style="margin-top:12px;box-shadow:none">
-        <h3 style="display:flex;align-items:center;gap:8px">${icon('link')}Use GroupTrip on another device</h3>
-        <p class="hint" style="margin:6px 0 12px">Open this private link on your phone or laptop to be signed in as you. Don't share it — it's yours.</p>
-        <div style="display:grid;gap:8px">
-          ${EMAIL_ENABLED ? `<button class="btn btn-secondary btn-block" data-email-link>${icon('link')}Email me my private link</button>` : ''}
-          <button class="btn ${EMAIL_ENABLED ? 'btn-ghost' : 'btn-secondary'} btn-block" data-personal>${icon('copy')}Copy my private link</button>
-        </div>
+        <h3 style="display:flex;align-items:center;gap:8px">${icon('users')}Your account</h3>
+        ${auth.signedIn()
+          ? `<p class="hint" style="margin:6px 0 12px">Signed in as <b>${esc(auth.user().email)}</b>. Sign in on any phone or laptop to see your trips there.</p>
+             <button class="btn btn-secondary btn-block" data-account>${icon('lock')}Passkeys & sign out</button>`
+          : `<p class="hint" style="margin:6px 0 12px">You're on this trip as a guest, on this device only. Create an account with the email you joined with to see it anywhere.</p>
+             <button class="btn btn-secondary btn-block" data-account>${icon('users')}Create an account</button>`}
       </div>
 
-      ${isOrg ? `<button class="btn btn-outline btn-block" style="margin-top:12px" data-edit>${icon('pencil')}Edit trip details</button>` : `
-      <button class="btn btn-ghost btn-block" style="margin-top:12px" data-leave>${icon('logout')}Remove this trip from this device</button>`}`,
+      ${isOrg ? `<button class="btn btn-outline btn-block" style="margin-top:12px" data-edit>${icon('pencil')}Edit trip details</button>` : ''}`,
     onMount(dlg, close) {
       const form = dlg.querySelector('#me-form');
       dlg.querySelectorAll('[data-rsvp]').forEach((b) => b.onclick = () => {
@@ -71,7 +72,11 @@ export function openMe(ctx) {
         }));
         if (ok) { close(); ctx.refresh('Saved'); }
       };
-      dlg.querySelector('[data-personal]').onclick = () => copy(store.personalLink(trip.id), 'Private link copied');
+      dlg.querySelector('[data-account]').onclick = async () => {
+        close();
+        if (auth.signedIn()) return openAccount();
+        if (await signIn({ title: 'Create your account', reason: 'Use the email you joined with and this trip moves into your account — on any device.' })) ctx.refresh('Signed in');
+      };
 
       // Email: fill in what's saved (only you can read it).
       if (EMAIL_ENABLED) wireEmail();
@@ -84,15 +89,6 @@ export function openMe(ctx) {
         if (!emailIn.value) emailIn.value = savedEmail;
         notifyIn.checked = Boolean(mine?.emailNotify);
       }).catch(() => {});
-      dlg.querySelector('[data-email-link]').onclick = async (e) => {
-        const email = emailIn.value.trim();
-        if (!email || !emailIn.checkValidity()) { emailIn.focus(); return toast('Add your email above first', { error: true }); }
-        const ok = await busy(e.currentTarget, async () => {
-          if (email !== savedEmail) { await store.updateMe(trip.id, { email }); savedEmail = email; }
-          await store.sendMyLink(trip.id);
-        });
-        if (ok) toast(`Sent to ${email} — check your inbox`);
-      };
       }
 
       // Notifications on this device.
@@ -120,15 +116,6 @@ export function openMe(ctx) {
       };
       drawPush();
       dlg.querySelector('[data-edit]')?.addEventListener('click', () => { close(); openEditTrip(ctx); });
-      dlg.querySelector('[data-leave]')?.addEventListener('click', async () => {
-        close();
-        const ok = await confirmSheet({
-          title: 'Remove from this device?',
-          message: "You'll stay on the trip. To get back in here, use your private link.",
-          confirm: 'Remove', danger: true,
-        });
-        if (ok) { store.forgetTrip(trip.id); location.hash = '#/'; }
-      });
     },
   });
 }

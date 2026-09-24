@@ -68,14 +68,28 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
     bottom sheets, desktop sidebar + dialogs). Reuse its components.
 - Data: Supabase project `grouptrip` (ref fnedxcktddvioxseogng, ca-central-1,
   free tier). Keep `supabase/schema.sql` in sync with every migration.
-- Roles, no accounts: the invite link (`#/t/<share_code>`) lets anyone view and
-  join; joining gives a secret per-person token saved on that device. The
-  organizer is the member with `is_organizer`; organizer-only: edit/delete
-  trip, itinerary, add/remove people. Anyone joined: RSVP, own flight,
-  expenses. `#/me/<code>/<token>` is a person's private link for another
-  device. Tables are locked (RLS, no policies); everything goes through the
-  functions in `supabase/schema.sql` (Supabase advisor warnings about public
-  SECURITY DEFINER functions are expected — that IS the access model).
+- Accounts (v7, owner 2026-09-23): organizers MUST sign in (Supabase Auth);
+  invited people choose "Join as a guest" (name + email, no code; seat token
+  saved on that device only) or "Join with an account". Sign-in: passkey,
+  Google, Apple (off until the owner approves the $99/yr Apple Developer
+  account), or a 6-digit email code for any email; after an email sign-in we
+  offer "Add a passkey". `app/auth.js` wraps supabase-js (loaded lazily from
+  jsDelivr, pinned version, so offline still works); `SIGN_IN` in config.js
+  toggles options. Every seat (member) still has a secret token that all the
+  share-code functions check, plus `members.user_id`: a seat linked to an
+  account only works for that account (`_actor`, `_get_trip_all`), so copied
+  links/shared devices can't act as an organizer. `my_trips()` returns the
+  account's seats (tokens) for any device and links guest seats whose email
+  matches the verified account email. Admins = emails in the `admins` table
+  (owner: timmdonlon@gmail.com): `#/admin`, `admin_trips()`,
+  `admin_trip_people()`, and they see all business expenses. Organizer-only:
+  edit/delete trip, itinerary, add/remove people. Anyone joined: RSVP, own
+  flight, expenses. Tables are locked (RLS, no policies); everything goes
+  through the functions in `supabase/schema.sql` (Supabase advisor warnings
+  about public SECURITY DEFINER functions are expected — that IS the access
+  model). The old `#/me/<code>/<token>` private link is retired (route just
+  opens the trip). Edge functions that act as a person must forward the
+  caller's Authorization header (see `photos`).
 - Edge Function `calendar` (verify_jwt OFF — calendar apps can't send auth)
   serves a subscribable .ics feed at `/functions/v1/calendar?trip=<share_code>`.
   Same access as the invite link; never include private lists, tokens or money.
@@ -128,9 +142,10 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
 - Editing: every add form doubles as its edit form (pass the existing item).
   Same permissions as delete. `update_expense` replaces splits with
   `grouptrip.quiet` set so the split trigger doesn't re-notify.
-- Lost device without email: organizer's "Let back in" (`reset_member`) gives
-  the person a new token and un-joins them; they tap their name on the invite
-  link again. Their data and RSVP stay.
+- Lost device: account holders just sign in. Guests (or someone who joined
+  with the wrong account): organizer's "Let back in" (`reset_member`) gives
+  the seat a new token and un-joins/unlinks it; the real person taps their
+  name on the invite link again. Their data and RSVP stay.
 - Money is stored in integer cents everywhere. Never use floats for totals.
   Splits: equal / amounts / shares (`weightedShares` = largest-remainder so
   shares always sum exactly). Settlements ("mark as paid") count in
