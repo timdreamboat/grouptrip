@@ -1,14 +1,12 @@
 // The only file that talks to the database (Supabase). Every trip change goes
 // through a share-code function in supabase/schema.sql; the person's seat token
-// says who is acting, and the signed-in account (auth.js) must own that seat.
+// says who is acting. There's no sign-in: a username ties a person's seats
+// together so their trips show up on any device.
 
 import { SUPABASE_URL, SUPABASE_KEY } from './config.js';
-import * as auth from './auth.js';
 
-// Signed in: the account's session. Signed out: the public key (view-only invite pages).
 async function headers() {
-  const bearer = (await auth.accessToken()) || SUPABASE_KEY;
-  return { apikey: SUPABASE_KEY, Authorization: `Bearer ${bearer}`, 'Content-Type': 'application/json' };
+  return { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' };
 }
 
 async function rpc(fn, args) {
@@ -58,30 +56,37 @@ export function forgetTrip(code) {
 // Trips this device is a member of (for turning notifications on for all of them).
 export const joinedCodes = () => Object.keys(read(IDS, {}));
 
-// ---------- accounts ----------
-// The signed-in person's trips, from the server: saves their seat on each so
-// every trip opens as them on this device. Guest seats joined on this device
-// (no account) are kept alongside. Returns { isAdmin, email, trips }.
-const ACCOUNT = 'grouptrip.account';   // { isAdmin, email, codes: [trip codes from the account] }
-export async function syncMyTrips() {
-  const r = await rpc('my_trips', {});
-  const old = read(ACCOUNT, {}).codes ?? [];
-  const guestIds = Object.fromEntries(Object.entries(read(IDS, {})).filter(([c]) => !old.includes(c)));
-  const guestTrips = listTrips().filter((t) => !old.includes(t.id) && guestIds[t.id]);
-  const codes = r.trips.map((t) => t.id);
-  write(IDS, { ...guestIds, ...Object.fromEntries(r.trips.map((t) => [t.id, t.token])) });
-  write(TRIPS, [...r.trips.map(({ token, ...t }) => t), ...guestTrips.filter((t) => !codes.includes(t.id))]);
-  write(ACCOUNT, { isAdmin: r.isAdmin, email: r.email, codes });
+// ---------- username ----------
+// Picking a username ties this device's seats to it and brings back every trip
+// under that username (from any device). No password — the owner's choice.
+const USER = 'grouptrip.username';
+export const username = () => read(USER, null);
+export const cleanUsername = (u) => String(u || '').trim().toLowerCase().replace(/^@/, '');
+export const validUsername = (u) => /^[a-z0-9_.-]{3,30}$/.test(cleanUsername(u));
+
+export async function setUsername(u) {
+  const name = cleanUsername(u);
+  if (!validUsername(name)) throw new Error('Usernames are 3–30 letters or numbers (dots, dashes and underscores are fine)');
+  const r = await syncMyTrips(name);
+  write(USER, r.username);
   return r;
 }
-export const account = () => (auth.signedIn() ? read(ACCOUNT, {}) : {});
-export const adminTrips = () => rpc('admin_trips', {});
-export const adminTripPeople = (code) => rpc('admin_trip_people', { p_code: code });
-// Signing out: forget the account's trips on this device (guest seats stay).
-export function forgetAccount() {
-  const codes = read(ACCOUNT, {}).codes ?? [];
-  codes.forEach((c) => forgetTrip(c));
-  try { localStorage.removeItem(ACCOUNT); } catch { /* ignore */ }
+// The username's trips from the server: saves the seat on each so every trip
+// opens as them on this device. Seats joined here before are tied to it first.
+export async function syncMyTrips(name = username()) {
+  if (!name) return { trips: [] };
+  const seats = Object.entries(read(IDS, {})).map(([code, token]) => ({ code, token }));
+  const r = await rpc('my_trips', { p_username: name, p_seats: seats });
+  const codes = r.trips.map((t) => t.id);
+  write(IDS, { ...read(IDS, {}), ...Object.fromEntries(r.trips.map((t) => [t.id, t.token])) });
+  write(TRIPS, [...r.trips.map(({ token, ...t }) => t), ...listTrips().filter((t) => !codes.includes(t.id))]);
+  return r;
+}
+// Switching usernames: forget every trip on this device (they stay under the old username).
+export function forgetUsername() {
+  listTrips().forEach((t) => forgetTrip(t.id));
+  joinedCodes().forEach((c) => forgetTrip(c));
+  try { localStorage.removeItem(USER); } catch { /* ignore */ }
 }
 
 // ---------- reading ----------
@@ -108,22 +113,19 @@ export async function getTrip(code) {
 export async function createTrip(f) {
   const r = await rpc('create_trip', {
     p_name: f.name, p_destination: f.destination, p_start: f.startDate || null, p_end: f.endDate || null,
-    p_currency: f.currency || 'USD', p_organizer: f.organizer, p_kind: f.kind || 'friends',
+    p_currency: f.currency || 'USD', p_organizer: f.organizer, p_kind: f.kind || 'friends', p_username: username(),
   });
   saveToken(r.code, r.token);
-  await syncMyTrips().catch(() => {});
   return r.code;
 }
-// Signed in: joins as the account (email ignored). Signed out: as a guest.
-export async function joinTrip(code, name, email) {
-  const r = await rpc('join_trip', { p_code: code, p_name: name, p_email: email || null });
+// Both need a username first (setUsername). Already on the trip under it? You get your seat back.
+export async function joinTrip(code, name) {
+  const r = await rpc('join_trip', { p_code: code, p_name: name, p_username: username() });
   saveToken(code, r.token);
-  if (auth.signedIn()) await syncMyTrips().catch(() => {});
 }
-export async function claimMember(code, memberId, email) {
-  const r = await rpc('claim_member', { p_code: code, p_member: memberId, p_email: email || null });
+export async function claimMember(code, memberId) {
+  const r = await rpc('claim_member', { p_code: code, p_member: memberId, p_username: username() });
   saveToken(code, r.token);
-  if (auth.signedIn()) await syncMyTrips().catch(() => {});
 }
 
 // ---------- acting (all need this device's token) ----------

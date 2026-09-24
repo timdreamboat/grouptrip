@@ -68,36 +68,28 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
     bottom sheets, desktop sidebar + dialogs). Reuse its components.
 - Data: Supabase project `grouptrip` (ref fnedxcktddvioxseogng, ca-central-1,
   free tier). Keep `supabase/schema.sql` in sync with every migration.
-- Accounts (v7, owner 2026-09-23): organizers MUST sign in (Supabase Auth);
-  invited people choose "Join as a guest" (name + email, no code; seat token
-  saved on that device only) or "Join with an account". Sign-in: passkey,
-  Google, Apple (button shown; needs the $99/yr Apple Developer account to
-  work), or a 6-digit email code for any email; after an email sign-in we
-  offer "Add a passkey". Consumer-first flow (owner, 2026-09-23): one
-  sheet for sign-in and sign-up, Google first, "Continue with email", code
-  auto-submits, resend timer, webmail shortcut, remembered email + "Last
-  used" badge, passkeys via autofill. Creating a trip asks for sign-in only
-  at the end ("Save your trip"; draft survives the Google round-trip).
-  Invite page: name + email → "Join trip" (guest) or "Join with Google". `app/auth.js` wraps supabase-js (loaded lazily from
-  jsDelivr, pinned version, so offline still works); `SIGN_IN` in config.js
-  toggles options; `auth.ready()` reads Supabase's /auth/v1/settings and
-  options that aren't switched on stay hidden. Passwordless by owner's choice
-  (no passwords). The `signup` Edge Function is a retired stub (410). Toasts are popovers (top layer) so they
-  show above open sheets. Every seat (member) still has a secret token that all the
-  share-code functions check, plus `members.user_id`: a seat linked to an
-  account only works for that account (`_actor`, `_get_trip_all`), so copied
-  links/shared devices can't act as an organizer. `my_trips()` returns the
-  account's seats (tokens) for any device and links guest seats whose email
-  matches the verified account email. Admins = emails in the `admins` table
-  (owner: timmdonlon@gmail.com): `#/admin`, `admin_trips()`,
-  `admin_trip_people()`, and they see all business expenses. Organizer-only:
-  edit/delete trip, itinerary, add/remove people. Anyone joined: RSVP, own
-  flight, expenses. Tables are locked (RLS, no policies); everything goes
-  through the functions in `supabase/schema.sql` (Supabase advisor warnings
-  about public SECURITY DEFINER functions are expected — that IS the access
-  model). The old `#/me/<code>/<token>` private link is retired (route just
-  opens the trip). Edge functions that act as a person must forward the
-  caller's Authorization header (see `photos`).
+- Usernames, no sign-in (v8, owner 2026-09-24: "Remove login functionality
+  and just do username and tie the username to each trip the user has").
+  A person picks a username (3–30 chars: a-z 0-9 . _ -, stored lowercase)
+  when creating a trip (asked at the end), joining from an invite link, or
+  from "Enter username" on home. Every seat carries `members.username`;
+  `my_trips(username, seats)` returns that username's trips with seat tokens
+  (and first ties this device's un-named seats to it), so typing the username
+  on any device brings the trips back. No password by owner's choice: anyone
+  who types a username acts as that person. `views/username.js` has the
+  sheets; `store.js` keeps it in localStorage (`grouptrip.username`).
+  Switching username forgets this device's trips. Supabase Auth, passkeys,
+  Google/Apple, the admin page and the `admins` table are removed (v7
+  `auth.js`/`signin.js`/`admin.js` deleted; `members.user_id` column is
+  unused). The `signup` Edge Function is a retired stub (410). Toasts are
+  popovers (top layer) so they show above open sheets. Every seat (member)
+  still has a secret token that all the share-code functions check (`_actor`).
+  Organizer-only: edit/delete trip, itinerary, add/remove people. Anyone
+  joined: RSVP, own flight, expenses. Tables are locked (RLS, no policies);
+  everything goes through the functions in `supabase/schema.sql` (Supabase
+  advisor warnings about public SECURITY DEFINER functions are expected —
+  that IS the access model). The old `#/me/<code>/<token>` private link is
+  retired (route just opens the trip).
 - Edge Function `calendar` (verify_jwt OFF — calendar apps can't send auth)
   serves a subscribable .ics feed at `/functions/v1/calendar?trip=<share_code>`.
   Same access as the invite link; never include private lists, tokens or money.
@@ -150,10 +142,10 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
 - Editing: every add form doubles as its edit form (pass the existing item).
   Same permissions as delete. `update_expense` replaces splits with
   `grouptrip.quiet` set so the split trigger doesn't re-notify.
-- Lost device: account holders just sign in. Guests (or someone who joined
-  with the wrong account): organizer's "Let back in" (`reset_member`) gives
-  the seat a new token and un-joins/unlinks it; the real person taps their
-  name on the invite link again. Their data and RSVP stay.
+- Lost device: enter the username again. Someone who joined with the wrong
+  username: organizer's "Let back in" (`reset_member`) gives the seat a new
+  token and clears its username; the real person taps their name on the
+  invite link again. Their data and RSVP stay.
 - Money is stored in integer cents everywhere. Never use floats for totals.
   Splits: equal / amounts / shares (`weightedShares` = largest-remainder so
   shares always sum exactly). Settlements ("mark as paid") count in

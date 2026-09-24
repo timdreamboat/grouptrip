@@ -1,14 +1,14 @@
 // GroupTrip service worker: makes the app installable, keeps it working
 // offline (last-seen copy of the app files), and shows push notifications.
-const CACHE = 'grouptrip-v6';
+const CACHE = 'grouptrip-v7';
 
 // The app's own files. Add new files here so they work offline too.
 const SHELL = [
   './', './index.html', './style.css', './manifest.webmanifest',
-  './app.js', './auth.js', './config.js', './embeds.js', './money.js', './places.js', './pwa.js', './store.js', './ui.js',
-  './views/admin.js', './views/bizexpenses.js', './views/bizreport.js', './views/common.js', './views/cover.js', './views/create.js', './views/flights.js', './views/getapp.js', './views/home.js',
+  './app.js', './config.js', './embeds.js', './money.js', './places.js', './pwa.js', './store.js', './ui.js',
+  './views/bizexpenses.js', './views/bizreport.js', './views/common.js', './views/cover.js', './views/create.js', './views/flights.js', './views/getapp.js', './views/home.js',
   './views/invite.js', './views/lists.js', './views/me.js', './views/overview.js', './views/people.js',
-  './views/photos.js', './views/plan.js', './views/polls.js', './views/signin.js', './views/stays.js', './views/trip.js',
+  './views/photos.js', './views/plan.js', './views/polls.js', './views/stays.js', './views/username.js', './views/trip.js',
   './views/today.js', './views/tripmap.js', './views/wallet.js',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-180.png',
 ];

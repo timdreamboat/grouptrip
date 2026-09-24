@@ -20,9 +20,3 @@ export const PUSH_PUBLIC_KEY = 'BLvMhsoo5jSQOMMxx6LEatOOScH-mChqPU64c0f0HjXv-tia
 // is used in the browser or installed. Turning it on also needs a Brevo or
 // Resend key in the Supabase function secrets (see CLAUDE.md).
 export const EMAIL_ENABLED = false;
-
-// Sign-in options shown to people. Each must also be switched on in the
-// Supabase dashboard (Authentication → Sign In / Providers, and → Passkeys).
-// Buttons whose option isn't switched on in Supabase yet explain that instead
-// of failing. Apple also needs an Apple Developer account ($99/year).
-export const SIGN_IN = { google: true, apple: true, passkeys: true };

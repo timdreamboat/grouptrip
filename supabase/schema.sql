@@ -1810,3 +1810,161 @@ end $$;
 
 -- Helpers aren't callable from the outside.
 revoke execute on function _is_admin(), _need_user(), _my_email(), _clean_email(text) from public, anon, authenticated;
+
+
+-- ============ v8: usernames instead of sign-in (owner, 2026-09-24) ============
+-- "Remove login and just do username, tied to each trip the user has."
+-- No accounts: a person picks a username; every seat (member) they create or
+-- join carries it, and typing the same username on any device brings back all
+-- their trips (with their seat tokens). There is no password, so anyone who
+-- types a username acts as that person — the owner's choice. Seat tokens still
+-- guard every change. The admin page (which relied on sign-in) is removed.
+
+alter table members add column if not exists username text
+  check (username is null or username ~ '^[a-z0-9_.-]{3,30}$');
+create unique index if not exists members_trip_username on members (trip_id, username) where username is not null;
+create index if not exists members_username on members (username);
+
+create or replace function _clean_username(p_username text) returns text
+language plpgsql immutable as $$
+declare u text := regexp_replace(lower(trim(coalesce(p_username, ''))), '^@', '');
+begin
+  if u !~ '^[a-z0-9_.-]{3,30}$' then
+    raise exception 'Usernames are 3–30 letters or numbers (dots, dashes and underscores are fine)';
+  end if;
+  return u;
+end $$;
+
+-- A seat's token is all it takes to act (no account check any more).
+create or replace function _actor(p_code text, p_token text) returns members
+language plpgsql stable security definer set search_path = public as $$
+declare m members;
+begin
+  select * into m from members
+  where trip_id = _trip(p_code) and token = p_token and joined_at is not null;
+  if m.id is null then raise exception 'You need to join this trip first'; end if;
+  return m;
+end $$;
+
+drop function if exists create_trip(text, text, date, date, text, text, text);
+create function create_trip(p_name text, p_destination text, p_start date, p_end date, p_currency text,
+  p_organizer text, p_kind text, p_username text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare t trips; m members; u text := _clean_username(p_username);
+begin
+  insert into trips (name, destination, start_date, end_date, currency, kind)
+  values (trim(p_name), nullif(trim(p_destination), ''), p_start, p_end, coalesce(nullif(upper(trim(p_currency)), ''), 'USD'),
+          case when p_kind in ('friends', 'family', 'business') then p_kind else 'friends' end)
+  returning * into t;
+  insert into members (trip_id, name, is_organizer, rsvp, joined_at, username)
+  values (t.id, trim(p_organizer), true, 'going', now(), u)
+  returning * into m;
+  return jsonb_build_object('code', t.share_code, 'memberId', m.id, 'token', m.token);
+end $$;
+
+-- Join with your username. Already on this trip under it? You get your seat back.
+drop function if exists join_trip(text, text, text);
+create function join_trip(p_code text, p_name text, p_username text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare m members; u text := _clean_username(p_username); t uuid := _trip(p_code);
+begin
+  select * into m from members where trip_id = t and username = u;
+  if m.id is null then
+    insert into members (trip_id, name, rsvp, joined_at, username)
+    values (t, trim(p_name), 'going', now(), u)
+    returning * into m;
+  elsif m.joined_at is null then
+    update members set joined_at = now() where id = m.id returning * into m;
+  end if;
+  return jsonb_build_object('memberId', m.id, 'token', m.token);
+end $$;
+
+drop function if exists claim_member(text, uuid, text);
+create function claim_member(p_code text, p_member uuid, p_username text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare m members; u text := _clean_username(p_username); t uuid := _trip(p_code);
+begin
+  select * into m from members where trip_id = t and username = u and joined_at is not null;
+  if m.id is not null then return jsonb_build_object('memberId', m.id, 'token', m.token); end if;
+  update members set joined_at = now(), username = u,
+    rsvp = case when rsvp = 'invited' then 'going' else rsvp end
+  where id = p_member and trip_id = t and joined_at is null
+  returning * into m;
+  if m.id is null then raise exception 'That name has already been claimed. Ask the organizer for help.'; end if;
+  return jsonb_build_object('memberId', m.id, 'token', m.token);
+end $$;
+
+-- "Let back in": new token, un-joined and username cleared, so the real person
+-- can tap their name again with their own username.
+create or replace function reset_member(p_code text, p_token text, p_id uuid) returns void
+language plpgsql security definer set search_path = public as $$
+declare o members := _organizer(p_code, p_token);
+begin
+  if p_id = o.id then raise exception 'You''re the organizer — just enter your username on your new device'; end if;
+  update members set token = replace(gen_random_uuid()::text, '-', ''), joined_at = null, username = null, user_id = null
+  where id = p_id and trip_id = o.trip_id and joined_at is not null;
+  if not found then raise exception 'They haven''t joined yet — just send them the invite link'; end if;
+  delete from push_subscriptions where member_id = p_id;
+end $$;
+
+-- A username's trips (with seat tokens) for any device. p_seats = seats this
+-- device already holds ([{code, token}]) with no username yet: they're tied to
+-- this username first (skipped if it already has a seat on that trip).
+drop function if exists my_trips();
+create function my_trips(p_username text, p_seats jsonb default '[]') returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare u text := _clean_username(p_username); s jsonb;
+begin
+  for s in select * from jsonb_array_elements(case when jsonb_typeof(p_seats) = 'array' then p_seats else '[]' end) loop
+    update members m set username = u
+    where m.trip_id = (select id from trips where share_code = s->>'code')
+      and m.token = s->>'token' and m.username is null and m.joined_at is not null
+      and not exists (select 1 from members x where x.trip_id = m.trip_id and x.username = u);
+  end loop;
+  return jsonb_build_object(
+    'username', u,
+    'trips', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'id', t.share_code, 'token', m.token, 'name', t.name, 'destination', t.destination,
+        'startDate', t.start_date, 'endDate', t.end_date, 'kind', t.kind, 'cover', t.cover_url,
+        'role', case when m.is_organizer then 'organizer' else 'guest' end, 'myName', m.name,
+        'going', (select coalesce(jsonb_agg(jsonb_build_object('name', g.name) order by g.created_at), '[]')
+                  from members g where g.trip_id = t.id and g.rsvp = 'going'))
+        order by t.start_date nulls last, t.created_at)
+      from members m join trips t on t.id = m.trip_id
+      where m.username = u and m.joined_at is not null), '[]'));
+end $$;
+
+-- Business trips: non-organizers see only their own expenses (no admin override now).
+create or replace function get_trip(p_code text, p_token text default null) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare j jsonb := _get_trip_all(p_code, p_token); me jsonb := j->'me';
+begin
+  if j->>'kind' = 'business' and coalesce((me->>'isOrganizer')::boolean, false) = false then
+    j := jsonb_set(j, '{expenses}', coalesce((
+      select jsonb_agg(e) from jsonb_array_elements(j->'expenses') e
+      where jsonb_typeof(me) = 'object' and (e->>'paidBy' = me->>'id' or e->>'createdBy' = me->>'id')), '[]'));
+  end if;
+  return j;
+end $$;
+
+-- The trip view counts you as "me" by seat token alone again.
+do $$
+declare def text := pg_get_functiondef('public._get_trip_all(text,text)'::regprocedure);
+begin
+  def := replace(def, E'\n      and (user_id is null or user_id = auth.uid())', '');
+  if def like '%auth.uid()%' then raise exception '_get_trip_all patch did not apply'; end if;
+  execute def;
+end $$;
+
+-- Sign-in and admin pieces are gone.
+drop function if exists admin_trips();
+drop function if exists admin_trip_people(text);
+drop function if exists _is_admin();
+drop function if exists _need_user();
+drop function if exists _my_email();
+drop function if exists _clean_email(text);
+drop table if exists admins;
+update members set user_id = null where user_id is not null;
+
+revoke execute on function _clean_username(text) from public, anon, authenticated;

@@ -17,15 +17,14 @@ and what's pending**.
   to the URL). The Claude desktop preview browser cannot run service workers,
   so install/offline/push must be tested on a real phone.
 
-## Testing sign-in (owner's question, 2026-09-23)
-- Admin = whoever signs in with timmdonlon@gmail.com (the `admins` table);
-  there's no separate admin login. Google (once set up) or a passkey = no code.
-- To test other roles: guests need no account; for a second organizer or
-  account holder use Gmail "+" addresses (timmdonlon+org2@gmail.com) — codes
-  land in the same inbox — in a private window. A "test as someone else"
-  switcher without codes was blocked as a security weakening; not built.
-- Claude's own UI tests create throwaway users via SQL with a password and sign
-  in with signInWithPassword in the preview; delete them afterwards.
+## Usernames instead of sign-in (owner, 2026-09-24)
+- Owner: "Remove login functionality and just do username and tie the
+  username to each trip the user has." Sign-in (email code, Google, Apple,
+  passkeys) and the admin page are gone. People pick a username; typing it on
+  any device brings back every trip under it. No password, so anyone who
+  types a username acts as that person — told to the owner; their call.
+- To test roles: use different usernames in private windows.
+- Supabase Auth settings in the dashboard are now unused (nothing to set up).
 
 ## Working with the owner (Tim)
 - Non-technical; wants plain-English outcomes, end-to-end work, tested before
@@ -39,12 +38,10 @@ and what's pending**.
   line; push to `main` (that deploys).
 
 ## What's built (all live)
-- Accounts (2026-09-23): organizers sign in (email code / Google / passkey;
-  Apple ready but off); guests can join with just name + email or with an
-  account; admin page `#/admin` for the owner. The database was wiped for
-  this (owner: "nothing is live yet").
+- Usernames (2026-09-24): no sign-in; a username ties each person's trips
+  together across devices (replaced the 2026-09-23 accounts + admin page).
 - Trips with organizer vs guest roles; invite page with "tap your name";
-  organizer "Let back in" for guests/wrong-account joins.
+  organizer "Let back in" for wrong-username joins.
 - Trip types: Friends / Family / Business (wording, suggestions; business =
   reimbursable expenses with receipt photos, CSV export and a printable
   expense report with the receipts (print or Save as PDF), private per person; family = shares).
@@ -79,30 +76,6 @@ and what's pending**.
   by the owner for now.
 
 ## Pending on the owner
-0. **Sign-in setup in the Supabase dashboard** — sign-in is passwordless
-   (owner, 2026-09-23), so it depends on this. Until done, only the email code
-   shows, and Supabase's built-in email sends just ~2 an hour. Priority order:
-   email sender (Brevo) → passkeys → Google → Apple. The app hides each option
-   until Supabase reports it switched on. (Signing in with just an email and no
-   proof was blocked as a security weakening — see the retired `signup` stub.)
-   - Email: Authentication → Emails → SMTP → custom SMTP with Brevo (free,
-     300/day, verify a single sender — no domain needed; Resend needs your
-     own domain). Edit the "Magic Link" template so it shows the code:
-     `Your GroupTrip code is {{ .Token }}`. Keep "Email OTP length" at 6
-     (the app signs in automatically once 6 digits are entered).
-   - URLs: Authentication → URL Configuration → Site URL
-     `https://timdreamboat.github.io/grouptrip/`, redirect URLs add
-     `https://timdreamboat.github.io/grouptrip/**` and `http://localhost:8080/**`.
-   - Google: Google Cloud → OAuth client (Web), redirect URI
-     `https://fnedxcktddvioxseogng.supabase.co/auth/v1/callback`; paste the
-     client ID/secret into Authentication → Sign In / Providers → Google.
-     Set the consent screen to "In production".
-   - Passkeys: Authentication → Passkeys → enable; RP ID
-     `timdreamboat.github.io`, name `GroupTrip`, origins
-     `https://timdreamboat.github.io,http://localhost:8080`. (Changing the
-     domain later invalidates passkeys.)
-   - Apple (optional, $99/yr Apple Developer account): then set
-     `SIGN_IN.apple = true` in `app/config.js`.
 1. **Google Maps key** → paste into `app/config.js` `GOOGLE_MAPS_KEY` (and
    optionally a Map ID in `GOOGLE_MAP_ID`). Unlocks: all pins at once,
    info-window cards, Google Places lookup for plan/hotel locations,

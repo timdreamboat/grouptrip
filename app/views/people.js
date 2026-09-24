@@ -49,7 +49,7 @@ export function render(el, ctx) {
             </div>
             ${isMe ? `<button class="btn btn-xs btn-secondary" data-action="me">Edit</button>` : ''}
             ${isOrg && !m.joined ? `<button class="btn btn-xs btn-secondary" data-nudge="${m.id}">${icon('bell')}Nudge</button>` : ''}
-            ${isOrg && m.joined && !m.isOrganizer ? `<button class="btn btn-xs btn-ghost" data-reset="${m.id}" title="Joined with the wrong account? Reset their spot">${icon('link')}Let back in</button>` : ''}
+            ${isOrg && m.joined && !m.isOrganizer ? `<button class="btn btn-xs btn-ghost" data-reset="${m.id}" title="Joined with the wrong username? Reset their spot">${icon('link')}Let back in</button>` : ''}
             ${isOrg && !m.isOrganizer ? `<button class="btn btn-icon btn-xs btn-ghost" style="width:30px" data-del="${m.id}" aria-label="Remove ${esc(m.name)}">${icon('trash')}</button>` : ''}
           </div>`;
         }).join('')}
@@ -76,7 +76,7 @@ export function render(el, ctx) {
       const name = firstName(m.name);
       const ok = await confirmSheet({
         title: `Let ${name} back in?`,
-        message: `If ${name} joined with the wrong account (or someone joined as them), this frees their spot. They open the invite link, sign in as themselves and tap their name. Their flights, expenses and votes stay.`,
+        message: `If ${name} joined with the wrong username (or someone joined as them), this frees their spot. They open the invite link and tap their name again with their own username. Their flights, expenses and votes stay.`,
         confirm: `Reset ${name}'s spot`,
       });
       if (!ok) return;

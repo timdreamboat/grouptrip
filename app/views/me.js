@@ -1,4 +1,4 @@
-// "You" settings (name, Venmo, RSVP, account) and the
+// "You" settings (name, Venmo, RSVP, username) and the
 // organizer's trip editor.
 import { esc, icon, avatar, sheet, confirmSheet, busy, toast, suggest } from '../ui.js';
 import * as store from '../store.js';
@@ -8,8 +8,7 @@ import { mountCoverPicker } from './cover.js';
 import * as pwa from '../pwa.js';
 import { EMAIL_ENABLED } from '../config.js';
 import { openInstallHelp } from './getapp.js';
-import * as auth from '../auth.js';
-import { signIn, openAccount } from './signin.js';
+import { askUsername, openUsername } from './username.js';
 
 export function openMe(ctx) {
   const { trip, isOrg } = ctx;
@@ -48,12 +47,12 @@ export function openMe(ctx) {
       </div>
 
       <div class="card" style="margin-top:12px;box-shadow:none">
-        <h3 style="display:flex;align-items:center;gap:8px">${icon('users')}Your account</h3>
-        ${auth.signedIn()
-          ? `<p class="hint" style="margin:6px 0 12px">Signed in as <b>${esc(auth.user().email)}</b>. Sign in on any phone or laptop to see your trips there.</p>
-             <button class="btn btn-secondary btn-block" data-account>${icon('lock')}Passkeys & sign out</button>`
-          : `<p class="hint" style="margin:6px 0 12px">You're on this trip as a guest, on this device only. Create an account with the email you joined with to see it anywhere.</p>
-             <button class="btn btn-secondary btn-block" data-account>${icon('users')}Create an account</button>`}
+        <h3 style="display:flex;align-items:center;gap:8px">${icon('users')}Your username</h3>
+        ${store.username()
+          ? `<p class="hint" style="margin:6px 0 12px">You're <b>@${esc(store.username())}</b>. Enter it on any phone or laptop to see your trips there.</p>
+             <button class="btn btn-secondary btn-block" data-account>${icon('users')}Switch username</button>`
+          : `<p class="hint" style="margin:6px 0 12px">This trip is only on this device. Pick a username to see it anywhere.</p>
+             <button class="btn btn-secondary btn-block" data-account>${icon('users')}Pick a username</button>`}
       </div>
 
       ${isOrg ? `<button class="btn btn-outline btn-block" style="margin-top:12px" data-edit>${icon('pencil')}Edit trip details</button>` : ''}`,
@@ -74,8 +73,8 @@ export function openMe(ctx) {
       };
       dlg.querySelector('[data-account]').onclick = async () => {
         close();
-        if (auth.signedIn()) return openAccount();
-        if (await signIn({ title: 'Create your account', reason: 'Use the email you joined with and this trip moves into your account — on any device.' })) ctx.refresh('Signed in');
+        if (store.username()) return openUsername();
+        if (await askUsername()) ctx.refresh('Username saved');
       };
 
       // Email: fill in what's saved (only you can read it).

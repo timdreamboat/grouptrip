@@ -789,18 +789,3 @@ body.report-open { overflow: hidden; }
   .report-receipts { break-before: page; }
   .report-receipt img { max-height: 235mm; }
 }
-/* ---------- sign-in & admin ---------- */
-.brand-btn { gap: 10px; }
-.code-input { text-align: center; letter-spacing: .3em; font-variant-numeric: tabular-nums; }
-.account-btn { font-weight: 700; border-radius: 999px; }
-button.admin-row { width: 100%; text-align: left; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
-button.admin-row:hover { background: var(--surface-2); }
-
-.brand-btn { position: relative; }
-.last-used { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 11px; font-weight: 600;
-  padding: 2px 8px; border-radius: 999px; background: var(--accent-soft, var(--surface-3)); color: var(--accent, inherit); }
-.btn:has(.last-used) { position: relative; }
-.signin-link { display: flex; margin: 12px auto 0; }
-.signin-row { display: flex; justify-content: space-between; gap: 8px; }
-.join-alt { display: grid; gap: 8px; text-align: center; }
-.signin-error { margin: 12px 0 0; padding: 10px 12px; border-radius: 12px; font-size: 14px; background: color-mix(in srgb, var(--bad) 14%, transparent); color: var(--text); }

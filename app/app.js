@@ -2,12 +2,8 @@
 //   #/                     your trips (or the landing page)
 //   #/new                  create a trip
 //   #/t/<code>[/<tab>]     a trip — the invite page until you've joined
-//   #/admin                every trip (admins only)
 //   #/me/<code>/<token>    old private links (before accounts) — just open the trip
 import * as store from './store.js';
-import * as auth from './auth.js';
-import { afterSignIn } from './views/signin.js';
-import * as admin from './views/admin.js';
 import { toast, esc, icon } from './ui.js';
 import * as home from './views/home.js';
 import * as create from './views/create.js';
@@ -40,7 +36,6 @@ async function route() {
 
   if (page === 'me' && code) { location.replace(`#/t/${code}`); return; }
   if (page === 'new') { current = {}; return paint(() => create.render(root)); }
-  if (page === 'admin') { current = {}; return paint(() => admin.render(root)); }
   if (page === 't' && code) return openTrip(code, extra || 'home');
   current = {};
   paint(() => home.render(root));
@@ -110,31 +105,11 @@ async function enrich({ trip, isOrg, refresh }) {
 window.addEventListener('hashchange', route);
 pwa.registerServiceWorker();
 
-// "Join with an account" via Google/Apple left the page mid-join: finish joining.
-async function finishPendingJoin() {
-  let p = null;
-  try { p = JSON.parse(sessionStorage.getItem('grouptrip.pending-join')); sessionStorage.removeItem('grouptrip.pending-join'); } catch { /* ignore */ }
-  if (!p?.code || store.tokenFor(p.code)) return;
-  try {
-    const u = auth.user();
-    const name = p.name || String(u?.name || '').split(/\s+/)[0] || (u?.email || '').split('@')[0];
-    await (p.memberId ? store.claimMember(p.code, p.memberId) : store.joinTrip(p.code, name));
-    sessionStorage.setItem('grouptrip.flash', "You're in! Welcome to the trip");
-  } catch (err) { toast(err.message, { error: true }); }
-}
-
-// Back from Google/Apple sign-in? Finish it. Signed in already? Refresh my trips list
-// from the account in the background (it may have changed on another device).
+// Has a username? Refresh the trips list in the background (it may have
+// changed on another device).
 async function start() {
-  try {
-    if (await auth.finishRedirect()) {
-      await afterSignIn();
-      toast(`Signed in as ${auth.user()?.email}`);
-      await finishPendingJoin();
-    }
-  } catch (err) { toast(err.message, { error: true }); }
   route();
-  if (auth.signedIn()) {
+  if (store.username()) {
     const before = JSON.stringify(store.listTrips());
     await store.syncMyTrips().catch(() => {});
     if (!current.code && location.hash.replace(/^#\/?/, '') === '' && JSON.stringify(store.listTrips()) !== before) route();
