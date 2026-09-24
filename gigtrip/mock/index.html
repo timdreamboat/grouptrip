@@ -1572,10 +1572,21 @@ function openExport(kind = 'shows') {
   openForm({ title: 'Export to Excel', fields: [], extra: `<label class="field" for="f-exkind">What to export<select id="f-exkind">${Object.entries(EXPORTS).map(([k, e]) => `<option value="${k}" ${k === kind ? 'selected' : ''}>${e.label}</option>`).join('')}</select></label>
     <p class="muted" style="margin:0">${rows.length} rows${cur() !== 'all' ? ` for ${esc(artist(cur()).name)}` : ''}. Download opens in Excel, Numbers or Google Sheets; or copy and paste into any sheet.</p>
     <textarea class="csv field" id="f-export" readonly style="width:100%;border:1px solid var(--line-strong);border-radius:12px;padding:10px;background:var(--surface-2);color:var(--text)">${esc(text)}</textarea>
-    <div class="row wrap"><a class="btn btn-tape" id="dlcsv" href="data:text/csv;charset=utf-8,${encodeURIComponent('﻿' + text)}" download="gigtrip-${kind}.csv">${icon('upload')} Download .csv</a><button class="btn btn-secondary" type="button" id="copycsv">Copy all</button></div>` });
+    <div class="row wrap"><button class="btn btn-tape" type="button" id="dlcsv">${icon('upload')} Download .csv</button><button class="btn btn-secondary" type="button" id="copycsv">Copy all</button></div>` });
   $('#f-exkind').addEventListener('change', e => openExport(e.target.value));
   $('#copycsv').addEventListener('click', () => { const ta = $('#f-export'); (navigator.clipboard?.writeText(ta.value) || Promise.reject()).then(() => toast('Copied — paste into Excel'), () => { ta.select(); toast('Selected — press Copy'); }); });
-  $('#dlcsv').addEventListener('click', () => setTimeout(() => toast('If nothing downloaded, use Copy all'), 800));
+  $('#dlcsv').addEventListener('click', () => saveFile(`gigtrip-${kind}.csv`, '\ufeff' + text));
+}
+// hand a generated file to the viewer: through the claude.ai viewer when the page runs there, else a plain browser download
+async function saveFile(filename, text) {
+  const dl = window.claude && typeof claude.use === 'function' ? await claude.use('downloads') : null;
+  if (dl) {
+    try { await dl.save({ filename, data: text }); toast(`Saved ${filename}`); }
+    catch (e) { if (e && e.code === 'declined') return; toast('Could not save here — use Copy all instead'); }
+    return;
+  }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: 'text/csv' })); a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 3000);
 }
 
 // ---------- imports page (Settings › Imports) ----------
