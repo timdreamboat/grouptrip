@@ -98,6 +98,10 @@ and what's pending**.
    is verified; the device side isn't).
 
 ## Known small quirks
+- Automatic cover photos can pick an artwork instead of a place photo (live
+  test: "Austin" got an old painting). Organizer can change it; worth a fix.
+- The very first visit after an update can use the browser's saved copies
+  for a few minutes; after that the service worker always re-checks files.
 - Rejoining after "Let back in" sends the organizer a "joined" notification again.
 - Flight "Landed / In the air" on Today is estimated from scheduled times.
 - Keyless Google map can't draw routes; "Route" opens Google Maps directions.
