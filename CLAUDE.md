@@ -80,9 +80,9 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
   at the end ("Save your trip"; draft survives the Google round-trip).
   Invite page: name + email → "Join trip" (guest) or "Join with Google". `app/auth.js` wraps supabase-js (loaded lazily from
   jsDelivr, pinned version, so offline still works); `SIGN_IN` in config.js
-  toggles options; `auth.ready()` reads Supabase's /auth/v1/settings so a
-  button whose option isn't switched on says so in the sheet instead of
-  sending people to an error page. Toasts are popovers (top layer) so they
+  toggles options; `auth.ready()` reads Supabase's /auth/v1/settings and
+  options that aren't switched on stay hidden. Passwordless by owner's choice
+  (no passwords). The `signup` Edge Function is a retired stub (410). Toasts are popovers (top layer) so they
   show above open sheets. Every seat (member) still has a secret token that all the
   share-code functions check, plus `members.user_id`: a seat linked to an
   account only works for that account (`_actor`, `_get_trip_all`), so copied

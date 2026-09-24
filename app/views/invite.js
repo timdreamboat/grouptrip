@@ -43,10 +43,10 @@ export function render(root, trip, onJoined) {
               <input class="input" name="email" type="email" autocomplete="email" inputmode="email" placeholder="Your email" value="${esc(auth.lastUsed().email || '')}">
               <button class="btn btn-primary btn-lg btn-block" data-how="guest">Join trip ${icon('arrow')}</button>
               <p class="hint" style="text-align:center;margin:-2px 0 0">No account or password needed.</p>
-              <div class="divider">or</div>
+              <div class="divider" id="join-or" hidden>or</div>
               <div class="join-alt">
-                ${SIGN_IN.google ? `<button type="button" class="btn btn-secondary btn-lg btn-block brand-btn" data-how="google">${GOOGLE_G}Join with Google</button>` : ''}
-                ${SIGN_IN.apple ? `<button type="button" class="btn btn-secondary btn-lg btn-block brand-btn" data-how="apple">${APPLE}Join with Apple</button>` : ''}
+                ${SIGN_IN.google ? `<button type="button" class="btn btn-secondary btn-lg btn-block brand-btn" data-how="google" hidden>${GOOGLE_G}Join with Google</button>` : ''}
+                ${SIGN_IN.apple ? `<button type="button" class="btn btn-secondary btn-lg btn-block brand-btn" data-how="apple" hidden>${APPLE}Join with Apple</button>` : ''}
                 <button type="button" class="btn btn-ghost btn-sm" data-how="account">Have an account? Sign in</button>
               </div>`}
           </form>
@@ -101,6 +101,13 @@ export function render(root, trip, onJoined) {
     const how = e.submitter?.dataset.how || (me ? 'account' : 'guest');
     return how === 'guest' ? asGuest(e.submitter) : withAccount(e.submitter);
   };
+  // Only show Google/Apple once they're switched on in Supabase.
+  auth.ready().then((r) => {
+    let any = false;
+    form.querySelectorAll('[data-how=google],[data-how=apple]').forEach((b) => { b.hidden = !r[b.dataset.how]; any ||= !b.hidden; });
+    const or = form.querySelector('#join-or');
+    if (or) or.hidden = !any;
+  });
   form.querySelectorAll('button[type=button][data-how]').forEach((b) => b.addEventListener('click', () => (
     b.dataset.how === 'account' ? withAccount(b) : withProvider(b, b.dataset.how))));
 }

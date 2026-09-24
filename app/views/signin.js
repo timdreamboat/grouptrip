@@ -24,14 +24,16 @@ const MAIL = [
 // Continue with Google (or Apple), or continue with email → 6-digit code.
 // Saved passkeys show up in the email field's autofill. Resolves true once
 // signed in; Google/Apple leave the page and come back signed in (app.js).
-export function signIn({ title = 'Welcome to GroupTrip', reason = 'Sign in or create an account — it takes a few seconds.' } = {}) {
+export function signIn({ title = 'Welcome to GroupTrip', reason = 'Enter your email and we’ll send you a code — no password needed. New here? This creates your account.' } = {}) {
   return new Promise((resolve) => {
     let done = false;
     const last = auth.lastUsed();
     const badge = (m) => (last.method === m ? '<span class="last-used">Last used</span>' : '');
+    // Buttons start hidden and appear only if that option is switched on in
+    // Supabase — nobody should see a button that doesn't work.
     const providers = [
-      SIGN_IN.google ? `<button class="btn btn-secondary btn-lg btn-block brand-btn" data-provider="google">${GOOGLE_G}Continue with Google${badge('google')}</button>` : '',
-      SIGN_IN.apple ? `<button class="btn btn-secondary btn-lg btn-block brand-btn" data-provider="apple">${APPLE}Continue with Apple${badge('apple')}</button>` : '',
+      SIGN_IN.google ? `<button class="btn btn-secondary btn-lg btn-block brand-btn" data-provider="google" hidden>${GOOGLE_G}Continue with Google${badge('google')}</button>` : '',
+      SIGN_IN.apple ? `<button class="btn btn-secondary btn-lg btn-block brand-btn" data-provider="apple" hidden>${APPLE}Continue with Apple${badge('apple')}</button>` : '',
     ].join('');
     sheet({
       title,
@@ -39,13 +41,13 @@ export function signIn({ title = 'Welcome to GroupTrip', reason = 'Sign in or cr
         <div class="signin">
           <div id="step-start">
             <p class="hint" style="margin:0 0 16px">${esc(reason)}</p>
-            ${providers ? `<div class="stack" style="gap:10px">${providers}</div><div class="divider" style="margin:16px 0">or</div>` : ''}
+            ${providers ? `<div class="stack" id="providers" style="gap:10px" hidden>${providers}</div><div class="divider" id="or" style="margin:16px 0" hidden>or</div>` : ''}
             <form class="form" id="email-form">
               <input class="input" name="email" type="email" required autocomplete="username webauthn" inputmode="email"
                 placeholder="you@example.com" value="${esc(last.email || '')}" aria-label="Email">
-              <button class="btn btn-primary btn-lg btn-block">Continue with email${badge('email')}</button>
+              <button class="btn btn-primary btn-lg btn-block">Continue${badge('email')}</button>
             </form>
-            ${auth.passkeysSupported() ? `<button type="button" class="btn btn-ghost btn-sm signin-link" data-passkey>${icon('lock')}Sign in with a passkey${badge('passkey')}</button>` : ''}
+            ${auth.passkeysSupported() ? `<button type="button" class="btn btn-ghost btn-sm signin-link" data-passkey hidden>${icon('lock')}Sign in with a passkey${badge('passkey')}</button>` : ''}
             <p class="signin-error" role="alert" hidden></p>
           </div>
           <form class="form" id="code-form" hidden>
@@ -90,6 +92,13 @@ export function signIn({ title = 'Welcome to GroupTrip', reason = 'Sign in or cr
           finally { btn.disabled = false; }
         };
 
+        auth.ready().then((r) => {
+          let any = false;
+          dlg.querySelectorAll('[data-provider]').forEach((b) => { b.hidden = !r[b.dataset.provider]; any ||= !b.hidden; });
+          dlg.querySelectorAll('#providers, #or').forEach((x) => { x.hidden = !any; });
+          const pk = dlg.querySelector('[data-passkey]');
+          if (pk) pk.hidden = !r.passkeys;
+        });
         dlg.querySelectorAll('[data-provider]').forEach((b) => b.onclick = () => attempt(b, async () => {
           const p = b.dataset.provider;
           if (!(await auth.ready())[p]) throw new Error(auth.NOT_READY[p]);

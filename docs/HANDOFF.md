@@ -79,9 +79,12 @@ and what's pending**.
   by the owner for now.
 
 ## Pending on the owner
-0. **Sign-in setup in the Supabase dashboard** (until done, only the email
-   code works, and only for a few emails an hour to the project team's own
-   addresses):
+0. **Sign-in setup in the Supabase dashboard** — sign-in is passwordless
+   (owner, 2026-09-23), so it depends on this. Until done, only the email code
+   shows, and Supabase's built-in email sends just ~2 an hour. Priority order:
+   email sender (Brevo) → passkeys → Google → Apple. The app hides each option
+   until Supabase reports it switched on. (Signing in with just an email and no
+   proof was blocked as a security weakening — see the retired `signup` stub.)
    - Email: Authentication → Emails → SMTP → custom SMTP with Brevo (free,
      300/day, verify a single sender — no domain needed; Resend needs your
      own domain). Edit the "Magic Link" template so it shows the code:
