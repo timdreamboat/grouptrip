@@ -110,7 +110,7 @@ function pass(f, { trip, isOrg }) {
     </div>
     <div class="pass-foot">
       <button class="btn btn-xs btn-secondary" data-live="${f.id}">${icon('radar')}Live map</button>
-      <a class="btn btn-xs btn-ghost" href="${esc(embed.flightAwareLink(p?.callsign ?? f.flightNumber))}" target="_blank" rel="noopener">FlightAware ${icon('external')}</a>
+      <a class="btn btn-xs btn-ghost" href="${esc(embed.flightAwareLink(p?.callsign ?? f.flightNumber))}" target="_blank" rel="noopener noreferrer">FlightAware ${icon('external')}</a>
       <span class="spacer"></span>
       ${mine || isOrg ? `<button class="btn btn-icon btn-xs btn-ghost" style="width:30px" data-edit-flight="${f.id}" aria-label="Edit flight">${icon('pencil')}</button>
         <button class="btn btn-icon btn-xs btn-ghost" style="width:30px" data-del="${f.id}" aria-label="Remove flight">${icon('trash')}</button>` : ''}

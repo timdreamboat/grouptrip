@@ -1,7 +1,7 @@
 // Calendar: one day-by-day timeline of plans, flights and check-ins, plus
 // a subscribable feed. Organizers add and remove plans; everyone can open
 // the embedded OpenTable booking and maps.
-import { esc, icon, fmtDay, fmtTime, tripDays, sheet, embedSheet, confirmSheet, busy, toast, copy, emptyState } from '../ui.js';
+import { esc, icon, fmtDay, fmtTime, tripDays, sheet, embedSheet, confirmSheet, busy, toast, copy, emptyState, safeUrl, siteName } from '../ui.js';
 import * as store from '../store.js';
 import * as embed from '../embeds.js';
 import { going, organizer, firstName, nameOf, words } from './common.js';
@@ -147,7 +147,7 @@ function openSync({ trip }) {
       <p class="hint" style="margin-bottom:6px">Flights, check-ins and plans show up in your own calendar — and new ones appear automatically.</p>
       <div class="rows">
         ${options.map(([name, sub, href]) => `
-          <a class="sync-option" href="${esc(href)}" target="_blank" rel="noopener">
+          <a class="sync-option" href="${esc(href)}" target="_blank" rel="noopener noreferrer">
             <div class="tl-icon">${icon('calplus')}</div>
             <div style="flex:1"><div style="font-weight:600">${name}</div><div class="small muted">${sub}</div></div>${icon('external')}
           </a>`).join('')}
@@ -179,7 +179,7 @@ function item(it, { isOrg, trip }, pinNo = 0) {
         ${it.opentableRid ? `<button class="btn btn-sm btn-primary" data-ot="${it.id}">${icon('utensils')}Reserve a table</button>` : ''}
         ${it.place ? `<button class="btn btn-sm btn-secondary" data-map="${it.id}">${icon('map')}Map</button>` : ''}
         ${it.place && trip.stays.length ? `<button class="btn btn-sm btn-secondary" data-from="${it.id}">${icon('bed')}From hotels</button>` : ''}
-        ${it.bookingUrl ? `<a class="btn btn-sm btn-outline" href="${esc(it.bookingUrl)}" target="_blank" rel="noopener">Booking ${icon('external')}</a>` : ''}
+        ${safeUrl(it.bookingUrl) ? `<a class="btn btn-sm btn-outline" href="${esc(safeUrl(it.bookingUrl))}" target="_blank" rel="noopener noreferrer" title="Opens ${esc(siteName(it.bookingUrl))} — you sign in there, not in GroupTrip">Book on ${esc(siteName(it.bookingUrl))} ${icon('external')}</a>` : ''}
       </div>` : ''}
     </article>
   </div>`;
@@ -208,7 +208,7 @@ export function openAddItem(ctx, day, preset = {}) {
             <label class="field"><span>OpenTable link or restaurant ID</span>
               <input name="opentable" placeholder="https://www.opentable.com/restref/client/?rid=1779" value="${esc(it?.opentableRid ?? '')}"></label>
             <p class="hint">With an OpenTable ID, everyone can book right inside the trip.
-              <a href="${esc(embed.openTableSearch(trip.destination))}" target="_blank" rel="noopener">Search OpenTable ↗</a></p>
+              <a href="${esc(embed.openTableSearch(trip.destination))}" target="_blank" rel="noopener noreferrer">Search OpenTable ↗</a></p>
             <label class="field"><span>Other booking link</span><input name="bookingUrl" type="url" placeholder="Resy, tour, hotel…" value="${v('bookingUrl')}"></label>
           </div>
         </details>
@@ -257,6 +257,7 @@ export function openAddItem(ctx, day, preset = {}) {
         if (ot && !rid && !/^https?:/.test(ot)) return toast("That doesn't look like an OpenTable link or ID", { error: true });
         // An OpenTable link without an ID can't be embedded — keep it as a plain link.
         const bookingUrl = f.bookingUrl.trim() || (ot && !rid ? ot : '');
+        if (bookingUrl && !safeUrl(bookingUrl)) return toast('Booking links need to be a web address starting with https://', { error: true });
         const ok = await busy(dlg.querySelector('.sheet-foot .btn'), async () => {
           const place = f.place.trim();
           const { hit } = place && found.q !== place ? await lookup(place) : found;

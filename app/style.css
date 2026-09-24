@@ -789,3 +789,4 @@ body.report-open { overflow: hidden; }
   .report-receipts { break-before: page; }
   .report-receipt img { max-height: 235mm; }
 }
+.venmo-warn { display: flex; gap: 6px; align-items: center; font-size: 12px; font-weight: 600; color: var(--warn); margin-bottom: 2px; }

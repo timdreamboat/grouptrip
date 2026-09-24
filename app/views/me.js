@@ -65,6 +65,8 @@ export function openMe(ctx) {
       form.onsubmit = async (e) => {
         e.preventDefault();
         const f = Object.fromEntries(new FormData(form));
+        f.venmo = f.venmo.trim().replace(/^@/, '');
+        if (f.venmo && !/^[A-Za-z0-9_-]{2,30}$/.test(f.venmo)) return toast('Venmo usernames use only letters, numbers, - and _', { error: true });
         const ok = await busy(form.querySelector('.btn-primary'), () => store.updateMe(trip.id, {
           name: f.name.trim(), venmo: f.venmo.trim(), ...(f.rsvp ? { rsvp: f.rsvp } : {}),
           ...(EMAIL_ENABLED ? { email: (f.email || '').trim(), emailNotify: Boolean(f.emailNotify) && Boolean((f.email || '').trim()) } : {}),

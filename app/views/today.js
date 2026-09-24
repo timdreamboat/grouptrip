@@ -67,7 +67,7 @@ export function todayCard(ctx) {
       <div class="small muted">${[next.time && fmtTime(next.time), next.place].filter(Boolean).map(esc).join(' · ')}</div>
       ${next.notes ? `<div class="pin-notes" style="margin-top:10px">${esc(next.notes)}</div>` : ''}
       <div class="tl-actions">
-        ${next.place ? `<a class="btn btn-sm btn-primary" target="_blank" rel="noopener"
+        ${next.place ? `<a class="btn btn-sm btn-primary" target="_blank" rel="noopener noreferrer"
           href="https://www.google.com/maps/dir/?api=1&destination=${next.lat != null ? `${next.lat},${next.lon}` : encodeURIComponent(placeQuery(next, trip))}">${icon('map')}Directions</a>` : ''}
         ${next.opentableRid ? `<button class="btn btn-sm btn-secondary" data-today-ot="${next.id}">${icon('utensils')}Reservation</button>` : ''}
       </div>
@@ -115,7 +115,7 @@ export function todayCard(ctx) {
         </div>
       </div>
       <div class="tl-actions">
-        <a class="btn btn-sm btn-primary" target="_blank" rel="noopener"
+        <a class="btn btn-sm btn-primary" target="_blank" rel="noopener noreferrer"
           href="https://www.google.com/maps/dir/?api=1&destination=${stay.lat != null ? `${stay.lat},${stay.lon}` : encodeURIComponent([stay.name, stay.address].filter(Boolean).join(', '))}">${icon('map')}Directions</a>
         ${stay.confirmation ? `<button class="btn btn-sm btn-secondary" data-today-conf="${stay.id}">${icon('copy')}${esc(stay.confirmation)}</button>` : ''}
       </div>

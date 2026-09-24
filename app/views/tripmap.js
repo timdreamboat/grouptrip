@@ -34,7 +34,7 @@ export function stayCardHTML(st, trip) {
       ${guestsOf(trip, st).length ? `<div class="pin-row">${avatarStack(guestsOf(trip, st), 5, 20)}<span>${esc(namesOf(guestsOf(trip, st), trip.me?.id))}</span></div>` : ''}
       ${st.checkIn ? `<div class="pin-row">${icon('calendar', 'tiny')}In ${esc(when(st.checkIn, st.checkInTime))}${st.checkOut ? ` · Out ${esc(when(st.checkOut, st.checkOutTime))}` : ''}</div>` : ''}
       ${st.confirmation ? `<div class="pin-notes">Confirmation: ${esc(st.confirmation)}</div>` : ''}
-      <a class="pin-link" href="https://www.google.com/maps/dir/?api=1&destination=${dest}" target="_blank" rel="noopener">Directions ${icon('external', 'tiny')}</a>
+      <a class="pin-link" href="https://www.google.com/maps/dir/?api=1&destination=${dest}" target="_blank" rel="noopener noreferrer">Directions ${icon('external', 'tiny')}</a>
     </div>`;
 }
 
@@ -51,7 +51,7 @@ export function cardHTML(it, n, trip) {
       ${it.day || it.time ? `<div class="pin-row">${icon('calendar', 'tiny')}${esc([it.day && fmtDay(it.day), it.time && fmtTime(it.time)].filter(Boolean).join(' · '))}</div>` : ''}
       ${it.notes ? `<div class="pin-notes">${esc(it.notes)}</div>` : ''}
       ${it.place ? fromHotelsHTML(it, trip) : ''}
-      <a class="pin-link" href="${esc(directions(it, trip))}" target="_blank" rel="noopener">Directions ${icon('external', 'tiny')}</a>
+      <a class="pin-link" href="${esc(directions(it, trip))}" target="_blank" rel="noopener noreferrer">Directions ${icon('external', 'tiny')}</a>
     </div>`;
 }
 
@@ -72,7 +72,7 @@ export function fromHotelsHTML(it, trip) {
           <span class="pin-num stay">${icon('bed', 'tiny')}</span>
           <div class="from-name"><b>${esc(st.name)}</b>${guests.length ? `<span>${esc(namesOf(guests, trip.me?.id))}</span>` : ''}</div>
           ${dist ? `<span class="from-dist">${esc(dist)}</span>` : ''}
-          <a class="pin-link" target="_blank" rel="noopener" href="${esc(routeUrl({ lat: st.lat, lon: st.lon, q: stayQuery(st, trip) }, to))}">Route ${icon('external', 'tiny')}</a>
+          <a class="pin-link" target="_blank" rel="noopener noreferrer" href="${esc(routeUrl({ lat: st.lat, lon: st.lon, q: stayQuery(st, trip) }, to))}">Route ${icon('external', 'tiny')}</a>
         </div>`;
       }).join('')}
     </div>`;

@@ -9,6 +9,13 @@ import * as embed from '../embeds.js';
 import { memberById, nameOf, firstName, isBusiness } from './common.js';
 import * as biz from './bizexpenses.js';
 
+// A Venmo handle changed in the last 3 days gets a warning next to the pay button.
+const freshVenmo = (m) => m.venmoChangedAt && Date.now() - new Date(m.venmoChangedAt) < 3 * 86400000;
+const ago = (iso) => {
+  const h = Math.max(1, Math.round((Date.now() - new Date(iso)) / 3600000));
+  return h < 24 ? `${h} hour${h === 1 ? '' : 's'} ago` : `${Math.round(h / 24)} day${h < 36 ? '' : 's'} ago`;
+};
+
 export function render(el, ctx) {
   if (isBusiness(ctx.trip)) return biz.render(el, ctx);
   const { trip, isOrg } = ctx;
@@ -45,20 +52,23 @@ export function render(el, ctx) {
             <div class="pay-row ${p.from === meId ? 'me' : ''}">
               <div class="pay-flow">${avatar(memberById(trip, p.from), 32)}${icon('arrow')}${avatar(to, 32)}</div>
               <div style="flex:1;min-width:0">
+                ${p.from === meId && to?.venmo && freshVenmo(to) ? `<div class="venmo-warn">${icon('info', 'tiny')}${esc(firstName(to.name))}'s Venmo was updated ${esc(ago(to.venmoChangedAt))} — check it's really them before paying</div>` : ''}
                 <div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.from === meId
                   ? `Pay ${esc(firstName(to?.name))}`
                   : p.to === meId ? `${esc(who(p.from))} pays you` : `${esc(who(p.from))} → ${esc(who(p.to))}`}</div>
                 <div class="amt">${money(p.amount)}</div>
               </div>
               <div class="pay-actions">
-                ${p.from === meId && trip.currency === 'USD' ? `<a class="btn btn-sm btn-primary" target="_blank" rel="noopener"
-                    href="${esc(embed.venmoLink(p.amount, `${trip.name} ✈︎`, to?.venmo))}">Venmo</a>` : ''}
+                ${p.from === meId && trip.currency === 'USD' ? `<a class="btn btn-sm btn-primary" target="_blank" rel="noopener noreferrer"
+                    title="Opens Venmo — you sign in and confirm the payment there"
+                    href="${esc(embed.venmoLink(p.amount, `${trip.name} ✈︎`, to?.venmo))}">${to?.venmo ? `Venmo @${esc(to.venmo)}` : 'Venmo'}</a>` : ''}
                 ${involved || isOrg ? `<button class="btn btn-sm btn-secondary" data-paid="${p.from}|${p.to}|${p.amount}">${icon('check')}${p.to === meId ? 'Got it' : 'Mark paid'}</button>` : ''}
               </div>
             </div>`;
           }).join('')}
         </div>
         ${pays.some((p) => p.from === meId && !memberById(trip, p.to)?.venmo) && trip.currency === 'USD' ? `<p class="hint" style="margin:8px 4px 0">Tip: ask them to add their Venmo in GroupTrip so the button goes straight to them.</p>` : ''}
+        ${pays.some((p) => p.from === meId) && trip.currency === 'USD' ? `<p class="hint" style="margin:8px 4px 0">Venmo opens in its own app — you sign in there and see who you're paying (name and photo) before anything is sent. GroupTrip never sees your Venmo account.</p>` : ''}
       </section>` : ''}
 
       ${settlements.length ? `

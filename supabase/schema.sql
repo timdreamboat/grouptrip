@@ -1968,3 +1968,49 @@ drop table if exists admins;
 update members set user_id = null where user_id is not null;
 
 revoke execute on function _clean_username(text) from public, anon, authenticated;
+
+
+-- ============ v9: safe outside links (owner, 2026-09-24) ============
+-- Anyone who types a username acts as that person, so outside connections
+-- must be safe on their own: links are plain web addresses only (never
+-- "javascript:" etc.), Venmo handles only Venmo's characters. Enforced on the
+-- tables so every function obeys. Partner sites (Venmo, OpenTable, booking
+-- sites) always open on their own site, where people sign in themselves.
+alter table itinerary_items add constraint itinerary_booking_url_web
+  check (booking_url is null or booking_url ~* '^https?://[^\s<>"'']+$');
+alter table stays add constraint stays_booking_url_web
+  check (booking_url is null or booking_url ~* '^https?://[^\s<>"'']+$');
+alter table trips add constraint trips_cover_link_web
+  check (cover_link is null or cover_link ~* '^https://[^\s<>"'']+$');
+alter table trips add constraint trips_cover_url_web
+  check (cover_url is null or cover_url ~* '^https://[^\s<>"'']+$');
+alter table members add constraint members_venmo_handle
+  check (venmo is null or venmo ~ '^[A-Za-z0-9_-]{2,30}$');
+
+alter table members add column if not exists venmo_changed_at timestamptz;
+
+create or replace function _on_venmo() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.venmo is distinct from old.venmo then
+    new.venmo_changed_at := now();
+    if old.venmo is not null then
+      perform _notify(new.trip_id,
+        (select coalesce(array_agg(id), '{}') from members where trip_id = new.trip_id and (id = new.id or is_organizer)),
+        new.name || '''s Venmo was changed',
+        'Now @' || coalesce(new.venmo, '(removed)') || ' on ' || (select name from trips where id = new.trip_id)
+          || '. If that wasn''t them, tell the organizer before anyone pays.', 'money');
+    end if;
+  end if;
+  return new;
+end $$;
+drop trigger if exists venmo_changed on members;
+create trigger venmo_changed before update of venmo on members for each row execute function _on_venmo();
+
+do $$
+declare def text := pg_get_functiondef('public._get_trip_all(text,text)'::regprocedure);
+begin
+  def := replace(def, '''venmo'', m.venmo)', '''venmo'', m.venmo, ''venmoChangedAt'', m.venmo_changed_at)');
+  if def not like '%venmoChangedAt%' then raise exception '_get_trip_all patch did not apply'; end if;
+  execute def;
+end $$;

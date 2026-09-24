@@ -1,5 +1,5 @@
 // Where we're staying: address, check-in/out, confirmation, map, booking link.
-import { esc, icon, avatar, avatarStack, fmtDay, fmtTime, sheet, embedSheet, confirmSheet, busy, copy, toast, emptyState } from '../ui.js';
+import { esc, icon, avatar, avatarStack, fmtDay, fmtTime, sheet, embedSheet, confirmSheet, busy, copy, toast, emptyState, safeUrl, siteName } from '../ui.js';
 import { guestsOf, namesOf, firstName } from './common.js';
 import * as store from '../store.js';
 import * as embed from '../embeds.js';
@@ -40,7 +40,7 @@ export function stayCard(s, ctx) {
     <div class="tl-actions">
       ${s.address ? `<button class="btn btn-sm btn-secondary" data-stay-map="${s.id}">${icon('map')}Map</button>` : ''}
       ${s.confirmation ? `<button class="btn btn-sm btn-secondary" data-stay-conf="${s.id}">${icon('copy')}${esc(s.confirmation)}</button>` : ''}
-      ${s.bookingUrl ? `<a class="btn btn-sm btn-outline" href="${esc(s.bookingUrl)}" target="_blank" rel="noopener">Booking ${icon('external')}</a>` : ''}
+      ${safeUrl(s.bookingUrl) ? `<a class="btn btn-sm btn-outline" href="${esc(safeUrl(s.bookingUrl))}" target="_blank" rel="noopener noreferrer" title="Opens ${esc(siteName(s.bookingUrl))} — you sign in there, not in GroupTrip">Book on ${esc(siteName(s.bookingUrl))} ${icon('external')}</a>` : ''}
     </div>
   </article>`;
 }
@@ -114,6 +114,7 @@ export function openAddStay(ctx, stay = null) {
         e.preventDefault();
         const f = Object.fromEntries(new FormData(form));
         if (f.checkIn && f.checkOut && f.checkOut < f.checkIn) return toast('Check-out is before check-in', { error: true });
+        if (f.bookingUrl.trim() && !safeUrl(f.bookingUrl)) return toast('Booking links need to be a web address starting with https://', { error: true });
         const ok = await busy(dlg.querySelector('.sheet-foot .btn'), async () => {
           // Pin it on the map (with a Google key); keep the old pin if the place didn't change.
           const same = stay && stay.name === f.name.trim() && (stay.address || '') === f.address.trim();

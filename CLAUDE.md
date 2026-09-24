@@ -151,6 +151,17 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
   shares always sum exactly). Settlements ("mark as paid") count in
   `balances()`. Receipts live in the trip's photo folder (not the album).
 
+## Outside connections are safe on their own (v9, owner 2026-09-24)
+Because a username is all it takes to act as someone, partner connections must
+not depend on GroupTrip identity: Venmo, OpenTable and booking sites always
+open on their own site/app (or their own embedded page), where the person
+signs in and confirms there. GroupTrip never stores or passes partner logins.
+Links: only `https?://` addresses become clickable (`safeUrl()` in ui.js +
+table CHECK constraints), shown as "Book on <site>" with rel noopener
+noreferrer. Venmo handles: letters/numbers/-/_ only; the pay button names the
+handle ("Venmo @handle"); a handle added/changed in the last 3 days shows a
+warning to payers, and a change notifies the person and the organizer.
+
 ## Design direction
 Modern (2027) consumer app, mobile-first. References: Partiful/Luma (invite
 page), Flighty (boarding-pass flight cards), Splitwise/Tricount (balances

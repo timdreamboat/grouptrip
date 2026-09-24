@@ -66,6 +66,16 @@ export function cover(seed) {
   ].join(', ');
 }
 
+// Outside links: only plain web addresses ever become clickable (never
+// "javascript:" or other tricks), shown with the site's name so people can see
+// where they're going. The database enforces the same rule.
+export function safeUrl(url) {
+  const u = String(url ?? '').trim();
+  if (!/^https?:\/\/[^\s<>"']+$/i.test(u)) return null;
+  try { return new URL(u).href; } catch { return null; }
+}
+export const siteName = (url) => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; } };
+
 // The trip's chosen photo, over its gradient (which also shows while it loads).
 export function coverBg(seed, url) {
   return url ? `url('${String(url).replace(/'/g, '%27')}') center / cover no-repeat, ${cover(seed)}` : cover(seed);

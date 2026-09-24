@@ -1,5 +1,5 @@
 // Pieces shared by several trip screens.
-import { esc, icon, coverBg, avatarStack, fmtRange, countdown, daysUntil } from '../ui.js';
+import { esc, icon, coverBg, avatarStack, fmtRange, countdown, daysUntil, safeUrl } from '../ui.js';
 import { balances } from '../money.js';
 
 export const going = (trip) => trip.members.filter((m) => m.rsvp === 'going');
@@ -26,7 +26,9 @@ export function heroHTML(trip, { top = '', size = 'lg' } = {}) {
   const people = going(trip);
   return `
   <section class="hero" style="background:${esc(coverBg(trip.destination || trip.name, trip.cover?.url))}">
-    ${trip.cover?.credit ? `<a class="hero-credit" href="${esc(trip.cover.link || '#')}" target="_blank" rel="noopener">${esc(trip.cover.credit)}</a>` : ''}
+    ${trip.cover?.credit ? (safeUrl(trip.cover.link)
+      ? `<a class="hero-credit" href="${esc(safeUrl(trip.cover.link))}" target="_blank" rel="noopener noreferrer">${esc(trip.cover.credit)}</a>`
+      : `<span class="hero-credit">${esc(trip.cover.credit)}</span>`) : ''}
     <div class="hero-top">${top}</div>
     <div>
       <h1 class="display" style="${size === 'sm' ? 'font-size:clamp(40px,9vw,56px)' : ''}">${esc(trip.name)}</h1>
