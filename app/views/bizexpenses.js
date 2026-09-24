@@ -43,11 +43,11 @@ export function render(el, ctx) {
     </header>
 
     <div class="stack-lg">
-      ${ended && list.length ? `
+      ${list.length ? `
       <div class="card report-cta">
-        <div class="grow"><div class="title">The trip's over — time for the expense report</div>
-          <div class="sub">Every ${isOrg ? '' : 'one of your '}expense${isOrg ? ' and' : 's and'} receipt photo, ready to print or save as a PDF.</div></div>
-        <button class="btn btn-primary btn-sm" data-action="report">${icon('receipt')}Expense report</button>
+        <div class="grow"><div class="title">${ended ? "The trip's over — time for the expense report" : 'Expense report'}</div>
+          <div class="sub">${isOrg ? 'Every expense' : 'All your expenses'}${ended ? '' : ' so far'}, with receipt photos — print or save as a PDF any time.</div></div>
+        <button class="btn btn-primary btn-sm" data-action="report">${icon('receipt')}${ended ? 'Expense report' : 'Download report'}</button>
       </div>` : ''}
       <div class="stat-grid">
         <div class="stat"><div class="num">${money(total)}</div><div class="lbl">${isOrg ? 'Team spend' : 'You spent'}</div></div>

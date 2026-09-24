@@ -115,7 +115,7 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
   `views/bizexpenses.js` (reimbursable: category, company card, receipt,
   reimbursed flag, CSV export, and a printable report in `views/bizreport.js` —
   summary, transactions, then each receipt photo; printed via the browser's
-  print dialog, "Save as PDF" downloads it; prompted once the trip has ended); non-organizers only receive their own
+  print dialog, "Save as PDF" downloads it; card is always shown, wording changes once the trip has ended); non-organizers only receive their own
   expenses (enforced in `get_trip`, which wraps `_get_trip_all` — change trip
   contents in `_get_trip_all`). Family trips default expense splits to shares.
 - Hotels: `stay_guests` says who stays where (a person can be at more than
