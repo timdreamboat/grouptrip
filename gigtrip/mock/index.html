@@ -1,0 +1,906 @@
+<title>GigTrip</title>
+<meta name="description" content="GigTrip prototype — tours, shows, day sheets and settlements for artist managers and their touring party.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500;600&display=swap">
+<style>
+/* GigTrip mock. Built on GroupTrip's design system (same spacing, radii,
+   buttons, sheets) with its own identity: gaffer-tape yellow, stencil-style
+   condensed display type, mono for show times. */
+:root {
+  --bg: #f1f1ee;
+  --surface: #ffffff;
+  --surface-2: #e9e9e4;
+  --surface-3: #dcdcd5;
+  --text: #131316;
+  --muted: #61616a;
+  --faint: #9c9ca4;
+  --line: rgba(19, 19, 22, .08);
+  --line-strong: rgba(19, 19, 22, .16);
+  --tape: #ffcc1a;
+  --tape-ink: #141414;
+  --accent-ink: #7a5a00;
+  --good: #0f8a5f; --good-soft: #dcf3e8;
+  --hold: #2f5bd3; --hold-soft: #e2e9fb;
+  --offer: #7a3fc4; --offer-soft: #efe4fb;
+  --warn: #a86a12; --warn-soft: #fbefd5;
+  --bad: #d4383e; --bad-soft: #fde2e1;
+  --ring: rgba(255, 204, 26, .55);
+  --shadow: 0 1px 2px rgba(20, 16, 10, .04), 0 6px 20px rgba(20, 16, 10, .06);
+  --font-ui: 'Geist', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: 'Big Shoulders Display', 'Arial Narrow', 'Helvetica Neue', sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --r-lg: 22px; --r: 16px; --r-sm: 12px;
+  --av-l: 86%; --av-ink: 27%;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e0e10; --surface: #18181b; --surface-2: #222226; --surface-3: #2d2d32;
+    --text: #f2f2f4; --muted: #a2a2ab; --faint: #6b6b73;
+    --line: rgba(255, 255, 255, .07); --line-strong: rgba(255, 255, 255, .15);
+    --tape: #ffd23a; --tape-ink: #141414; --accent-ink: #ffd23a;
+    --good: #3ccf91; --good-soft: #10291f; --hold: #86a6ff; --hold-soft: #172042;
+    --offer: #c29bff; --offer-soft: #271b3b; --warn: #f0b44c; --warn-soft: #2e2413;
+    --bad: #ff6b6f; --bad-soft: #341617; --ring: rgba(255, 210, 58, .5);
+    --shadow: 0 1px 2px rgba(0, 0, 0, .4); --av-l: 30%; --av-ink: 86%;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e0e10; --surface: #18181b; --surface-2: #222226; --surface-3: #2d2d32;
+  --text: #f2f2f4; --muted: #a2a2ab; --faint: #6b6b73;
+  --line: rgba(255, 255, 255, .07); --line-strong: rgba(255, 255, 255, .15);
+  --tape: #ffd23a; --tape-ink: #141414; --accent-ink: #ffd23a;
+  --good: #3ccf91; --good-soft: #10291f; --hold: #86a6ff; --hold-soft: #172042;
+  --offer: #c29bff; --offer-soft: #271b3b; --warn: #f0b44c; --warn-soft: #2e2413;
+  --bad: #ff6b6f; --bad-soft: #341617; --ring: rgba(255, 210, 58, .5);
+  --shadow: 0 1px 2px rgba(0, 0, 0, .4); --av-l: 30%; --av-ink: 86%;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { background: var(--bg); }
+body { margin: 0; color: var(--text); font: 15px/1.5 var(--font-ui); letter-spacing: -.006em; -webkit-font-smoothing: antialiased; }
+button, input, select { font: inherit; color: inherit; }
+a { color: inherit; }
+svg.i { width: 20px; height: 20px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+:focus-visible { outline: 3px solid var(--ring); outline-offset: 2px; border-radius: 8px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* type */
+.display { font-family: var(--font-display); font-weight: 800; text-transform: uppercase; letter-spacing: .01em; line-height: .92; margin: 0; text-wrap: balance; }
+h1.display { font-size: clamp(34px, 6vw, 52px); }
+h2 { font-size: 18px; font-weight: 600; letter-spacing: -.02em; margin: 0; text-wrap: balance; }
+h3 { font-size: 15px; font-weight: 600; margin: 0; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: 0; }
+.num { font-variant-numeric: tabular-nums; }
+.eyebrow { font-size: 11.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+
+/* shell */
+.shell { display: grid; grid-template-columns: 1fr; min-height: 100%; }
+.side { display: none; }
+.top {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  display: flex; align-items: center; gap: 10px; padding: 10px 16px;
+  background: color-mix(in srgb, var(--bg) 86%, transparent); backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--line);
+}
+.brand { display: flex; align-items: center; gap: 8px; text-decoration: none; }
+.logo { width: 30px; height: 30px; border-radius: 8px; background: var(--tape); color: var(--tape-ink); display: grid; place-items: center; font: 900 17px/1 var(--font-display); transform: rotate(-4deg); }
+.brand b { font: 800 21px/1 var(--font-display); text-transform: uppercase; letter-spacing: .02em; }
+.top .spacer { flex: 1; }
+.viewas { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+.viewas select { height: 34px; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--surface); padding: 0 10px; font-weight: 600; font-size: 13px; color: var(--text); }
+main { padding: 18px 16px 110px; max-width: 1080px; width: 100%; margin: 0 auto; display: grid; gap: 18px; align-content: start; }
+.ribbon { font-size: 12.5px; color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.ribbon .tapechip { background: var(--tape); color: var(--tape-ink); font-weight: 700; padding: 2px 8px; border-radius: 4px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+
+.tabbar {
+  position: fixed; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); z-index: 30;
+  display: flex; justify-content: space-around; padding: 6px; border-radius: 24px;
+  background: color-mix(in srgb, var(--surface) 88%, transparent); backdrop-filter: blur(18px);
+  border: 1px solid var(--line); box-shadow: var(--shadow);
+}
+.tabbar a { flex: 1; display: grid; justify-items: center; gap: 2px; padding: 6px 2px; border-radius: 16px; text-decoration: none; color: var(--muted); font-size: 11px; font-weight: 600; }
+.tabbar a[aria-current="page"] { color: var(--text); background: var(--surface-2); }
+.tabbar a[aria-current="page"] svg { color: var(--accent-ink); }
+
+@media (min-width: 900px) {
+  .shell { grid-template-columns: 244px 1fr; }
+  .side {
+    display: flex; flex-direction: column; gap: 4px; position: sticky; top: 0; height: 100vh;
+    padding: 18px 14px; border-right: 1px solid var(--line); background: var(--surface);
+  }
+  .side .brand { padding: 4px 8px 18px; }
+  .side nav { display: grid; gap: 2px; }
+  .side nav a { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 12px; text-decoration: none; color: var(--muted); font-weight: 500; }
+  .side nav a:hover { background: var(--surface-2); color: var(--text); }
+  .side nav a[aria-current="page"] { background: var(--surface-2); color: var(--text); font-weight: 600; }
+  .side nav a[aria-current="page"] svg { color: var(--accent-ink); }
+  .side .foot { margin-top: auto; font-size: 12.5px; color: var(--muted); padding: 8px; display: grid; gap: 6px; }
+  .top .brand { display: none; }
+  .tabbar { display: none; }
+  main { padding: 26px 32px 60px; }
+}
+
+/* building blocks */
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 18px; }
+.card.flat { background: transparent; border: 0; padding: 0; }
+.stack { display: grid; gap: 12px; }
+.row { display: flex; align-items: center; gap: 12px; }
+.wrap { flex-wrap: wrap; }
+.between { justify-content: space-between; }
+.grid2 { display: grid; gap: 18px; }
+@media (min-width: 760px) { .grid2 { grid-template-columns: 1fr 1fr; } .grid2.wide-left { grid-template-columns: 1.4fr 1fr; } }
+.head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.head .sub { margin-top: 6px; }
+
+.btn { height: 40px; padding: 0 16px; border-radius: 999px; border: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; font-size: 14px; text-decoration: none; white-space: nowrap; transition: transform .15s ease, background-color .15s; }
+.btn:active { transform: scale(.97); }
+.btn-primary { background: var(--text); color: var(--bg); }
+.btn-tape { background: var(--tape); color: var(--tape-ink); }
+.btn-secondary { background: var(--surface-2); }
+.btn-secondary:hover { background: var(--surface-3); }
+.btn-outline { background: transparent; border: 1px solid var(--line-strong); }
+.btn-sm { height: 32px; padding: 0 12px; font-size: 13px; }
+
+.chip { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 9px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; background: var(--surface-2); color: var(--muted); }
+.chip::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.chip.plain::before { display: none; }
+.st-confirmed { background: var(--good-soft); color: var(--good); }
+.st-hold { background: var(--hold-soft); color: var(--hold); }
+.st-offer { background: var(--offer-soft); color: var(--offer); }
+.st-pencil { background: transparent; color: var(--muted); box-shadow: inset 0 0 0 1px var(--line-strong); }
+.st-cancelled { background: var(--bad-soft); color: var(--bad); }
+.st-pending { background: var(--warn-soft); color: var(--warn); }
+.st-settled { background: var(--surface-2); color: var(--muted); }
+
+.seg { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.seg button { height: 32px; padding: 0 13px; border-radius: 999px; border: 1px solid var(--line-strong); background: transparent; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--text); color: var(--bg); border-color: var(--text); }
+
+.list { display: grid; }
+.li { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-top: 1px solid var(--line); }
+.li:first-child { border-top: 0; }
+.li.click { cursor: pointer; border-radius: 12px; }
+.li.click:hover { background: var(--surface-2); margin: 0 -10px; padding-inline: 10px; }
+.li .grow { flex: 1; min-width: 0; }
+.li .grow > * { overflow-wrap: anywhere; }
+
+.datebox { width: 52px; flex: none; text-align: center; border-radius: 12px; background: var(--surface-2); padding: 6px 0 5px; }
+.datebox .d { font: 800 24px/1 var(--font-display); }
+.datebox .m { font-size: 10.5px; font-weight: 600; letter-spacing: .08em; color: var(--muted); text-transform: uppercase; }
+.datebox.tape { background: var(--tape); color: var(--tape-ink); }
+.datebox.tape .m { color: var(--tape-ink); opacity: .7; }
+.cancelled-text { text-decoration: line-through; color: var(--faint); }
+
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 8px 18px; font-size: 14px; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.kv .total { font-weight: 700; font-size: 16px; border-top: 1px solid var(--line-strong); padding-top: 8px; }
+.kv .total + .total { border-top: 0; padding-top: 0; }
+
+.bar { height: 8px; border-radius: 99px; background: var(--surface-2); overflow: hidden; }
+.bar > i { display: block; height: 100%; border-radius: 99px; background: var(--text); }
+.bar.good > i { background: var(--good); }
+.bar.over > i { background: var(--bad); }
+
+.stat { display: grid; gap: 2px; }
+.stat b { font: 800 30px/1 var(--font-display); letter-spacing: .01em; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+.stats .card { padding: 14px 16px; }
+
+.check { display: flex; gap: 12px; align-items: flex-start; padding: 10px 0; border-top: 1px solid var(--line); cursor: pointer; }
+.check:first-child { border-top: 0; }
+.check input { width: 20px; height: 20px; margin: 1px 0 0; accent-color: var(--good); flex: none; }
+.check.done .lbl { color: var(--muted); text-decoration: line-through; }
+
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+.tabs button { border: 0; background: none; padding: 10px 12px; font-weight: 600; font-size: 14px; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; }
+.tabs button[aria-selected="true"] { color: var(--text); border-bottom-color: var(--tape); }
+
+.field { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+.field input, .field select { height: 42px; border-radius: 12px; border: 1px solid var(--line-strong); background: var(--surface); padding: 0 12px; font-size: 15px; color: var(--text); width: 100%; }
+.field input:focus { outline: 3px solid var(--ring); outline-offset: 0; }
+
+.scroll-x { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th { text-align: left; font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; padding: 8px 10px; border-bottom: 1px solid var(--line-strong); white-space: nowrap; }
+td { padding: 10px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.r, th.r { text-align: right; }
+tfoot td { font-weight: 700; border-bottom: 0; }
+
+/* laminate (Today header) */
+.laminate { position: relative; border-radius: var(--r-lg); overflow: hidden; background: var(--surface); border: 1px solid var(--line); }
+.laminate .band { background: var(--tape); color: var(--tape-ink); padding: 10px 18px; display: flex; justify-content: space-between; align-items: center; font: 800 15px/1 var(--font-display); letter-spacing: .14em; text-transform: uppercase; }
+.laminate .body { padding: 18px; display: grid; gap: 14px; }
+.laminate .next { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+.laminate .next .t { font: 600 40px/1 var(--font-mono); letter-spacing: -.02em; }
+
+/* day sheet */
+.sheet { display: grid; }
+.slot { display: grid; grid-template-columns: 72px 1fr; gap: 14px; padding: 11px 0; border-top: 1px solid var(--line); align-items: baseline; }
+.slot:first-child { border-top: 0; }
+.slot .t { font: 600 16px/1.2 var(--font-mono); }
+.slot.past { color: var(--faint); }
+.slot.past .muted { color: var(--faint); }
+.slot.now { background: color-mix(in srgb, var(--tape) 22%, transparent); margin: 0 -12px; padding-inline: 12px; border-radius: 12px; border-top-color: transparent; }
+.slot.now + .slot { border-top-color: transparent; }
+.slot.key .what { font-weight: 700; }
+
+/* boarding pass */
+.pass { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; }
+.pass .code { font: 800 38px/1 var(--font-display); }
+.pass .mid { display: grid; justify-items: center; color: var(--muted); font-size: 12px; }
+.pass .r { text-align: right; }
+.perf { border-top: 2px dashed var(--line-strong); margin: 14px -18px; }
+
+.map svg { width: 100%; height: auto; display: block; }
+.avatar { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 13px; flex: none; }
+
+.toast { position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 20px); opacity: 0; pointer-events: none; background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 999px; font-weight: 600; font-size: 14px; z-index: 50; transition: opacity .2s, transform .2s; max-width: calc(100% - 32px); text-align: center; }
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+@media (min-width: 900px) { .toast { bottom: 28px; } }
+
+.note { font-size: 13px; color: var(--muted); border-left: 3px solid var(--tape); padding: 2px 0 2px 12px; }
+.prose { max-width: 66ch; display: grid; gap: 12px; }
+.prose p, .prose ol, .prose ul { margin: 0; }
+.prose li + li { margin-top: 6px; }
+</style>
+
+<div class="shell">
+  <aside class="side">
+    <a class="brand" href="#about"><span class="logo">G</span><b>GigTrip</b></a>
+    <nav id="sidenav"></nav>
+    <div class="foot">
+      <span>Prototype · sample data</span>
+      <a href="https://timdreamboat.github.io/grouptrip/" target="_blank" rel="noopener">Made by GroupTrip ↗</a>
+    </div>
+  </aside>
+  <div>
+    <header class="top">
+      <a class="brand" href="#about"><span class="logo">G</span><b>GigTrip</b></a>
+      <span class="spacer"></span>
+      <label class="viewas" for="role">View as
+        <select id="role">
+          <option value="manager">Manager</option>
+          <option value="tm">Tour manager</option>
+          <option value="band">Band / crew</option>
+        </select>
+      </label>
+    </header>
+    <main id="main"></main>
+  </div>
+</div>
+<nav class="tabbar" id="tabbar"></nav>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+// ---------- sample data (all made up) ----------
+const NOW = { date: '2027-04-12', min: 16 * 60 + 5 };   // mock clock: Mon Apr 12, 4:05 pm
+const ARTISTS = { jv: 'Juniper Vale', co: 'The Coastlines' };
+const TOUR = { name: 'Low Tide Tour', season: 'Spring 2027', artist: 'jv' };
+const PEOPLE = {
+  rae:   { name: 'Rae Collins',  role: 'Manager · Northlight Mgmt', road: false, ph: '(416) 555-0110', hue: 30 },
+  jordan:{ name: 'Jordan Blake', role: 'Agent · Fieldhouse Agency', road: false, ph: '(212) 555-0177', hue: 260 },
+  juni:  { name: 'Juniper Vale', role: 'Artist', road: true, ph: '(416) 555-0101', hue: 48, room: '614' },
+  theo:  { name: 'Theo Marsh',   role: 'Guitar', road: true, ph: '(416) 555-0122', hue: 200, room: '612' },
+  priya: { name: 'Priya Anand',  role: 'Bass', road: true, ph: '(647) 555-0134', hue: 330, room: '615' },
+  sam:   { name: 'Sam Okafor',   role: 'Drums', road: true, ph: '(416) 555-0145', hue: 150, room: '612' },
+  dana:  { name: 'Dana Reyes',   role: 'Tour manager', road: true, ph: '(416) 555-0156', hue: 10, room: '610' },
+  luis:  { name: 'Luis Ortega',  role: 'FOH engineer', road: true, ph: '(514) 555-0167', hue: 100, room: '611' },
+  kit:   { name: 'Kit Brennan',  role: 'Lighting (LD)', road: true, ph: '(416) 555-0178', hue: 280, room: '611' },
+  mo:    { name: 'Mo Haddad',    role: 'Backline tech', road: true, ph: '(905) 555-0189', hue: 180, room: '616' },
+  ellie: { name: 'Ellie Park',   role: 'Merch', road: true, ph: '(647) 555-0190', hue: 60, room: '615' },
+};
+const ADVANCE = [
+  ['Contract signed', 'rae'], ['Deposit received', 'rae'], ['Tech rider sent', 'luis'],
+  ['Input list + stage plot confirmed', 'luis'], ['Lighting plot + haze OK', 'kit'],
+  ['Hospitality rider confirmed', 'dana'], ['Parking for van + trailer', 'dana'],
+  ['Load-in time + dock', 'dana'], ['Hotel booked near venue', 'dana'],
+  ['Guest list cap agreed', 'dana'], ['Merch split + seller confirmed', 'ellie'],
+  ['Settlement contact confirmed', 'dana'],
+];
+// deal: g = guarantee (cents), pct = artist % of net after expenses (vs deal), dep = deposit
+const SHOWS = [
+  { id: 'tor', date: '2027-04-08', city: 'Toronto, ON', venue: 'The Marlowe Hall', cap: 1100, status: 'confirmed', ll: [43.65, -79.38], deal: { type: 'vs', g: 1200000, pct: 85, dep: 600000 }, settled: 1400000, adv: 12 },
+  { id: 'mtl', date: '2027-04-09', city: 'Montréal, QC', venue: 'Salle Ferro', cap: 900, status: 'confirmed', ll: [45.50, -73.57], deal: { type: 'flat', g: 850000, dep: 425000 }, settled: 850000, adv: 12, drive: '5h 30m · 541 km' },
+  { id: 'bos', date: '2027-04-10', city: 'Boston, MA', venue: 'The Wharfhouse', cap: 1000, status: 'confirmed', ll: [42.36, -71.06], deal: { type: 'vs', g: 1000000, pct: 85, dep: 500000 }, settled: 1100000, adv: 12, drive: '5h 00m · 500 km' },
+  { id: 'nyc', date: '2027-04-12', city: 'New York, NY', venue: 'Canal Street Ballroom', cap: 1400, status: 'confirmed', ll: [40.71, -74.01], deal: { type: 'vs', g: 900000, pct: 85, dep: 450000 }, adv: 11, drive: '3h 45m · 346 km', today: true },
+  { id: 'phl', date: '2027-04-13', city: 'Philadelphia, PA', venue: 'The Tinworks', cap: 850, status: 'hold', hold: 1, ll: [39.95, -75.17], deal: { type: 'vs', g: 900000, pct: 85, dep: 0 }, adv: 7, drive: '1h 50m · 153 km' },
+  { id: 'dc', date: '2027-04-15', city: 'Washington, DC', venue: 'Ninth & Pine', cap: 1200, status: 'hold', hold: 2, ll: [38.91, -77.04], deal: { type: 'vs', g: 1300000, pct: 85, dep: 650000 }, adv: 4, drive: '2h 45m · 224 km' },
+  { id: 'fest', date: '2027-04-24', city: 'Asheville, NC', venue: 'Sunmeadow Festival · Pine Stage', cap: 8000, status: 'confirmed', ll: [35.60, -82.55], deal: { type: 'fest', g: 2000000, dep: 1000000 }, adv: 3, fest: '45-min set · 5:15 pm', drive: 'fly · via CLT' },
+];
+const OTHER_DATES = [
+  { artist: 'co', date: '2027-03-30', city: 'Vancouver, BC', venue: 'Harbourline Theatre', cap: 1000, status: 'cancelled' },
+  { artist: 'co', date: '2027-04-17', city: 'Austin, TX', venue: 'The Lantern Room', cap: 750, status: 'confirmed' },
+  { artist: 'co', date: '2027-04-30', city: 'Denver, CO', venue: 'Gold Hill Theatre', cap: 1600, status: 'hold', hold: 1 },
+  { artist: 'co', date: '2027-05-22', city: 'Seattle, WA', venue: 'Pier Nine', cap: 1100, status: 'pencil' },
+  { artist: 'jv', date: '2027-06-05', city: 'Portland, ME', venue: 'Casco Pier Stage', cap: 2200, status: 'pencil' },
+];
+const OFFERS = [
+  { id: 'o1', artist: 'jv', date: '2027-05-14', city: 'Chicago, IL', venue: 'The Foundry', cap: 1500, promoter: 'Lakeshore Live', deal: '$10,000 vs 85% of net', radius: 'No other Chicago plays 60 days before, 150 mi', expires: 'Apr 16', status: 'offer' },
+  { id: 'o2', artist: 'jv', date: '2027-05-16', city: 'Nashville, TN', venue: 'Brightwater Hall', cap: 900, promoter: 'Cumberland Presents', deal: '$8,000 flat + hotel buyout', radius: '45 days, 100 mi', expires: 'Apr 19', status: 'offer' },
+  { id: 'o3', artist: 'co', date: '2027-06-19', city: 'Halifax, NS', venue: 'Harbor Lights Fest', cap: 12000, promoter: 'Harbor Lights', deal: '$18,000 flat (festival)', radius: 'No Atlantic Canada shows 90 days before', expires: 'Apr 22', status: 'offer' },
+];
+const NYC = {
+  address: '415 Canal St, New York, NY 10013',
+  hotel: { name: 'The Mercer Row Hotel', addr: '88 Grand St, New York, NY', nights: 'Apr 11 – 13' },
+  wifi: 'CanalGuest · pw: lowtide2027',
+  parking: 'Van + trailer: Lispenard St loading dock. Street parking after 7 pm only.',
+  hospitality: 'Dinner buyout $25/person × 11 · 2 cases water, coffee on arrival',
+  support: 'Hollow Pines',
+  slots: [
+    ['12:00', 'Lobby call — van to venue', 'Everyone', 'key'],
+    ['13:00', 'Load-in', 'Crew · dock on Lispenard St'],
+    ['15:30', 'Line check', 'Luis, Mo'],
+    ['16:30', 'Soundcheck — Juniper Vale', 'Band', 'key'],
+    ['17:30', 'Soundcheck — Hollow Pines', 'Support'],
+    ['18:00', 'Dinner', 'Green room (buyout)'],
+    ['19:00', 'Doors', 'Venue'],
+    ['20:00', 'Hollow Pines', '40 min'],
+    ['21:00', 'Juniper Vale', '90 min', 'key'],
+    ['22:30', 'Curfew', 'Hard — $1,000 per 15 min over'],
+    ['23:00', 'Settlement', 'Dana + Nina · production office'],
+    ['23:30', 'Load-out', 'Crew'],
+  ],
+  tomorrow: 'Bus call 09:00 · lobby · drive to Philadelphia (1h 50m)',
+  contacts: [
+    ['Nina Alvarez', 'Promoter rep · Riverside Presents', '(212) 555-0148'],
+    ['Greg Ho', 'Production manager', '(212) 555-0193'],
+    ['Box office', 'Canal Street Ballroom', '(212) 555-0100'],
+    ['Front desk', 'The Mercer Row Hotel', '(212) 555-0161'],
+  ],
+  docs: [
+    ['Hospitality rider', 'v3 · sent Mar 2', 'ok'], ['Tech rider + input list', 'v5 · sent Mar 2', 'ok'],
+    ['Stage plot', 'v5 · PDF', 'ok'], ['Contract', 'Signed Feb 18', 'ok'],
+    ['Certificate of insurance', 'Requested by venue', 'ok'], ['Settlement sheet', 'Tonight', 'pending'],
+  ],
+  settle: {
+    sold: 1262, price: 3800, feePer: 300,
+    expenses: [['Room rent', 650000], ['Production (sound + lights)', 420000], ['Staff + security', 385000], ['Advertising', 290000], ['Hospitality', 100000]],
+  },
+};
+const GUESTS = [
+  { name: 'Maya Chen', plus: 1, by: 'theo', status: 'approved' },
+  { name: 'Jon & Alex Rivera', plus: 1, by: 'priya', status: 'approved' },
+  { name: 'Harbor Records (label)', plus: 3, by: 'rae', status: 'approved' },
+  { name: 'The Setlist (press)', plus: 1, by: 'rae', status: 'approved' },
+  { name: 'Carol Okafor', plus: 1, by: 'sam', status: 'pending' },
+  { name: 'Devon Park', plus: 0, by: 'ellie', status: 'pending' },
+];
+const GUEST_CAP = 24;
+const TRAVEL = {
+  van: [
+    ['Sun Apr 11', 'Boston → New York', '11:00 lobby', '3h 45m · 346 km', true],
+    ['Tue Apr 13', 'New York → Philadelphia', '09:00 lobby', '1h 50m · 153 km'],
+    ['Wed Apr 14', 'Philadelphia → Washington (day off)', '12:00 lobby', '2h 45m · 224 km'],
+  ],
+  flights: [
+    { date: 'Fri Apr 16', from: 'DCA', to: 'YYZ', dep: '10:40', arr: '12:15', no: 'AC 8783', seat: '14C', conf: 'Q7RT2M' },
+    { date: 'Fri Apr 23', from: 'YYZ', to: 'CLT', dep: '08:05', arr: '10:20', no: 'AA 1739', seat: '22A', conf: 'W4KD9P', next: 'Connects to AVL · AA 5210 · 11:35 → 12:30' },
+  ],
+  rooms: [
+    ['Apr 11 – 13', 'The Mercer Row Hotel, New York', 'Room 612 · with Sam'],
+    ['Apr 13 – 15', 'Hotel Tinsley, Philadelphia', 'Room 318 · with Sam'],
+  ],
+};
+// tour budget, cents. Actuals are to date (Apr 12).
+const PER_DIEM = 5000, ROAD_DAYS = 14;
+const BUDGET = [
+  ['Crew pay', 2880000, 1645000],
+  ['Travel — van, fuel, flights', 1420000, 988000],
+  ['Hotels', 1260000, 734000],
+  ['Per diems ($50 × 9 people × 14 days)', PER_DIEM * 9 * ROAD_DAYS, PER_DIEM * 9 * 8],
+  ['Production + backline', 850000, 612000],
+];
+const MERCH = { budget: 1860000, actual: 1124500 };
+const AGENT_PCT = 10, MGMT_PCT = 15;
+
+// ---------- state ----------
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('gigtrip.' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem('gigtrip.' + k, JSON.stringify(v)); } catch {} },
+};
+const S = {
+  role: store.get('role', 'manager'),
+  showId: 'nyc',
+  showTab: 'deal',
+  artist: 'all', status: 'all',
+  me: { manager: 'rae', tm: 'dana', band: 'theo' },
+};
+SHOWS.forEach(s => { s.done = ADVANCE.map((_, i) => i < s.adv); });
+SHOWS.find(s => s.id === 'nyc').done = ADVANCE.map((a, i) => a[0] !== 'Merch split + seller confirmed');
+
+// ---------- helpers ----------
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const money = (c, cents = false) => (c < 0 ? '−' : '') + '$' + (Math.abs(c) / 100).toLocaleString('en-US', { minimumFractionDigits: cents ? 2 : 0, maximumFractionDigits: cents ? 2 : 0 });
+const pctOf = (c, p) => Math.round(c * p / 100);
+const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const DAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const dt = iso => { const [y, m, d] = iso.split('-').map(Number); return new Date(y, m - 1, d); };
+const fmtDate = iso => { const d = dt(iso); return `${DAY[d.getDay()]} ${MON[d.getMonth()]} ${d.getDate()}`; };
+const toMin = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+const ampm = t => { let [h, m] = t.split(':').map(Number); const p = h >= 12 ? 'pm' : 'am'; h = h % 12 || 12; return `${h}:${String(m).padStart(2, '0')} ${p}`; };
+const dateBox = (iso, tape) => { const d = dt(iso); return `<div class="datebox${tape ? ' tape' : ''}"><div class="m">${DAY[d.getDay()]}</div><div class="d">${d.getDate()}</div><div class="m">${MON[d.getMonth()]}</div></div>`; };
+const statusChip = s => {
+  const st = s.status;
+  const label = st === 'hold' ? `Hold ${s.hold || ''}`.trim() : st === 'offer' ? 'Offer' : st[0].toUpperCase() + st.slice(1);
+  return `<span class="chip st-${st}">${label}</span>`;
+};
+const initials = n => n.split(/\s+/).map(w => w[0]).slice(0, 2).join('');
+const avatar = id => { const p = PEOPLE[id]; return `<span class="avatar" style="background:hsl(${p.hue} 70% var(--av-l,86%));color:hsl(${p.hue} 60% var(--av-ink,27%))">${initials(p.name)}</span>`; };
+const pctDone = s => Math.round(s.done.filter(Boolean).length / ADVANCE.length * 100);
+const dealText = d => d.type === 'flat' ? `${money(d.g)} flat` : d.type === 'fest' ? `${money(d.g)} festival flat` : `${money(d.g)} vs ${d.pct}% of net`;
+const show = id => SHOWS.find(s => s.id === id);
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2400); }
+
+// settlement math — integer cents, "versus" deal: artist earns the larger of guarantee and % of net after expenses
+function settle(s, d) {
+  const gross = s.sold * s.price;
+  const fees = s.sold * s.feePer;
+  const net = gross - fees;
+  const exp = s.expenses.reduce((a, e) => a + e[1], 0);
+  const after = Math.max(0, net - exp);
+  const share = pctOf(after, d.pct);
+  const earns = Math.max(d.g, share);
+  return { gross, fees, net, exp, after, share, earns, versusWins: share > d.g, due: earns - d.dep };
+}
+function showFee(s) {
+  if (s.settled) return s.settled;
+  if (s.id === 'nyc') return settle(NYC.settle, s.deal).earns;
+  return s.deal.g;
+}
+
+// ---------- icons ----------
+const ICONS = {
+  board: 'M4 6h16v14H4z M4 10h16 M9 3v4 M15 3v4 M8 14h2 M14 14h2',
+  offers: 'M4 13l2-8h12l2 8v6H4z M4 13h5l1 2h4l1-2h5',
+  tour: 'M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z M9 3v15 M15 6v15',
+  show: 'M4 7h16v3a2 2 0 0 0 0 4v3H4v-3a2 2 0 0 0 0-4z M14 7v10',
+  budget: 'M5 20V10 M12 20V4 M19 20v-7',
+  party: 'M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z M3 20c0-3 2.7-5 6-5s6 2 6 5 M16 4.5a3.5 3.5 0 0 1 0 6.5 M18 15c2 .6 3 2.3 3 5',
+  today: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z M12 7v5l3 2',
+  travel: 'M3 17h18 M5 13l14-5 1.5 2-9 5.5-2-.5-2 2H5l1-2.5z',
+  guests: 'M10 6h10 M10 12h10 M10 18h10 M4 6l1 1 2-2 M4 12l1 1 2-2 M4 18l1 1 2-2',
+  settle: 'M6 3h12v18l-3-2-3 2-3-2-3 2z M9 8h6 M9 12h6 M9 16h3',
+  about: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z M12 11v5 M12 8v.01',
+};
+const icon = n => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="${ICONS[n]}"/></svg>`;
+
+const NAV = {
+  manager: [['board', 'Season'], ['offers', 'Offers'], ['tour', 'Tour'], ['show', 'Show'], ['budget', 'Budget'], ['party', 'Party'], ['about', 'About']],
+  tm: [['today', 'Today'], ['show', 'Show'], ['settle', 'Settle'], ['guests', 'Guests'], ['travel', 'Travel'], ['party', 'Party'], ['about', 'About']],
+  band: [['today', 'Today'], ['travel', 'Travel'], ['guests', 'Guests'], ['party', 'Party'], ['about', 'About']],
+};
+
+// ---------- views ----------
+const V = {};
+
+V.board = () => {
+  const rows = [
+    ...SHOWS.map(s => ({ ...s, artist: TOUR.artist, tour: TOUR.name })),
+    ...OTHER_DATES,
+    ...OFFERS.filter(o => o.status !== 'declined').map(o => ({ ...o, fromOffer: true })),
+  ].filter(r => (S.artist === 'all' || r.artist === S.artist) && (S.status === 'all' || r.status === S.status))
+   .sort((a, b) => a.date.localeCompare(b.date));
+  const byMonth = {};
+  rows.forEach(r => { const k = r.date.slice(0, 7); (byMonth[k] ||= []).push(r); });
+  const count = st => [...SHOWS, ...OTHER_DATES, ...OFFERS].filter(r => r.status === st).length;
+  const segA = [['all', 'All artists'], ['jv', ARTISTS.jv], ['co', ARTISTS.co]];
+  const segS = [['all', 'Any status'], ['confirmed', 'Confirmed'], ['hold', 'Holds'], ['offer', 'Offers'], ['pencil', 'Pencils'], ['cancelled', 'Cancelled']];
+  return `
+  <div class="head"><div><div class="eyebrow">Northlight Mgmt · roster</div><h1 class="display">Season 2027</h1>
+    <div class="sub muted">Every date for every artist — the dates sheet you keep in Excel.</div></div>
+    <button class="btn btn-tape" data-go="offers">${icon('offers')} ${OFFERS.filter(o => o.status === 'offer').length} offers waiting</button></div>
+  <div class="stats">
+    <div class="card stat"><span class="eyebrow">Confirmed</span><b>${count('confirmed')}</b></div>
+    <div class="card stat"><span class="eyebrow">Holds</span><b>${count('hold')}</b></div>
+    <div class="card stat"><span class="eyebrow">Pencils</span><b>${count('pencil')}</b></div>
+    <div class="card stat"><span class="eyebrow">Open offers</span><b>${count('offer')}</b></div>
+  </div>
+  <div class="stack">
+    <div class="seg" data-filter="artist">${segA.map(([k, l]) => `<button aria-pressed="${S.artist === k}" data-v="${k}">${esc(l)}</button>`).join('')}</div>
+    <div class="seg" data-filter="status">${segS.map(([k, l]) => `<button aria-pressed="${S.status === k}" data-v="${k}">${l}</button>`).join('')}</div>
+  </div>
+  ${Object.keys(byMonth).length ? Object.entries(byMonth).map(([k, list]) => `
+    <section class="card"><h2 style="margin-bottom:6px">${MON[+k.slice(5) - 1]} ${k.slice(0, 4)}</h2>
+      <div class="list">${list.map(r => `
+        <div class="li ${r.id ? 'click' : ''}" ${r.id ? `data-show="${r.fromOffer ? '' : r.id}" ${r.fromOffer ? 'data-go="offers"' : ''}` : ''}>
+          ${dateBox(r.date, r.today)}
+          <div class="grow"><div class="${r.status === 'cancelled' ? 'cancelled-text' : ''}"><b>${esc(r.city)}</b> · ${esc(r.venue)}</div>
+            <div class="small muted">${esc(ARTISTS[r.artist])}${r.tour ? ' · ' + esc(r.tour) : ''} · cap ${r.cap.toLocaleString()}${r.deal ? ' · ' + esc(typeof r.deal === 'string' ? r.deal : dealText(r.deal)) : ''}</div></div>
+          ${statusChip(r)}
+        </div>`).join('')}</div></section>`).join('') : `<p class="muted">Nothing matches those filters.</p>`}`;
+};
+
+V.offers = () => {
+  const open = OFFERS.filter(o => o.status === 'offer');
+  const done = OFFERS.filter(o => o.status !== 'offer');
+  const card = o => `
+    <article class="card stack">
+      <div class="row between wrap"><div class="row">${dateBox(o.date)}<div><h2>${esc(o.city)} · ${esc(o.venue)}</h2>
+        <div class="small muted">${esc(ARTISTS[o.artist])} · from ${esc(o.promoter)} · cap ${o.cap.toLocaleString()}</div></div></div>
+        ${o.status === 'offer' ? `<span class="chip st-offer">Answer by ${o.expires}</span>` : statusChip(o)}</div>
+      <dl class="kv"><dt>Deal</dt><dd>${esc(o.deal)}</dd><dt>Radius clause</dt><dd>${esc(o.radius)}</dd></dl>
+      ${o.status === 'offer' ? `<div class="row wrap">
+        <button class="btn btn-primary btn-sm" data-offer="${o.id}" data-act="hold">Accept as hold</button>
+        <button class="btn btn-secondary btn-sm" data-offer="${o.id}" data-act="counter">Counter</button>
+        <button class="btn btn-outline btn-sm" data-offer="${o.id}" data-act="decline">Decline</button></div>` : ''}
+    </article>`;
+  return `
+  <div class="head"><div><div class="eyebrow">From agents and promoters</div><h1 class="display">Offers</h1>
+    <div class="sub muted">Accepting puts a hold on the season board. Confirming the hold starts the show's advance.</div></div></div>
+  ${open.length ? open.map(card).join('') : '<p class="muted">No open offers. Nice.</p>'}
+  ${done.length ? `<h2>Answered</h2>${done.map(card).join('')}` : ''}`;
+};
+
+V.tour = () => {
+  const total = SHOWS.reduce((a, s) => a + showFee(s), 0);
+  return `
+  <div class="head"><div><div class="eyebrow">${esc(ARTISTS[TOUR.artist])} · ${TOUR.season}</div><h1 class="display">${TOUR.name}</h1>
+    <div class="sub muted">${SHOWS.length} shows · 9 on the road · Apr 8 – 24</div></div>
+    <button class="btn btn-secondary" data-go="budget">${icon('budget')} Tour budget</button></div>
+  <div class="grid2 wide-left">
+    <section class="card map"><div class="row between" style="margin-bottom:8px"><h2>Routing</h2><span class="small muted">Real build: Google map embed</span></div>${routeMap()}</section>
+    <section class="card stack"><h2>Money so far</h2>
+      <dl class="kv"><dt>Show fees (settled + expected)</dt><dd>${money(total)}</dd>
+      <dt>Deposits received</dt><dd>${money(SHOWS.filter(s => s.done[1]).reduce((a, s) => a + s.deal.dep, 0))}</dd>
+      <dt>Settled so far</dt><dd>${SHOWS.filter(s => s.settled).length} of ${SHOWS.length} shows</dd></dl>
+      <div class="note">Tonight: New York settles at 11 pm. Dana has the sheet.</div></section>
+  </div>
+  <section class="card"><h2 style="margin-bottom:6px">Shows</h2><div class="list">
+    ${SHOWS.map((s, i) => `
+      <div class="li click" data-show="${s.id}">
+        ${dateBox(s.date, s.today)}
+        <div class="grow"><div><b>${esc(s.city)}</b> · ${esc(s.venue)}${s.today ? ' <span class="chip st-pending plain">Today</span>' : ''}</div>
+          <div class="small muted">${s.drive ? 'From previous: ' + esc(s.drive) + ' · ' : ''}${esc(dealText(s.deal))}</div>
+          <div class="row small" style="gap:10px;margin-top:6px"><div class="bar ${pctDone(s) === 100 ? 'good' : ''}" style="width:120px"><i style="width:${pctDone(s)}%"></i></div>
+            <span class="muted">${pctDone(s)}% advanced</span>
+            <span class="${s.done[0] ? '' : 'muted'}">${s.done[0] ? '✓ contract' : '○ contract'}</span>
+            <span class="${s.done[1] ? '' : 'muted'}">${s.done[1] ? '✓ deposit' : '○ deposit'}</span></div></div>
+        ${s.settled ? '<span class="chip st-settled">Settled</span>' : statusChip(s)}
+      </div>`).join('')}
+  </div></section>`;
+};
+
+function routeMap() {
+  const W = 620, H = 380, lon0 = -85, lon1 = -69, lat0 = 34, lat1 = 47;
+  const P = ([la, lo]) => [((lo - lon0) / (lon1 - lon0)) * W, H - ((la - lat0) / (lat1 - lat0)) * H];
+  const pts = SHOWS.map(s => P(s.ll));
+  const path = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
+  const labelLeft = { mtl: false, bos: false, nyc: false, phl: true, dc: true, fest: false, tor: true };
+  return `<svg viewBox="-20 -10 ${W + 40} ${H + 20}" role="img" aria-label="Tour routing from Toronto to Asheville">
+    <path d="${path}" fill="none" stroke="var(--faint)" stroke-width="2" stroke-dasharray="5 6"/>
+    ${pts.map((p, i) => { const s = SHOWS[i]; const left = labelLeft[s.id]; return `
+      <g>
+        <circle cx="${p[0]}" cy="${p[1]}" r="13" fill="${s.today ? 'var(--tape)' : s.status === 'hold' ? 'var(--hold-soft)' : 'var(--text)'}" stroke="${s.status === 'hold' ? 'var(--hold)' : 'none'}" stroke-width="1.5"/>
+        <text x="${p[0]}" y="${p[1] + 4.5}" text-anchor="middle" font-size="12" font-weight="700" fill="${s.today ? 'var(--tape-ink)' : s.status === 'hold' ? 'var(--hold)' : 'var(--bg)'}" font-family="var(--font-ui)">${i + 1}</text>
+        <text x="${p[0] + (left ? -20 : 20)}" y="${p[1] + 4}" text-anchor="${left ? 'end' : 'start'}" font-size="13" font-weight="600" fill="var(--text)" font-family="var(--font-ui)">${esc(s.city.split(',')[0])}</text>
+        <text x="${p[0] + (left ? -20 : 20)}" y="${p[1] + 19}" text-anchor="${left ? 'end' : 'start'}" font-size="11" fill="var(--muted)" font-family="var(--font-ui)">${fmtDate(s.date)}</text>
+      </g>`; }).join('')}
+  </svg>`;
+}
+
+V.show = () => {
+  const s = show(S.showId);
+  const isNyc = s.id === 'nyc';
+  const tabs = [['deal', 'Deal'], ['advance', `Advance ${pctDone(s)}%`], ['docs', 'Docs'], ['contacts', 'Contacts'], ['sheet', 'Day sheet']];
+  let body = '';
+  if (S.showTab === 'deal') {
+    const fee = showFee(s);
+    body = `<div class="grid2">
+      <div class="stack"><dl class="kv">
+        <dt>Deal</dt><dd>${esc(dealText(s.deal))}</dd>
+        <dt>Guarantee</dt><dd>${money(s.deal.g)}</dd>
+        ${s.deal.pct ? `<dt>Artist %</dt><dd>${s.deal.pct}% of net after show expenses</dd>` : ''}
+        <dt>Deposit</dt><dd>${s.deal.dep ? money(s.deal.dep) + (s.done[1] ? ' · received' : ' · not yet') : 'None'}</dd>
+        <dt>Capacity</dt><dd>${s.cap.toLocaleString()}</dd>
+        <dt>${s.settled ? 'Settled at' : isNyc ? 'Tracking to' : 'Expected'}</dt><dd><b>${money(fee)}</b></dd>
+      </dl>
+      ${isNyc && S.role !== 'band' ? `<button class="btn btn-tape" data-go="settle">${icon('settle')} Open tonight's settlement</button>` : ''}</div>
+      <div class="note">Real build: the ticketing page (Ticketmaster, AXS, Dice) and the venue site open here as embeds or new-tab buttons — GigTrip never copies ticket counts from them.</div>
+    </div>`;
+  } else if (S.showTab === 'advance') {
+    body = `<div class="list">${ADVANCE.map(([lbl, who], i) => `
+      <label class="check ${s.done[i] ? 'done' : ''}"><input type="checkbox" id="adv-${s.id}-${i}" data-adv="${i}" ${s.done[i] ? 'checked' : ''}>
+        <span class="grow"><span class="lbl">${esc(lbl)}</span><br><span class="small muted">${esc(PEOPLE[who].name)} · due ${dueFor(s, i)}</span></span></label>`).join('')}</div>
+      <p class="note">This replaces the per-show ClickUp list. Items come from a template the manager edits once.</p>`;
+  } else if (S.showTab === 'docs') {
+    const docs = isNyc ? NYC.docs : [['Hospitality rider', 'v3', 'ok'], ['Tech rider + input list', 'v5', 'ok'], ['Stage plot', 'v5', 'ok'], ['Contract', s.done[0] ? 'Signed' : 'Waiting on promoter', s.done[0] ? 'ok' : 'pending']].concat(s.fest ? [['Artist credentials + wristbands', 'From festival advance', 'pending']] : []);
+    body = `<div class="list">${docs.map(([n, meta, st]) => `
+      <div class="li click" data-toast="Opens ${esc(n)} (mock)"><span class="avatar" style="background:var(--surface-2);border-radius:10px">${icon('settle')}</span>
+        <div class="grow"><b>${esc(n)}</b><div class="small muted">${esc(meta)}</div></div>
+        <span class="chip ${st === 'ok' ? 'st-confirmed' : 'st-pending'}">${st === 'ok' ? 'Ready' : 'Waiting'}</span></div>`).join('')}</div>`;
+  } else if (S.showTab === 'contacts') {
+    body = contactsList(isNyc ? NYC.contacts : [['Promoter rep', 'Added during advance', '—']]);
+  } else {
+    body = isNyc ? daySheet() : `<p class="muted">The day sheet fills in as the show is advanced. Slots come from a template: lobby call, load-in, soundcheck, doors, set, curfew, settlement.</p>`;
+  }
+  return `
+  <div class="head"><div><div class="eyebrow">${esc(TOUR.name)} · show ${SHOWS.indexOf(s) + 1} of ${SHOWS.length}</div>
+    <h1 class="display">${esc(s.city.split(',')[0])}</h1>
+    <div class="sub muted">${fmtDate(s.date)} · ${esc(s.venue)} · cap ${s.cap.toLocaleString()}${s.fest ? ' · ' + esc(s.fest) : ''}</div></div>
+    <div class="row">${s.settled ? '<span class="chip st-settled">Settled</span>' : statusChip(s)}
+      <label class="viewas" for="pick">Show <select id="pick">${SHOWS.map(x => `<option value="${x.id}" ${x.id === s.id ? 'selected' : ''}>${fmtDate(x.date)} · ${esc(x.city.split(',')[0])}</option>`).join('')}</select></label></div></div>
+  <section class="card stack">
+    <div class="tabs" role="tablist">${tabs.map(([k, l]) => `<button role="tab" aria-selected="${S.showTab === k}" data-tab="${k}">${l}</button>`).join('')}</div>
+    ${body}
+  </section>`;
+};
+function dueFor(s, i) {
+  const d = dt(s.date); d.setDate(d.getDate() - (i < 2 ? 45 : i < 6 ? 21 : 7));
+  return `${MON[d.getMonth()]} ${d.getDate()}`;
+}
+function contactsList(list) {
+  return `<div class="list">${list.map(([n, r, ph]) => `
+    <div class="li"><span class="avatar" style="background:var(--surface-2)">${esc(initials(n))}</span>
+      <div class="grow"><b>${esc(n)}</b><div class="small muted">${esc(r)}</div></div>
+      <span class="mono small" style="user-select:all">${esc(ph)}</span></div>`).join('')}</div>`;
+}
+
+function daySheet() {
+  const next = NYC.slots.findIndex(x => toMin(x[0]) > NOW.min);
+  const nowIdx = next - 1;
+  return `<div class="sheet">${NYC.slots.map(([t, what, who, key], i) => `
+    <div class="slot ${i < nowIdx ? 'past' : ''} ${i === nowIdx ? 'now' : ''} ${key ? 'key' : ''}">
+      <span class="t">${t}</span><div><div class="what">${esc(what)}${i === nowIdx ? ' <span class="chip st-pending plain">Now</span>' : ''}</div><div class="small muted">${esc(who)}</div></div>
+    </div>`).join('')}</div>
+    <p class="small muted" style="margin:10px 0 0">Tomorrow: ${esc(NYC.tomorrow)}</p>`;
+}
+
+V.today = () => {
+  const s = show('nyc');
+  const next = NYC.slots.find(x => toMin(x[0]) > NOW.min);
+  const mins = toMin(next[0]) - NOW.min;
+  const myRoom = PEOPLE[S.me[S.role]].room;
+  return `
+  <div class="ribbon"><span class="tapechip">Show day</span><span>Mock clock: ${fmtDate(NOW.date)}, ${ampm('16:05')}</span></div>
+  <section class="laminate">
+    <div class="band"><span>All access</span><span>${esc(TOUR.name)}</span></div>
+    <div class="body">
+      <div><div class="eyebrow">${esc(ARTISTS.jv)} · show ${SHOWS.indexOf(s) + 1} of ${SHOWS.length}</div>
+        <h1 class="display">${esc(s.city.split(',')[0])}</h1>
+        <div class="muted">${esc(s.venue)} · doors 7:00 pm · curfew 10:30 pm</div></div>
+      <div class="next"><span class="t">${next[0]}</span><div><b>${esc(next[1])}</b><div class="small muted">in ${mins} min · ${esc(next[2])}</div></div></div>
+    </div>
+  </section>
+  <div class="grid2 wide-left">
+    <section class="card"><div class="row between" style="margin-bottom:6px"><h2>Day sheet</h2><button class="btn btn-secondary btn-sm" data-toast="Adds every show day to your calendar (mock)">Add to calendar</button></div>${daySheet()}</section>
+    <div class="stack">
+      <section class="card stack"><h2>Venue</h2>
+        <div><b>${esc(s.venue)}</b><div class="small muted" style="user-select:all">${esc(NYC.address)}</div></div>
+        <dl class="kv small"><dt>Wi-Fi</dt><dd style="user-select:all">${esc(NYC.wifi)}</dd><dt>Hospitality</dt><dd>${esc(NYC.hospitality)}</dd></dl>
+        <div class="note">${esc(NYC.parking)}</div>
+        <a class="btn btn-outline btn-sm" href="https://www.google.com/maps/search/?api=1&query=Canal+St+New+York" target="_blank" rel="noopener">Directions ↗</a></section>
+      <section class="card stack"><h2>Hotel</h2>
+        <div><b>${esc(NYC.hotel.name)}</b><div class="small muted">${esc(NYC.hotel.addr)} · ${NYC.hotel.nights}</div></div>
+        ${myRoom ? `<div class="row"><span class="chip plain">Your room ${myRoom}</span></div>` : ''}</section>
+      <section class="card"><h2 style="margin-bottom:4px">Day-of contacts</h2>${contactsList(NYC.contacts.slice(0, 2))}</section>
+    </div>
+  </div>`;
+};
+
+V.settle = () => {
+  const s = show('nyc'), st = NYC.settle, r = settle(st, s.deal);
+  const past = SHOWS.filter(x => x.settled);
+  return `
+  <div class="head"><div><div class="eyebrow">Tonight · ${esc(s.venue)}</div><h1 class="display">Settlement</h1>
+    <div class="sub muted">Type the final numbers from the box office; everything else recalculates.</div></div></div>
+  <div class="grid2 wide-left">
+    <section class="card stack">
+      <div class="row wrap" style="gap:12px">
+        <label class="field" for="sold" style="flex:1;min-width:130px">Tickets sold (cap ${s.cap.toLocaleString()})<input id="sold" inputmode="numeric" value="${st.sold}"></label>
+        <label class="field" for="price" style="flex:1;min-width:110px">Ticket price ($)<input id="price" inputmode="decimal" value="${(st.price / 100).toFixed(2)}"></label>
+        <label class="field" for="feeper" style="flex:1;min-width:110px">Fees per ticket ($)<input id="feeper" inputmode="decimal" value="${(st.feePer / 100).toFixed(2)}"></label>
+      </div>
+      <dl class="kv" id="settle-sheet">${settleRows(r, st, s.deal)}</dl>
+      <div class="row wrap"><button class="btn btn-primary" data-toast="Both sign on the TM's phone; PDF goes to Rae (mock)">Sign with promoter</button>
+        <button class="btn btn-secondary" data-toast="Makes a printable sheet like GroupTrip's expense report (mock)">Printable sheet</button></div>
+    </section>
+    <div class="stack">
+      <section class="card stack"><h2>The deal</h2>
+        <dl class="kv"><dt>Type</dt><dd>Guarantee vs %</dd><dt>Guarantee</dt><dd>${money(s.deal.g)}</dd><dt>Artist %</dt><dd>${s.deal.pct}% of net after expenses</dd><dt>Deposit paid</dt><dd>${money(s.deal.dep)}</dd></dl>
+        <div class="note">Artist earns whichever is higher: the guarantee, or ${s.deal.pct}% of what's left after the promoter's agreed expenses.</div></section>
+      <section class="card"><h2 style="margin-bottom:4px">Already settled</h2><div class="list">
+        ${past.map(x => `<div class="li">${dateBox(x.date)}<div class="grow"><b>${esc(x.city.split(',')[0])}</b><div class="small muted">${esc(dealText(x.deal))}</div></div><b class="num">${money(x.settled)}</b></div>`).join('')}</div></section>
+    </div>
+  </div>`;
+};
+function settleRows(r, st, d) {
+  return `
+    <dt>Gross box office</dt><dd>${money(r.gross, true)}</dd>
+    <dt>Ticketing + facility fees</dt><dd>−${money(r.fees, true)}</dd>
+    <dt><b>Net box office</b></dt><dd><b>${money(r.net, true)}</b></dd>
+    ${st.expenses.map(([n, c]) => `<dt class="small">&nbsp;&nbsp;${esc(n)}</dt><dd class="small muted">−${money(c, true)}</dd>`).join('')}
+    <dt>Show expenses</dt><dd>−${money(r.exp, true)}</dd>
+    <dt><b>Net after expenses</b></dt><dd><b>${money(r.after, true)}</b></dd>
+    <dt>${d.pct}% to artist</dt><dd>${money(r.share, true)}</dd>
+    <dt>Guarantee</dt><dd>${money(d.g, true)}</dd>
+    <dt class="total">Artist earns</dt><dd class="total">${money(r.earns, true)} <span class="chip ${r.versusWins ? 'st-confirmed' : 'st-hold'} plain" style="margin-left:6px">${r.versusWins ? d.pct + '% wins' : 'Guarantee'}</span></dd>
+    <dt>Less deposit</dt><dd>−${money(d.dep, true)}</dd>
+    <dt class="total">Due tonight</dt><dd class="total">${money(r.due, true)}</dd>`;
+}
+
+V.guests = () => {
+  const s = show('nyc');
+  const used = GUESTS.filter(g => g.status !== 'declined').reduce((a, g) => a + 1 + g.plus, 0);
+  const canApprove = S.role !== 'band';
+  const me = S.me[S.role];
+  const list = canApprove ? GUESTS : GUESTS.filter(g => g.by === me);
+  return `
+  <div class="head"><div><div class="eyebrow">${fmtDate(s.date)} · ${esc(s.venue)}</div><h1 class="display">Guest list</h1>
+    <div class="sub muted">${used} of ${GUEST_CAP} spots used · closes 5:00 pm</div></div></div>
+  <div class="bar ${used > GUEST_CAP ? 'over' : ''}"><i style="width:${Math.min(100, used / GUEST_CAP * 100)}%"></i></div>
+  <div class="grid2 wide-left">
+    <section class="card"><h2 style="margin-bottom:4px">${canApprove ? 'Everyone\'s requests' : 'Your requests'}</h2>
+      ${list.length ? `<div class="list">${list.map(g => `
+        <div class="li"><div class="grow"><b>${esc(g.name)}</b>${g.plus ? ` <span class="muted">+${g.plus}</span>` : ''}<div class="small muted">for ${esc(PEOPLE[g.by].name)}</div></div>
+          ${canApprove && g.status === 'pending' ? `<button class="btn btn-primary btn-sm" data-guest="${GUESTS.indexOf(g)}" data-act="approved">Approve</button><button class="btn btn-outline btn-sm" data-guest="${GUESTS.indexOf(g)}" data-act="declined">Decline</button>` : `<span class="chip st-${g.status === 'approved' ? 'confirmed' : g.status === 'declined' ? 'cancelled' : 'pending'}">${g.status[0].toUpperCase() + g.status.slice(1)}</span>`}
+        </div>`).join('')}</div>` : '<p class="muted">You haven\'t asked for anyone yet.</p>'}
+    </section>
+    <form class="card stack" id="guestform"><h2>Request a spot</h2>
+      <label class="field" for="gname">Name on the list<input id="gname" required placeholder="e.g. Sofia Lindqvist" autocomplete="off"></label>
+      <label class="field" for="gplus">Plus-ones<select id="gplus"><option value="0">Just them</option><option value="1">+1</option><option value="2">+2</option></select></label>
+      <button class="btn btn-tape" type="submit">Send to Dana</button>
+      <p class="small muted" style="margin:0">Dana approves; the venue gets the final list at 5 pm.</p>
+    </form>
+  </div>`;
+};
+
+V.travel = () => {
+  const me = PEOPLE[S.me[S.role]];
+  return `
+  <div class="head"><div><div class="eyebrow">${esc(me.name)} · ${esc(me.role)}</div><h1 class="display">My travel</h1>
+    <div class="sub muted">Van legs, flights and rooms — only yours.</div></div></div>
+  <div class="grid2">
+    <div class="stack">${TRAVEL.flights.map(f => `
+      <section class="card"><div class="row between small muted"><span>${f.date} · ${f.no}</span><span>Seat ${f.seat}</span></div>
+        <div class="pass" style="margin-top:8px"><div><div class="code">${f.from}</div><div class="mono">${f.dep}</div></div>
+          <div class="mid">${icon('travel')}</div>
+          <div class="r"><div class="code">${f.to}</div><div class="mono">${f.arr}</div></div></div>
+        ${f.next ? `<div class="small muted" style="margin-top:8px">${esc(f.next)}</div>` : ''}
+        <div class="perf"></div><div class="row between small"><span class="muted">Confirmation</span><span class="mono" style="user-select:all">${f.conf}</span></div>
+      </section>`).join('')}
+      <p class="note">Flight times fill in from the flight number, same as GroupTrip.</p></div>
+    <div class="stack">
+      <section class="card"><h2 style="margin-bottom:4px">Van</h2><div class="list">${TRAVEL.van.map(([d, route, call, drive, done]) => `
+        <div class="li"><div class="grow ${done ? 'muted' : ''}"><b>${esc(route)}</b><div class="small muted">${d} · ${call} · ${drive}</div></div>${done ? '<span class="chip st-settled">Done</span>' : ''}</div>`).join('')}</div></section>
+      <section class="card"><h2 style="margin-bottom:4px">Rooms</h2><div class="list">${TRAVEL.rooms.map(([d, h, room]) => `
+        <div class="li"><div class="grow"><b>${esc(h)}</b><div class="small muted">${d} · ${esc(room)}</div></div></div>`).join('')}</div></section>
+    </div>
+  </div>`;
+};
+
+V.party = () => {
+  const road = Object.keys(PEOPLE).filter(k => PEOPLE[k].road), office = Object.keys(PEOPLE).filter(k => !PEOPLE[k].road);
+  const row = k => { const p = PEOPLE[k]; return `<div class="li">${avatar(k)}<div class="grow"><b>${esc(p.name)}</b><div class="small muted">${esc(p.role)}${p.room && S.role !== 'band' ? ' · room ' + p.room : ''}</div></div><span class="mono small" style="user-select:all">${p.ph}</span></div>`; };
+  return `
+  <div class="head"><div><div class="eyebrow">${esc(TOUR.name)}</div><h1 class="display">Touring party</h1>
+    <div class="sub muted">${road.length} on the road · ${office.length} in the office. Each person's role decides what they see.</div></div>
+    ${S.role !== 'band' ? `<button class="btn btn-secondary" data-toast="Copies the crew join link (mock)">Invite crew</button>` : ''}</div>
+  <div class="grid2">
+    <section class="card"><h2 style="margin-bottom:4px">On the road</h2><div class="list">${road.map(row).join('')}</div></section>
+    <section class="card"><h2 style="margin-bottom:4px">Office</h2><div class="list">${office.map(row).join('')}</div>
+      <p class="note" style="margin-top:12px">Agents and promoters get a read-only day-sheet link — no account.</p></section>
+  </div>`;
+};
+
+V.budget = () => {
+  const fees = SHOWS.reduce((a, s) => a + showFee(s), 0);
+  const feesSettled = SHOWS.filter(s => s.settled).reduce((a, s) => a + s.settled, 0);
+  const lines = [
+    ...BUDGET,
+    [`Agent commission (${AGENT_PCT}% of fees)`, pctOf(fees, AGENT_PCT), pctOf(feesSettled, AGENT_PCT)],
+    [`Management commission (${MGMT_PCT}% of fees)`, pctOf(fees, MGMT_PCT), pctOf(feesSettled, MGMT_PCT)],
+  ];
+  const costB = lines.reduce((a, l) => a + l[1], 0), costA = lines.reduce((a, l) => a + l[2], 0);
+  const income = fees + MERCH.budget;
+  return `
+  <div class="head"><div><div class="eyebrow">${esc(TOUR.name)} · to date Apr 12</div><h1 class="display">Tour budget</h1>
+    <div class="sub muted">Budget vs actual. Actuals come from expenses, per diems and settlements.</div></div></div>
+  <div class="stats">
+    <div class="card stat"><span class="eyebrow">Projected income</span><b>${money(income)}</b></div>
+    <div class="card stat"><span class="eyebrow">Budgeted costs</span><b>${money(costB)}</b></div>
+    <div class="card stat"><span class="eyebrow">Projected net</span><b style="color:${income - costB >= 0 ? 'var(--good)' : 'var(--bad)'}">${money(income - costB)}</b></div>
+    <div class="card stat"><span class="eyebrow">Spent so far</span><b>${money(costA)}</b></div>
+  </div>
+  <section class="card"><h2 style="margin-bottom:8px">Income</h2><div class="scroll-x"><table>
+    <thead><tr><th>Source</th><th class="r">Budget</th><th class="r">So far</th></tr></thead>
+    <tbody><tr><td>Show fees (${SHOWS.length} shows)</td><td class="r">${money(fees)}</td><td class="r">${money(feesSettled)}</td></tr>
+      <tr><td>Merch (net)</td><td class="r">${money(MERCH.budget)}</td><td class="r">${money(MERCH.actual)}</td></tr></tbody>
+    <tfoot><tr><td>Total</td><td class="r">${money(income)}</td><td class="r">${money(feesSettled + MERCH.actual)}</td></tr></tfoot></table></div></section>
+  <section class="card"><h2 style="margin-bottom:8px">Costs</h2><div class="scroll-x"><table>
+    <thead><tr><th>Category</th><th class="r">Budget</th><th class="r">Spent</th><th style="width:30%">Used</th></tr></thead>
+    <tbody>${lines.map(([n, b, a]) => `<tr><td>${esc(n)}</td><td class="r">${money(b)}</td><td class="r">${money(a)}</td>
+      <td><div class="bar ${a > b ? 'over' : ''}"><i style="width:${Math.min(100, Math.round(a / b * 100))}%"></i></div></td></tr>`).join('')}</tbody>
+    <tfoot><tr><td>Total</td><td class="r">${money(costB)}</td><td class="r">${money(costA)}</td><td class="small muted">${Math.round(costA / costB * 100)}% used · 57% of tour done</td></tr></tfoot></table></div></section>
+  <p class="note">Crew enter expenses with receipt photos on their phone (GroupTrip's business expenses). Per diems are paid out automatically per road day.</p>`;
+};
+
+V.about = () => `
+  <div class="head"><div><div class="eyebrow">Prototype · sample data</div><h1 class="display">What is GigTrip?</h1></div></div>
+  <section class="card prose">
+    <p><b>GigTrip is for artist managers and their touring party.</b> It puts the dates sheet, each show's deal and settlement, the advance checklist, day sheets, travel and guest lists in one place — instead of Excel for dates and money, ClickUp for advancing, and group texts for everything else.</p>
+    <p>It's built on <a href="https://timdreamboat.github.io/grouptrip/" target="_blank" rel="noopener">GroupTrip</a>, which already handles travel, shared plans, people and expenses for groups.</p>
+    <p class="muted">Use <b>View as</b> at the top to switch between the manager (desk, planning the year), the tour manager (runs the show day and settles) and band/crew (just needs today). Everyone, venues and numbers here are made up.</p>
+  </section>
+  <section class="card prose"><h2>We'd love your take</h2>
+    <ol>
+      <li>Do you manage more than one artist? Should the season board show your whole roster?</li>
+      <li>What columns are in your Excel dates sheet today? Which ClickUp lists do you rely on?</li>
+      <li>Who settles on the night — tour manager, you, or a business manager? Which currencies and withholding taxes come up?</li>
+      <li>Should band and crew ever see money (their pay, per diems)?</li>
+      <li>Do agents and promoters need to log in, or is a shared day-sheet link enough?</li>
+      <li>What would make you switch from Excel on day one?</li>
+    </ol>
+  </section>`;
+
+// ---------- router ----------
+function route() {
+  const nav = NAV[S.role];
+  let r = location.hash.slice(1);
+  if (!V[r] || !nav.some(n => n[0] === r)) r = nav[0][0];
+  const links = nav.map(([k, l]) => `<a href="#${k}" ${k === r ? 'aria-current="page"' : ''}>${icon(k)}<span>${l}</span></a>`).join('');
+  $('#sidenav').innerHTML = links;
+  $('#tabbar').innerHTML = nav.filter(n => n[0] !== 'about').slice(0, 5).map(([k, l]) => `<a href="#${k}" ${k === r ? 'aria-current="page"' : ''}>${icon(k)}<span>${l}</span></a>`).join('');
+  $('#main').innerHTML = V[r]();
+  $('#role').value = S.role;
+  document.title = 'GigTrip';
+}
+function go(r) { if (location.hash.slice(1) === r) route(); else location.hash = r; }
+
+addEventListener('hashchange', () => { route(); scrollTo(0, 0); });
+$('#role').addEventListener('change', e => { S.role = e.target.value; store.set('role', S.role); go(NAV[S.role][0][0]); });
+
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-go],[data-show],[data-tab],[data-toast],[data-offer],[data-guest],[data-filter] button');
+  if (!t) return;
+  if (t.dataset.toast) return toast(t.dataset.toast);
+  if (t.dataset.show) { S.showId = t.dataset.show; S.showTab = 'deal'; return NAV[S.role].some(n => n[0] === 'show') ? go('show') : toast('Managers and TMs open the show page'); }
+  if (t.dataset.go) return go(t.dataset.go);
+  if (t.dataset.tab) { S.showTab = t.dataset.tab; return route(); }
+  if (t.dataset.offer) {
+    const o = OFFERS.find(x => x.id === t.dataset.offer);
+    if (t.dataset.act === 'counter') return toast(`Counter sent to ${o.promoter} (mock)`);
+    o.status = t.dataset.act === 'hold' ? 'hold' : 'declined';
+    if (o.status === 'hold') o.hold = 1;
+    toast(o.status === 'hold' ? `${o.city} is on the season board as Hold 1` : `Declined ${o.city}`);
+    return route();
+  }
+  if (t.dataset.guest) { GUESTS[+t.dataset.guest].status = t.dataset.act; toast(t.dataset.act === 'approved' ? 'Approved — on the list' : 'Declined'); return route(); }
+  const f = t.closest('[data-filter]');
+  if (f) { S[f.dataset.filter] = t.dataset.v; route(); }
+});
+document.addEventListener('change', e => {
+  if (e.target.dataset.adv) {
+    const s = show(S.showId); s.done[+e.target.dataset.adv] = e.target.checked;
+    route(); toast(e.target.checked ? 'Marked done' : 'Marked not done');
+  }
+  if (e.target.id === 'pick') { S.showId = e.target.value; route(); }
+});
+document.addEventListener('input', e => {
+  if (!['sold', 'price', 'feeper'].includes(e.target.id)) return;
+  const st = NYC.settle;
+  const cents = v => Math.round(parseFloat(String(v).replace(/[^0-9.]/g, '')) * 100);
+  const sold = parseInt($('#sold').value.replace(/\D/g, ''), 10), price = cents($('#price').value), fee = cents($('#feeper').value);
+  if (Number.isFinite(sold)) st.sold = sold;
+  if (Number.isFinite(price)) st.price = price;
+  if (Number.isFinite(fee)) st.feePer = fee;
+  $('#settle-sheet').innerHTML = settleRows(settle(st, show('nyc').deal), st, show('nyc').deal);
+});
+document.addEventListener('submit', e => {
+  if (e.target.id !== 'guestform') return;
+  e.preventDefault();
+  const name = $('#gname').value.trim();
+  if (!name) return;
+  GUESTS.push({ name, plus: +$('#gplus').value, by: S.me[S.role], status: S.role === 'band' ? 'pending' : 'approved' });
+  toast(S.role === 'band' ? 'Sent to Dana for approval' : 'Added to the list');
+  route();
+});
+
+route();
+</script>

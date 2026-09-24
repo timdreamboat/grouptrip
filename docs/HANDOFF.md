@@ -26,6 +26,17 @@ and what's pending**.
 - To test roles: use different usernames in private windows.
 - Supabase Auth settings in the dashboard are now unused (nothing to set up).
 
+## GigTrip (new, 2026-09-23 — mock only)
+- A "next level" for music artist managers + touring party (tours, shows,
+  day sheets, advancing, deals/settlement, tour budget). Separate site and
+  brand, built on GroupTrip later.
+- Clickable mock: `gigtrip/mock/index.html` (one file, fake data, no
+  database; not on GitHub Pages). Private preview link:
+  https://claude.ai/artifact/6ckEWFC9bMBHE2iFr7d1UY
+- Spec to build from: `docs/GIGTRIP-SPEC.md`. Waiting on manager feedback
+  before any real build. Deal/settlement math would be a new in-app
+  processing exception — needs owner approval.
+
 ## Working with the owner (Tim)
 - Non-technical; wants plain-English outcomes, end-to-end work, tested before
   reporting. Explain results in a sentence or two, not code.
