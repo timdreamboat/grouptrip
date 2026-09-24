@@ -409,7 +409,7 @@ dialog.sheet .field select, dialog.sheet .field input { max-width: 100%; }
 
 <div class="shell">
   <aside class="side">
-    <a class="brand" href="#about"><span class="logo">G</span><b>GigTrip</b></a>
+    <a class="brand" href="#home" data-act="goHome" aria-label="GigTrip home"><span class="logo">G</span><b>GigTrip</b></a>
     <nav id="sidenav"></nav>
     <div class="foot">
       <span>Prototype · sample data</span><button class="btn btn-outline btn-sm" data-act="help" data-id="__page" style="justify-content:flex-start">? What is this page</button>
@@ -418,7 +418,7 @@ dialog.sheet .field select, dialog.sheet .field input { max-width: 100%; }
   </aside>
   <div>
     <header class="top">
-      <a class="brand" href="#about"><span class="logo">G</span><b>GigTrip</b></a>
+      <a class="brand" href="#home" data-act="goHome" aria-label="GigTrip home"><span class="logo">G</span><b>GigTrip</b></a>
       <span class="spacer"></span>
       <span id="achipslot" style="min-width:0;display:flex"></span><span id="bellslot"></span>
       <button class="iconbtn" id="themebtn" type="button" aria-label="Switch theme"></button>
@@ -758,7 +758,7 @@ const uploadZone = (target, id, text = 'Drop files here or tap to upload') => `<
 // sidebar groups: which heading each page sits under
 const GROUPS = [['Overview', ['home', 'overview', 'today', 'activity']], ['Booking', ['board', 'offers', 'tour']], ['Shows', ['show', 'settle', 'guests', 'travel']], ['Money', ['money', 'mymoney']], ['Team', ['party', 'access']], ['Setup', ['settings', 'imports', 'about']]];
 function navFor() {
-  if (isMgr()) return [['home', 'Artists'], ['board', 'Season'], ['show', 'Show'], ['money', 'Money']].concat(cur() !== 'all' ? [['overview', 'Artist page']] : []).concat([['activity', 'Activity'], ['offers', 'Offers'], ['tour', 'Tours'], ['settle', 'Settle'], ['guests', 'Guests'], ['travel', 'Travel'], ['party', 'Party'], ['access', 'Access'], ['settings', 'Settings'], ['imports', 'Imports'], ['about', 'About']]);
+  if (isMgr()) return [['home', 'Artists'], ['board', 'Season'], ['show', 'Show'], ['money', 'Money']].concat(cur() !== 'all' ? [['overview', 'Artist page']] : []).concat([['activity', 'Activity'], ['offers', 'Offers'], ['tour', 'Tours'], ['settle', 'Settle'], ['guests', 'Guests'], ['travel', 'Travel'], ['party', 'Party'], ['access', 'Access'], ['settings', 'Settings'], ['imports', 'Imports'], ['about', 'About & help']]);
   const n = [];
   if (hasHome()) n.push(['home', 'Artists']);
   if (can('day')) n.push(['today', 'Today']);
@@ -770,7 +770,7 @@ function navFor() {
   if (can('season')) n.push(['board', 'Season']);
   if (can('profit')) n.push(['money', 'Money']);
   if (canEdit('advance')) n.push(['activity', 'Activity']);
-  n.push(['party', isVenue() ? 'Tour team' : 'Party'], ['about', 'About']);
+  n.push(['party', isVenue() ? 'Tour team' : 'Party'], ['about', 'About & help']);
   return n;
 }
 function attention() {
@@ -2262,6 +2262,7 @@ const ACT = {
   newShow: () => E.show(null), newShowFor: id => E.show(null, { artist: id, tour: DB.tours.find(t => t.artist === id)?.id || '' }), newShowTour: id => E.show(null, { tour: id, artist: tour(id).artist }),
   show: id => E.show(id), artist: id => E.artist(id), newArtist: () => E.artist(null), tour: id => E.tour(id), newTour: id => E.tour(null, { artist: id || 'jv' }),
   gotour: id => { S.tourId = id; go('tour'); },
+  goHome: () => go(navFor()[0][0]),
   pickArtist: id => {
     S.artistId = id; store.set('artist', id); S.sel.clear(); S.showTab = '';
     if (id !== 'all') { S.tourId = DB.tours.find(t => t.artist === id)?.id || S.tourId; S.showId = null; }
