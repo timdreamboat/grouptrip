@@ -1,4 +1,4 @@
-# Handoff — where GroupTrip stands (2026-09-22)
+# Handoff — where GroupTrip stands (updated 2026-09-28)
 
 Read this after `CLAUDE.md` when starting a new session. `CLAUDE.md` explains
 how the app is built and the rules; this file is **current status, decisions
@@ -66,21 +66,44 @@ Trips where @timd is NOT the organizer (added 2026-09-28, to see each role):
   @demo-dana resets it).
 Other demo usernames: demo-priya, demo-marcus, demo-dana, demo-rose,
 demo-mike, demo-elena, and summit attendees like demo-olivia.p.
-Covers for Tahoe, SF and Orlando were picked by hand — the automatic picker
-chose Alcatraz, a night street scene and an 1800s engraving "Orlando and the
-Wrestler" (Openverse keyword matches); worth fixing (prefer Wikipedia's lead
-photo of the place and filter artworks).
+Covers for Tahoe, SF and Orlando were set by hand (before the picker fix);
+the five later trips got theirs from the fixed automatic picker.
+Demo trip share codes: Tahoe 9d77adeaac63485f94132ef21cbf9fb9, Orlando
+b7397ecbcca34404b9e31f89021e01ec, Dreamforce 0c41ee10618048edac9cb83e78bdc57a,
+Summit a2270a34970043edb35510bc504af8c8, Nashville 17d3e50c642840e29e60c8ecdbb43e8c,
+Thanksgiving 256ee10c0d0144e0a4cc6c30d0c9f0a4, re:Invent c37f8a0ea61d4d7f8accff6afdfccf5b,
+Gala b49cb13039194ddd910633d8bf88b0a9, Cabo fcbbbeaced46482b924f5955280eead3.
+Don't delete or change demo trips unless the owner asks; use throwaway "ZZ …"
+trips with "zz-…" usernames for tests and delete them after.
 
 ## Working with the owner (Tim)
 - Non-technical; wants plain-English outcomes, end-to-end work, tested before
   reporting. Explain results in a sentence or two, not code.
-- Test with throwaway trips (API or UI) and delete them afterwards.
-  **Never touch the owner's real trip "las vegas trip".**
+- Test with throwaway trips (API or UI) and delete them afterwards. The
+  owner's real trips were cleared on request (2026-09-28); only demo trips
+  exist now (see above).
+- Design consumer-first: familiar patterns from mainstream apps (Airbnb,
+  Partiful, Slack), fewest steps, no dead buttons, errors shown where the
+  person is looking.
 - Every schema change: apply via migration AND append it to
   `supabase/schema.sql` (the file must stay the source of truth; the current
   trip builder is `_get_trip_all`, wrapped by `get_trip`).
 - Commit small with plain-English messages ending with the Co-Authored-By
   line; push to `main` (that deploys).
+
+## Recent work (2026-09-24 → 09-28, all live)
+- Safe outside connections (v9): links only plain https (DB CHECK +
+  `safeUrl`), "Book on <site>", Venmo handle rules, pay button names the
+  handle, recent-change warning + alert. Venmo link = account.venmo.com/pay.
+- Service worker fetches app files with `cache: 'no-cache'` (no old/new mix
+  after deploys); DB refusals shown in plain English (`friendly()` in store.js).
+- Business privacy (v10): `trips.privacy` group/private, plans for specific
+  people (`for_members`), "Showing: Everyone/My/<person>'s schedule".
+- Personal calendar feed (v11): per-person `calendar_key`, `&me=` on the
+  calendar function, "My schedule / Everyone's", "Get a new one".
+- My trips (v12): stale/deleted cards pruned (`existing_trips`), card "⋯"
+  menu → Delete trip (organizer) / Leave trip (guest, `leave_trip`).
+- Cover picker: Wikidata P18 → place's Wikipedia photo → Flickr extras.
 
 ## What's built (all live)
 - Usernames (2026-09-24): no sign-in; a username ties each person's trips
@@ -133,6 +156,31 @@ photo of the place and filter artworks).
    APIs: Maps JavaScript API + Places API (New)).
 2. **Phone test** of Add to home screen + notifications (server-side sending
    is verified; the device side isn't).
+
+## Lessons for working in this repo
+- The preview browser caches JS modules: after editing, run
+  `fetch('/<file>', {cache:'reload'})` for changed files, then reload the page
+  (a page already running keeps the old module). A stopped preview server can
+  still "serve" via the service worker's cache — restart it with preview_start.
+- Screenshots fail when the browser pane is hidden; verify with
+  javascript_tool / get_page_text, or download images and view them.
+- Test identities: just usernames now — `store.setUsername('zz-…')`,
+  `store.forgetUsername()` between people, `localStorage.clear()` at the end.
+- The permission checker blocked (don't retry): an admin "test as someone
+  else" login without codes, and signing people in from an email with no
+  proof. Deploys/migrations normally go through.
+- Other sessions work in this repo too (GigTrip mock in `gigtrip/`): always
+  `git pull` first.
+- Supabase Auth has Brevo SMTP configured by the owner but it's unused since
+  usernames replaced sign-in.
+
+## Possible next steps (owner hasn't chosen)
+- Short PIN on top of usernames so knowing someone's username isn't enough
+  to change/delete their trips (told to owner as the main open risk).
+- South Lake Tahoe's Wikidata photo is a dusk street scene (picker's one weak
+  spot seen); could prefer lake/landmark photos for lake destinations.
+- Google Maps key test; phone test of install + push (below).
+- Ideas list at the bottom.
 
 ## Known small quirks
 - The very first visit after an update can use the browser's saved copies
