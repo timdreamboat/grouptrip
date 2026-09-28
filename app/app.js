@@ -39,6 +39,7 @@ async function route() {
   if (page === 't' && code) return openTrip(code, extra || 'home');
   current = {};
   paint(() => home.render(root));
+  refreshTrips();
 }
 
 async function openTrip(code, tab, { animate = true, keepScroll = false } = {}) {
@@ -105,15 +106,19 @@ async function enrich({ trip, isOrg, refresh }) {
 window.addEventListener('hashchange', route);
 pwa.registerServiceWorker();
 
-// Has a username? Refresh the trips list in the background (it may have
-// changed on another device).
+// Refresh the trips list in the background whenever My trips is shown (at most
+// every 20 seconds): trips added on another device appear, deleted ones go.
+let lastSync = 0;
+async function refreshTrips() {
+  if (Date.now() - lastSync < 20000) return;
+  lastSync = Date.now();
+  const before = JSON.stringify(store.listTrips());
+  await store.syncMyTrips().catch(() => {});
+  if (!current.code && location.hash.replace(/^#\/?/, '') === '' && JSON.stringify(store.listTrips()) !== before) route();
+}
 async function start() {
   route();
-  if (store.username()) {
-    const before = JSON.stringify(store.listTrips());
-    await store.syncMyTrips().catch(() => {});
-    if (!current.code && location.hash.replace(/^#\/?/, '') === '' && JSON.stringify(store.listTrips()) !== before) route();
-  }
+  refreshTrips();
 }
 
 // Pick up changes friends made while this tab was in the background.

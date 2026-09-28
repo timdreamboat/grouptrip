@@ -1,5 +1,5 @@
 // Trips list. First visit: a landing page that explains GroupTrip.
-import { esc, icon, coverBg, avatarStack, fmtRange, countdown } from '../ui.js';
+import { esc, icon, coverBg, avatarStack, fmtRange, countdown, sheet, confirmSheet, busy, toast } from '../ui.js';
 import * as store from '../store.js';
 import { askUsername, openUsername } from './username.js';
 
@@ -33,9 +33,10 @@ export function render(root) {
           ${sorted.map((t) => {
             const cd = countdown(t);
             return `
+            <div class="trip-card-wrap">
             <a class="trip-card" href="#/t/${esc(t.id)}">
               <div class="cover" style="background:${esc(coverBg(t.destination || t.name, t.cover))}">
-                <div style="display:flex;justify-content:space-between;gap:8px">
+                <div style="display:flex;gap:6px;flex-wrap:wrap;padding-right:44px">
                   <span class="chip glass">${t.role === 'organizer' ? `${icon('crown')}Organizer` : 'Guest'}${t.kind && t.kind !== 'friends' ? ` · ${t.kind === 'business' ? 'Business' : 'Family'}` : ''}</span>
                   ${cd ? `<span class="chip glass">${esc(cd)}</span>` : ''}
                 </div>
@@ -45,7 +46,9 @@ export function render(root) {
                 <span class="muted">${esc(t.destination ? `${t.destination} · ` : '')}${esc(fmtRange(t.startDate, t.endDate))}</span>
                 ${t.going?.length ? avatarStack(t.going, 3, 24) : ''}
               </div>
-            </a>`;
+            </a>
+            <button class="card-menu" data-menu="${esc(t.id)}" aria-label="Options for ${esc(t.name)}">${icon('more')}</button>
+            </div>`;
           }).join('')}
           <a class="new-card" href="#/new"><span class="tl-icon">${icon('plus')}</span>Plan a new trip</a>
         </div>`
@@ -69,5 +72,39 @@ export function render(root) {
   root.querySelectorAll('[data-signin]').forEach((b) => b.onclick = async () => {
     if (await askUsername()) render(root);
   });
+  root.querySelectorAll('[data-menu]').forEach((b) => b.onclick = () => tripMenu(trips.find((t) => t.id === b.dataset.menu), root));
   root.querySelector('[data-account]')?.addEventListener('click', openUsername);
+}
+
+// The card's "⋯": organizers delete the trip for everyone; guests leave it.
+function tripMenu(t, root) {
+  if (!t) return;
+  const org = t.role === 'organizer';
+  sheet({
+    title: t.name,
+    body: `
+      <div class="stack" style="gap:8px">
+        <a class="btn btn-secondary btn-block" href="#/t/${esc(t.id)}" data-open>${icon('arrow')}Open trip</a>
+        ${org
+          ? `<button class="btn btn-danger btn-block" data-delete>${icon('trash')}Delete trip</button>
+             <p class="hint" style="margin:0;text-align:center">Removes it for everyone — plans, flights, expenses and photos.</p>`
+          : `<button class="btn btn-danger btn-block" data-leave>${icon('logout')}Leave trip</button>
+             <p class="hint" style="margin:0;text-align:center">You'll show as "Can't go". Expenses you're part of stay so the money still adds up.</p>`}
+      </div>`,
+    onMount(dlg, close) {
+      dlg.querySelector('[data-open]').addEventListener('click', close);
+      dlg.querySelector('[data-delete]')?.addEventListener('click', async () => {
+        close();
+        const ok = await confirmSheet({ title: `Delete "${t.name}"?`, message: "Everyone loses access to this trip. This can't be undone.", confirm: 'Delete for everyone', danger: true });
+        if (!ok) return;
+        if (await busy(null, () => store.deleteTrip(t.id))) { toast('Trip deleted'); render(root); }
+      });
+      dlg.querySelector('[data-leave]')?.addEventListener('click', async () => {
+        close();
+        const ok = await confirmSheet({ title: `Leave "${t.name}"?`, message: 'It comes off your trips. To come back, open the invite link again.', confirm: 'Leave trip', danger: true });
+        if (!ok) return;
+        if (await busy(null, () => store.leaveTrip(t.id))) { toast('You left the trip'); render(root); }
+      });
+    },
+  });
 }

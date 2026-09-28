@@ -82,14 +82,26 @@ export async function setUsername(u) {
 }
 // The username's trips from the server: saves the seat on each so every trip
 // opens as them on this device. Seats joined here before are tied to it first.
+// Trips that are gone (deleted, or you left/were removed) disappear from the list.
 export async function syncMyTrips(name = username()) {
-  if (!name) return { trips: [] };
+  if (!name) { await pruneTrips(); return { trips: [] }; }
   const seats = Object.entries(read(IDS, {})).map(([code, token]) => ({ code, token }));
   const r = await rpc('my_trips', { p_username: name, p_seats: seats });
   const codes = r.trips.map((t) => t.id);
+  // Every seat on this device was just tied to the username, so a trip we were
+  // part of that's missing from the server's list is no longer ours.
+  listTrips().filter((t) => !codes.includes(t.id) && t.role !== 'invited').forEach((t) => forgetTrip(t.id));
   write(IDS, { ...read(IDS, {}), ...Object.fromEntries(r.trips.map((t) => [t.id, t.token])) });
   write(TRIPS, [...r.trips.map(({ token, ...t }) => t), ...listTrips().filter((t) => !codes.includes(t.id))]);
+  await pruneTrips();
   return r;
+}
+// Drop saved trips that no longer exist at all.
+async function pruneTrips() {
+  const codes = [...new Set([...listTrips().map((t) => t.id), ...joinedCodes()])];
+  if (!codes.length) return;
+  const alive = new Set(await rpc('existing_trips', { p_codes: codes }));
+  codes.filter((c) => !alive.has(c)).forEach(forgetTrip);
 }
 // Switching usernames: forget every trip on this device (they stay under the old username).
 export function forgetUsername() {
@@ -109,6 +121,7 @@ export async function getTrip(code) {
   } catch (err) {
     const saved = read(CACHE_PREFIX + code, null);
     if (saved && (!navigator.onLine || err instanceof TypeError)) return { ...saved, _offline: true };
+    if (/trip not found/i.test(err.message)) forgetTrip(code); // deleted — take it off this device
     throw err;
   }
   // A stale token (e.g. removed from the trip) means this device is no longer a member.
@@ -149,6 +162,11 @@ export const updateTrip = (code, trip) => act('update_trip', code, { p_trip: tri
 export async function deleteTrip(code) {
   await photosFn({ action: 'purge', code, token: tokenFor(code) }); // remove the album's files first
   await act('delete_trip', code);
+  forgetTrip(code);
+}
+// A guest leaves (organizers delete instead). Their spot shows "Can't go".
+export async function leaveTrip(code) {
+  await act('leave_trip', code);
   forgetTrip(code);
 }
 export const inviteMember = (code, name) => act('invite_member', code, { p_name: name });

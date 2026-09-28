@@ -2230,3 +2230,26 @@ begin
   update members set calendar_key = k where id = a.id;
   return k;
 end $$;
+
+
+-- ============ v12: trips list cleanup + leave a trip (owner, 2026-09-28) ============
+-- Which of these trip codes still exist (reveals nothing else) — the app drops
+-- saved cards for deleted trips.
+create or replace function existing_trips(p_codes text[]) returns text[]
+language sql stable security definer set search_path = public as $$
+  select coalesce(array_agg(share_code), '{}') from trips where share_code = any(p_codes[1:200]);
+$$;
+grant execute on function existing_trips(text[]) to anon, authenticated;
+
+-- A guest leaves: shows "Can't go", untied from their username and devices;
+-- expenses/votes/flights stay so the money still adds up.
+create or replace function leave_trip(p_code text, p_token text) returns void
+language plpgsql security definer set search_path = public as $$
+declare a members := _actor(p_code, p_token);
+begin
+  if a.is_organizer then raise exception 'You''re the organizer — delete the trip instead'; end if;
+  update members set rsvp = 'declined', username = null,
+    token = replace(gen_random_uuid()::text, '-', ''), calendar_key = replace(gen_random_uuid()::text, '-', '')
+  where id = a.id;
+  delete from push_subscriptions where member_id = a.id;
+end $$;

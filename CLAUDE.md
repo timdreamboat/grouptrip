@@ -164,6 +164,12 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
 - Editing: every add form doubles as its edit form (pass the existing item).
   Same permissions as delete. `update_expense` replaces splits with
   `grouptrip.quiet` set so the split trigger doesn't re-notify.
+- My trips list lives in localStorage and is refreshed from the server each
+  time My trips shows (max every 20s, `refreshTrips` in app.js):
+  `syncMyTrips` drops cards for trips no longer under the username and
+  `existing_trips()` prunes deleted ones (also when no username is set).
+  Each card has a "⋯" menu: organizer → Delete trip (for everyone);
+  guest → Leave trip (`leave_trip`: shows "Can't go", untied from username).
 - Lost device: enter the username again. Someone who joined with the wrong
   username: organizer's "Let back in" (`reset_member`) gives the seat a new
   token and clears its username; the real person taps their name on the
