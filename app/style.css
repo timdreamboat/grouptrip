@@ -790,3 +790,13 @@ body.report-open { overflow: hidden; }
   .report-receipt img { max-height: 235mm; }
 }
 .venmo-warn { display: flex; gap: 6px; align-items: center; font-size: 12px; font-weight: 600; color: var(--warn); margin-bottom: 2px; }
+/* ---------- whose schedule / plans for specific people / privacy ---------- */
+.schedule-pick { display: flex; align-items: center; gap: 8px; margin: 0 0 14px; font-size: 14px; color: var(--muted); }
+.schedule-pick select { flex: 1; max-width: 320px; height: 38px; border-radius: 12px; border: 1px solid var(--line);
+  background: var(--surface); color: var(--text); padding: 0 10px; font: inherit; font-weight: 600; }
+.for-who { display: inline-flex; align-items: center; gap: 5px; margin-top: 6px; font-size: 12px; font-weight: 600;
+  padding: 3px 9px; border-radius: 999px; background: var(--surface-2); color: var(--muted); }
+.for-picks { margin-top: 10px; max-height: 240px; overflow-y: auto; }
+.for-picks label[hidden] { display: none; }
+.privacy-picks { grid-template-columns: 1fr; }
+.privacy-picks .kind-card b { display: flex; align-items: center; gap: 6px; }

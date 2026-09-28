@@ -2,7 +2,7 @@
 // them by day and opens a full-screen viewer (swipe or arrow keys).
 import { esc, icon, avatar, fmtDay, confirmSheet, toast, emptyState } from '../ui.js';
 import * as store from '../store.js';
-import { memberById, firstName } from './common.js';
+import { memberById, firstName, isPrivate } from './common.js';
 
 const dayOf = (iso) => iso.slice(0, 10);
 
@@ -20,7 +20,8 @@ export function render(el, ctx) {
   el.innerHTML = `
     <header class="page-head">
       <div><h1 class="display">Photos</h1>
-        <div class="sub">${photos.length ? `${photos.length} photo${photos.length === 1 ? '' : 's'} from ${people} ${people === 1 ? 'person' : 'people'}` : 'One album for the whole group'}</div></div>
+        <div class="sub">${!ctx.isOrg && isPrivate(trip) ? 'Only you and the organizer see your photos'
+          : photos.length ? `${photos.length} photo${photos.length === 1 ? '' : 's'} from ${people} ${people === 1 ? 'person' : 'people'}` : 'One album for the whole group'}</div></div>
       <button class="btn page-action" data-action="add">${icon('plus')}Add photos</button>
     </header>
     <input type="file" accept="image/*" multiple hidden id="photo-input">

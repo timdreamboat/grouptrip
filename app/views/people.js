@@ -2,7 +2,7 @@
 // names (waiting to be claimed from the invite link) and remove people.
 import { esc, icon, avatar, fmtDay, fmtTime, copy, share, confirmSheet, busy } from '../ui.js';
 import * as store from '../store.js';
-import { flightsOf, statusPill, firstName } from './common.js';
+import { flightsOf, statusPill, firstName, isPrivate, privacyPicker } from './common.js';
 import { openMe } from './me.js';
 
 const ORDER = { going: 0, maybe: 1, invited: 2, declined: 3 };
@@ -17,15 +17,29 @@ export function render(el, ctx) {
   el.innerHTML = `
     <header class="page-head">
       <div><h1 class="display">People</h1>
-        <div class="sub">${counts.going} going${counts.maybe ? ` · ${counts.maybe} maybe` : ''}${counts.invited ? ` · ${counts.invited} not joined yet` : ''}</div></div>
+        <div class="sub">${!isOrg && isPrivate(trip)
+          ? `${trip.memberCount ?? counts.going} ${(trip.memberCount ?? counts.going) === 1 ? 'person' : 'people'} on this trip`
+          : `${counts.going} going${counts.maybe ? ` · ${counts.maybe} maybe` : ''}${counts.invited ? ` · ${counts.invited} not joined yet` : ''}`}</div></div>
       ${isOrg ? `<button class="btn page-action" data-action="share">${icon('share')}Invite</button>` : ''}
     </header>
 
     <div class="stack-lg">
+      ${isOrg && trip.kind === 'business' ? `
+      <section class="card stack">
+        <div><h2>Who can see what</h2>
+          <p class="hint" style="margin-top:4px">You always see everything. Change this any time.</p></div>
+        <form id="privacy-form">${privacyPicker(trip)}</form>
+      </section>` : ''}
+
+      ${!isOrg && isPrivate(trip) ? `
+      <p class="hint" style="margin:0 4px">${icon('lock', 'tiny')} The organizer keeps this trip's guest list private — you see yourself and the organizer.</p>` : ''}
+
       ${isOrg ? `
       <section class="card stack">
         <div><h2>Add people</h2>
-          <p class="hint" style="margin-top:4px">Add names now — when they open the invite link they just tap their name.</p></div>
+          <p class="hint" style="margin-top:4px">${isPrivate(trip)
+            ? 'Add names now. Guests don\'t see this list — when they open the invite link they type their name as you wrote it here.'
+            : 'Add names now — when they open the invite link they just tap their name.'}</p></div>
         <form id="add-person" style="display:flex;gap:8px">
           <input class="input" name="name" required maxlength="80" placeholder="Name" autocomplete="off" style="flex:1">
           <button class="btn btn-primary">${icon('plus')}Add</button>
@@ -55,6 +69,12 @@ export function render(el, ctx) {
         }).join('')}
       </section>
     </div>`;
+
+  el.querySelector('#privacy-form')?.addEventListener('change', (e) => {
+    const privacy = e.target.value;
+    ctx.run(() => store.updateTrip(trip.id, { privacy }),
+      privacy === 'private' ? 'Private: each person now sees only their own things' : 'Everyone now sees the whole group');
+  });
 
   const form = el.querySelector('#add-person');
   if (form) form.onsubmit = async (e) => {

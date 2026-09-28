@@ -4,18 +4,33 @@
 import { esc, icon, fmtDay, fmtTime, tripDays, sheet, embedSheet, confirmSheet, busy, toast, copy, emptyState, safeUrl, siteName } from '../ui.js';
 import * as store from '../store.js';
 import * as embed from '../embeds.js';
-import { going, organizer, firstName, nameOf, words } from './common.js';
+import { going, organizer, firstName, nameOf, words, isPrivate } from './common.js';
 import { handleStayClick } from './stays.js';
 import { mountTripMap, focusPin, pinned, staysOnMap, stayQuery, hasGoogleKey, googleFindPlace, placeQuery, fromHotelsHTML } from './tripmap.js';
 import { distanceText } from '../places.js';
 
+// Plans can be for everyone (no names) or for specific people.
+export const isFor = (it, id) => !it.forMembers?.length || it.forMembers.includes(id);
+
+// "Whose schedule" picker: everyone, me, or one person (kept per trip for the visit).
+const viewKey = (trip) => `grouptrip.schedule.${trip.id}`;
+function scheduleOf(trip) {
+  let v = 'all';
+  try { v = sessionStorage.getItem(viewKey(trip)) || 'all'; } catch { /* ignore */ }
+  return v === 'all' || trip.members.some((m) => m.id === v) ? v : 'all';
+}
+
 export function render(el, ctx) {
   const { trip, isOrg } = ctx;
-  // One timeline: plans + everyone's flights + check-in/out.
+  const who = scheduleOf(trip);
+  const mine = (id) => who === 'all' || id === who;
+  // Private trips: attendees only have their own schedule, so no picker.
+  const canPick = (isOrg || !isPrivate(trip)) && trip.members.filter((m) => m.joined || m.isOrganizer).length > 1;
+  // One timeline: plans + flights + check-in/out — everyone's, or one person's.
   const entries = [
-    ...trip.itinerary.map((it) => ({ day: it.day || '', time: it.time || '', kind: 'plan', it })),
-    ...trip.flights.map((f) => ({ day: f.date, time: f.depTime || '', kind: 'flight', f })),
-    ...trip.stays.flatMap((s) => [
+    ...trip.itinerary.filter((it) => who === 'all' || isFor(it, who)).map((it) => ({ day: it.day || '', time: it.time || '', kind: 'plan', it })),
+    ...trip.flights.filter((f) => mine(f.memberId)).map((f) => ({ day: f.date, time: f.depTime || '', kind: 'flight', f })),
+    ...trip.stays.filter((s) => who === 'all' || !s.guests?.length || s.guests.includes(who)).flatMap((s) => [
       s.checkIn && { day: s.checkIn, time: s.checkInTime || '', kind: 'in', s },
       s.checkOut && { day: s.checkOut, time: s.checkOutTime || '', kind: 'out', s },
     ].filter(Boolean)),
@@ -46,6 +61,14 @@ export function render(el, ctx) {
       <a class="day-chip ${byDay.has(d) ? 'has' : ''}" href="#" data-jump="${d}">
         <small>${esc(fmtDay(d, { weekday: 'short' }))}</small><b>${new Date(`${d}T00:00`).getDate()}</b><span class="dot"></span></a>`).join('')}</nav>` : ''}
 
+    ${canPick ? `<label class="schedule-pick">${icon('users')}<span>Showing</span>
+      <select id="schedule-of" aria-label="Whose schedule">
+        <option value="all">Everyone's schedule</option>
+        <option value="${esc(trip.me.id)}" ${who === trip.me.id ? 'selected' : ''}>My schedule</option>
+        ${trip.members.filter((m) => m.id !== trip.me.id && (m.joined || m.isOrganizer)).map((m) =>
+          `<option value="${esc(m.id)}" ${who === m.id ? 'selected' : ''}>${esc(m.name)}'s schedule</option>`).join('')}
+      </select></label>` : ''}
+
     ${mapCard(trip)}
 
     ${entries.length ? '' : `<div class="card">${isOrg
@@ -63,6 +86,11 @@ export function render(el, ctx) {
     ${undated.length ? `
       <section class="day"><div class="day-head"><h3>Anytime</h3></div>
         <div class="tl">${undated.map((e) => entry(e, ctx)).join('')}</div></section>` : ''}`;
+
+  el.querySelector('#schedule-of')?.addEventListener('change', (e) => {
+    try { sessionStorage.setItem(viewKey(trip), e.target.value); } catch { /* ignore */ }
+    render(el, ctx);
+  });
 
   const mapEl = el.querySelector('#trip-map');
   if (mapEl) mountTripMap(mapEl, el.querySelector('#map-detail'), trip);
@@ -159,6 +187,16 @@ function openSync({ trip }) {
   });
 }
 
+// "For Ann, Ben" — or "Just you" / "You + 3 others" when others' names are private.
+function forWho(it, trip) {
+  const names = it.forMembers.map((id) => (id === trip.me.id ? 'You' : trip.members.find((m) => m.id === id)?.name)).filter(Boolean);
+  const hidden = it.forMembers.length - names.length;
+  if (names.length === 1 && names[0] === 'You' && !hidden) return 'Just you';
+  const shown = names.slice(0, 4).map((n) => (n === 'You' ? n : firstName(n)));
+  const more = names.length - shown.length + hidden;
+  return `For ${shown.join(', ')}${more ? ` + ${more} other${more === 1 ? '' : 's'}` : ''}`;
+}
+
 function item(it, { isOrg, trip }, pinNo = 0) {
   const kind = pinNo ? 'numbered' : it.opentableRid ? 'ot' : '';
   return `
@@ -171,6 +209,7 @@ function item(it, { isOrg, trip }, pinNo = 0) {
           <div style="font-weight:600;font-size:16px">${esc(it.title)}</div>
           ${it.place ? `<div class="place">${icon('pin')}${esc(it.place)}</div>` : ''}
           ${it.notes ? `<div class="small muted" style="margin-top:4px">${esc(it.notes)}</div>` : ''}
+          ${it.forMembers?.length ? `<div class="for-who">${icon('users', 'tiny')}${esc(forWho(it, trip))}</div>` : ''}
         </div>
         ${isOrg ? `<button class="btn btn-icon btn-xs btn-ghost" style="width:30px" data-edit="${it.id}" aria-label="Edit">${icon('pencil')}</button>
           <button class="btn btn-icon btn-xs btn-ghost" style="width:30px" data-del="${it.id}" aria-label="Remove">${icon('trash')}</button>` : ''}
@@ -190,6 +229,8 @@ export function openAddItem(ctx, day, preset = {}) {
   const { trip } = ctx;
   const it = preset.item;
   const v = (k) => esc(it?.[k] ?? '');
+  const people = trip.members.filter((m) => m.joined || m.isOrganizer || it?.forMembers?.includes(m.id))
+    .concat(trip.members.filter((m) => !m.joined && !m.isOrganizer && !it?.forMembers?.includes(m.id)));
   sheet({
     title: it ? 'Edit plan' : words(trip).addPlan,
     body: `
@@ -198,6 +239,19 @@ export function openAddItem(ctx, day, preset = {}) {
         <div class="grid-2">
           <label class="field"><span>Day</span><input type="date" name="day" value="${it ? v('day') : esc(day || trip.startDate || '')}"></label>
           <label class="field"><span>Time</span><input type="time" name="time" value="${v('time')}"></label>
+        </div>
+        <div class="field"><span>Who's it for?</span>
+          <div class="segmented" role="group">
+            <button type="button" data-for="all" class="${it?.forMembers?.length ? '' : 'on'}">Everyone</button>
+            <button type="button" data-for="some" class="${it?.forMembers?.length ? 'on' : ''}">Specific people</button>
+          </div>
+          <div id="for-people" ${it?.forMembers?.length ? '' : 'hidden'}>
+            ${people.length > 10 ? '<input class="input" id="for-filter" placeholder="Find a person" style="margin:10px 0 0">' : ''}
+            <div class="picks for-picks">${people.map((m) => `<label data-name="${esc(m.name.toLowerCase())}">
+              <input type="checkbox" name="for" value="${esc(m.id)}" ${it?.forMembers?.includes(m.id) ? 'checked' : ''}>
+              <span class="pick">${esc(m.id === trip.me.id ? 'Me' : m.name)}</span></label>`).join('')}</div>
+            <p class="hint" style="margin:6px 0 0">Only they see it${trip.privacy === 'private' ? '' : ' in "My schedule"'} and get the notification.</p>
+          </div>
         </div>
         <label class="field"><span>Place</span><input name="place" placeholder="Restaurant, park, or an address" autocomplete="off" value="${v('place')}"></label>
         <div class="place-status" id="place-status" aria-live="polite"></div>
@@ -249,9 +303,21 @@ export function openAddItem(ctx, day, preset = {}) {
         timer = setTimeout(() => lookup(form.elements.place.value.trim()), 700);
       });
 
+      const forBox = dlg.querySelector('#for-people');
+      dlg.querySelectorAll('[data-for]').forEach((b) => b.onclick = () => {
+        dlg.querySelectorAll('[data-for]').forEach((x) => x.classList.toggle('on', x === b));
+        forBox.hidden = b.dataset.for === 'all';
+      });
+      dlg.querySelector('#for-filter')?.addEventListener('input', (e) => {
+        const q = e.target.value.trim().toLowerCase();
+        forBox.querySelectorAll('[data-name]').forEach((l) => { l.hidden = Boolean(q) && !l.dataset.name.includes(q); });
+      });
+
       form.onsubmit = async (e) => {
         e.preventDefault();
         const f = Object.fromEntries(new FormData(form));
+        const forMembers = forBox.hidden ? [] : [...form.querySelectorAll('[name=for]:checked')].map((c) => c.value);
+        if (!forBox.hidden && !forMembers.length) return toast('Pick who it\'s for, or choose Everyone', { error: true });
         const ot = f.opentable.trim();
         const rid = ot ? embed.openTableRid(ot) : null;
         if (ot && !rid && !/^https?:/.test(ot)) return toast("That doesn't look like an OpenTable link or ID", { error: true });
@@ -264,6 +330,7 @@ export function openAddItem(ctx, day, preset = {}) {
           const item = {
             title: f.title.trim(), day: f.day, time: f.time, place, notes: f.notes.trim(),
             opentableRid: rid ?? '', bookingUrl, lat: place ? hit?.lat ?? '' : '', lon: place ? hit?.lon ?? '' : '',
+            forMembers,
           };
           return it ? store.updateItem(trip.id, it.id, item) : store.addItem(trip.id, item);
         });

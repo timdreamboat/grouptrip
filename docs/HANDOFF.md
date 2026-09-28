@@ -53,6 +53,9 @@ and what's pending**.
   together across devices (replaced the 2026-09-23 accounts + admin page).
 - Trips with organizer vs guest roles; invite page with "tap your name";
   organizer "Let back in" for wrong-username joins.
+- Business "Who can see what" (2026-09-28): whole group vs each person sees
+  only their own (big events); plans can be for specific people; Calendar
+  shows everyone's or one person's schedule.
 - Trip types: Friends / Family / Business (wording, suggestions; business =
   reimbursable expenses with receipt photos, CSV export and a printable
   expense report with the receipts (print or Save as PDF), private per person; family = shares).

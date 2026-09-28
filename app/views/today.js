@@ -3,7 +3,7 @@
 // quick actions. Times are the phone's local time (you're at the destination).
 import { esc, icon, avatar, fmtDay, fmtTime, tripDays, embedSheet, copy } from '../ui.js';
 import * as embed from '../embeds.js';
-import { memberById, firstName, stayOf } from './common.js';
+import { memberById, firstName, stayOf, myPlans } from './common.js';
 import { placeQuery } from './tripmap.js';
 
 const pad = (n) => String(n).padStart(2, '0');
@@ -33,7 +33,7 @@ export function todayCard(ctx) {
   const dayNo = days.indexOf(today) + 1;
   const now = nowMinutes();
 
-  const plans = trip.itinerary.filter((i) => i.day === today);
+  const plans = myPlans(trip).filter((i) => i.day === today);
   // Next up: the first timed plan that hasn't been going for 45+ min, else the first untimed one.
   const next = plans.find((p) => p.time && minutesOf(p.time) - now > -45) ?? plans.find((p) => !p.time) ?? null;
   const later = plans.filter((p) => p !== next && (!p.time || !next?.time || minutesOf(p.time) > minutesOf(next.time)));

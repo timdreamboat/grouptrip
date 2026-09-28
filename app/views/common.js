@@ -13,11 +13,30 @@ export function myBalance(trip) {
   return trip.me ? (balances(trip)[trip.me.id] ?? 0) : 0;
 }
 
+// Plans on *my* schedule: everything for the organizer; for everyone else,
+// plans for everyone plus the ones naming them.
+export const myPlans = (trip) => (trip.me?.isOrganizer ? trip.itinerary
+  : trip.itinerary.filter((i) => !i.forMembers?.length || i.forMembers.includes(trip.me?.id)));
+
+// Private business trips: each person only sees their own things (the server
+// sends just that); the organizer sees everything.
+export const isPrivate = (trip) => trip.kind === 'business' && trip.privacy === 'private';
+
+// The organizer's "Who can see what" choice (business trips).
+export const PRIVACY = {
+  group: ['Everyone sees the whole group', "Everyone's schedule, flights and hotels. Best for small teams, like a conference group."],
+  private: ['Each person sees only their own', 'Their own schedule, flights, hotels, expenses and photos. Best for big events — fundraisers, company-wide meetings.'],
+};
+export const privacyPicker = (trip) => `
+  <div class="kind-picks privacy-picks">${Object.entries(PRIVACY).map(([k, [label, blurb]]) => `
+    <label><input type="radio" name="privacy" value="${k}" ${(trip.privacy || 'group') === k ? 'checked' : ''}>
+      <span class="kind-card"><b>${icon(k === 'private' ? 'lock' : 'users')} ${label}</b><small>${blurb}</small></span></label>`).join('')}</div>`;
+
 // The next plan that hasn't happened yet (or the first one before the trip).
 export function nextUp(trip) {
   const now = new Date();
   const todayIso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  const dated = trip.itinerary.filter((i) => i.day);
+  const dated = myPlans(trip).filter((i) => i.day);
   return dated.find((i) => i.day >= todayIso) ?? null;
 }
 
@@ -36,7 +55,8 @@ export function heroHTML(trip, { top = '', size = 'lg' } = {}) {
         ${trip.destination ? `<span class="chip glass">${icon('pin')}${esc(trip.destination)}</span>` : ''}
         <span class="chip glass">${icon('calendar')}${esc(fmtRange(trip.startDate, trip.endDate))}</span>
         ${cd ? `<span class="chip glass">${icon('clock')}${esc(cd)}</span>` : ''}
-        ${people.length ? `<span style="margin-left:4px">${avatarStack(people, 5, 28)}</span>` : ''}
+        ${trip.memberCount != null ? `<span class="chip glass">${icon('users')}${trip.memberCount} ${trip.memberCount === 1 ? 'person' : 'people'}</span>`
+          : people.length ? `<span style="margin-left:4px">${avatarStack(people, 5, 28)}</span>` : ''}
       </div>
     </div>
   </section>`;

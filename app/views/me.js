@@ -2,7 +2,7 @@
 // organizer's trip editor.
 import { esc, icon, avatar, sheet, confirmSheet, busy, toast, suggest } from '../ui.js';
 import * as store from '../store.js';
-import { memberById, KINDS } from './common.js';
+import { memberById, KINDS, privacyPicker } from './common.js';
 import { locate, suggestDestinations } from '../places.js';
 import { mountCoverPicker } from './cover.js';
 import * as pwa from '../pwa.js';
@@ -137,6 +137,7 @@ export function openEditTrip(ctx) {
           <div class="kind-picks">${Object.entries(KINDS).map(([k, v]) => `
             <label><input type="radio" name="kind" value="${k}" ${(trip.kind || 'friends') === k ? 'checked' : ''}>
               <span class="kind-card"><b>${v.label}</b><small>${v.blurb}</small></span></label>`).join('')}</div></div>
+        ${trip.kind === 'business' ? `<div class="field"><span>Who can see what</span>${privacyPicker(trip)}</div>` : ''}
         <div class="field"><span>Cover photo</span><div id="photos"></div></div>
         <button class="btn btn-primary btn-lg">Save changes</button>
       </form>

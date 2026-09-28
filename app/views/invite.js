@@ -3,7 +3,7 @@
 // type it, plus a username (asked once per device) that ties the trip to them.
 import { esc, icon, avatarStack, avatar, busy, toast } from '../ui.js';
 import * as store from '../store.js';
-import { heroHTML, going, organizer, firstName, tripCover } from './common.js';
+import { heroHTML, going, organizer, firstName, tripCover, isPrivate } from './common.js';
 
 export function render(root, trip, onJoined) {
   const org = organizer(trip);
@@ -31,7 +31,7 @@ export function render(root, trip, onJoined) {
                 ${unclaimed.map((m) => `<label><input type="radio" name="claim" value="${m.id}">
                   <span class="pick">${avatar({ name: m.name }, 30)}${esc(m.name)}</span></label>`).join('')}
                 <label><input type="radio" name="claim" value="new"><span class="pick">${icon('plus')}I'm not on the list</span></label>
-              </div>` : '<h3>What should we call you?</h3>'}
+              </div>` : isPrivate(trip) ? '<h3>Your name</h3><p class="hint" style="margin:-4px 0 0">Type it the way the organizer has it, so you get your own schedule.</p>' : '<h3>What should we call you?</h3>'}
             <input class="input input-xl" name="name" maxlength="80" placeholder="Your name" autocomplete="given-name" ${unclaimed.length ? 'hidden' : ''}>
             ${me ? '' : `<input class="input" name="username" maxlength="31" placeholder="Pick a username" aria-label="Username"
               autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false">`}

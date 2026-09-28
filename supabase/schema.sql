@@ -2014,3 +2014,154 @@ begin
   if def not like '%venmoChangedAt%' then raise exception '_get_trip_all patch did not apply'; end if;
   execute def;
 end $$;
+
+
+-- ============ v10: who can see what + plans for specific people (owner, 2026-09-28) ============
+-- Business trips get a privacy switch: 'group' (everyone sees the whole group —
+-- small conference teams) or 'private' (each person sees only their own
+-- schedule, flights, hotels, expenses and photos — fundraisers, company-wide
+-- events, 20-50+ people). Enforced in get_trip, so the app, the invite page and
+-- the calendar feed all follow it. The organizer always sees everything.
+-- Plans can be for everyone (default) or for specific people.
+
+alter table trips add column if not exists privacy text not null default 'group'
+  check (privacy in ('group', 'private'));
+alter table itinerary_items add column if not exists for_members uuid[];  -- null/empty = everyone
+
+-- Only real members of the trip can be named on a plan.
+create or replace function _for_members(p_trip uuid, p_ids jsonb) returns uuid[]
+language sql stable security definer set search_path = public as $$
+  select nullif(array(select m.id from members m
+    where m.trip_id = p_trip and m.id::text in (select jsonb_array_elements_text(coalesce(p_ids, '[]')))), '{}');
+$$;
+
+create or replace function add_item(p_code text, p_token text, p_item jsonb) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare o members := _organizer(p_code, p_token); new_id uuid;
+begin
+  insert into itinerary_items (trip_id, day, time, title, notes, place, opentable_rid, booking_url, lat, lon, for_members)
+  values (o.trip_id, nullif(p_item->>'day', '')::date, nullif(p_item->>'time', ''), trim(p_item->>'title'),
+          nullif(p_item->>'notes', ''), nullif(p_item->>'place', ''),
+          nullif(p_item->>'opentableRid', '')::integer, nullif(p_item->>'bookingUrl', ''),
+          nullif(p_item->>'lat', '')::double precision, nullif(p_item->>'lon', '')::double precision,
+          _for_members(o.trip_id, p_item->'forMembers'))
+  returning id into new_id;
+  return new_id;
+end $$;
+
+create or replace function update_item(p_code text, p_token text, p_id uuid, p_item jsonb) returns void
+language plpgsql security definer set search_path = public as $$
+declare o members := _organizer(p_code, p_token);
+begin
+  update itinerary_items set
+    day = nullif(p_item->>'day', '')::date, time = nullif(p_item->>'time', ''), title = trim(p_item->>'title'),
+    notes = nullif(p_item->>'notes', ''), place = nullif(p_item->>'place', ''),
+    opentable_rid = nullif(p_item->>'opentableRid', '')::integer, booking_url = nullif(p_item->>'bookingUrl', ''),
+    lat = nullif(p_item->>'lat', '')::double precision, lon = nullif(p_item->>'lon', '')::double precision,
+    for_members = case when p_item ? 'forMembers' then _for_members(o.trip_id, p_item->'forMembers') else for_members end
+  where id = p_id and trip_id = o.trip_id;
+  if not found then raise exception 'Plan not found'; end if;
+end $$;
+
+-- A new plan notifies only the people it's for (everyone when it's for everyone).
+create or replace function _on_plan() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  perform _notify(new.trip_id,
+    case when cardinality(new.for_members) > 0
+         then array(select x from unnest(_joined(new.trip_id, null, true)) x where x = any(new.for_members))
+         else _joined(new.trip_id, null, true) end,
+    'New plan: ' || new.title,
+    concat_ws(' · ', _when(new.day, new.time), new.place), 'plan');
+  return null;
+end $$;
+
+create or replace function update_trip(p_code text, p_token text, p_trip jsonb) returns void
+language plpgsql security definer set search_path = public as $$
+declare o members := _organizer(p_code, p_token);
+begin
+  update trips set
+    name         = coalesce(nullif(trim(p_trip->>'name'), ''), name),
+    destination  = case when p_trip ? 'destination' then nullif(trim(p_trip->>'destination'), '') else destination end,
+    start_date   = case when p_trip ? 'startDate' then nullif(p_trip->>'startDate', '')::date else start_date end,
+    end_date     = case when p_trip ? 'endDate' then nullif(p_trip->>'endDate', '')::date else end_date end,
+    lat          = case when p_trip ? 'lat' then (p_trip->>'lat')::double precision else lat end,
+    lon          = case when p_trip ? 'lon' then (p_trip->>'lon')::double precision else lon end,
+    notes        = case when p_trip ? 'notes' then nullif(trim(p_trip->>'notes'), '') else notes end,
+    cover_url    = case when p_trip ? 'cover' then nullif(p_trip->'cover'->>'url', '') else cover_url end,
+    cover_credit = case when p_trip ? 'cover' then nullif(p_trip->'cover'->>'credit', '') else cover_credit end,
+    cover_link   = case when p_trip ? 'cover' then nullif(p_trip->'cover'->>'link', '') else cover_link end,
+    kind         = case when p_trip->>'kind' in ('friends', 'family', 'business') then p_trip->>'kind' else kind end,
+    privacy      = case when p_trip->>'privacy' in ('group', 'private') then p_trip->>'privacy' else privacy end
+  where id = o.trip_id;
+end $$;
+
+-- Private trips don't list everyone's names on the invite page, so joining
+-- matches the typed name to someone the organizer added.
+create or replace function join_trip(p_code text, p_name text, p_username text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare m members; u text := _clean_username(p_username); t uuid := _trip(p_code);
+begin
+  select * into m from members where trip_id = t and username = u;
+  if m.id is null and (select privacy = 'private' and kind = 'business' from trips where id = t) then
+    update members set joined_at = now(), username = u, rsvp = case when rsvp = 'invited' then 'going' else rsvp end
+    where id = (select id from members where trip_id = t and joined_at is null
+                  and lower(trim(name)) = lower(trim(p_name)) order by created_at limit 1)
+    returning * into m;
+  end if;
+  if m.id is null then
+    insert into members (trip_id, name, rsvp, joined_at, username)
+    values (t, trim(p_name), 'going', now(), u)
+    returning * into m;
+  elsif m.joined_at is null then
+    update members set joined_at = now() where id = m.id returning * into m;
+  end if;
+  return jsonb_build_object('memberId', m.id, 'token', m.token);
+end $$;
+
+-- Trip contents now include the privacy setting and who each plan is for.
+do $$
+declare def text := pg_get_functiondef('public._get_trip_all(text,text)'::regprocedure);
+begin
+  def := replace(def, '''kind'', t.kind,', '''kind'', t.kind, ''privacy'', t.privacy,');
+  def := replace(def, '''lat'', i.lat, ''lon'', i.lon)', '''lat'', i.lat, ''lon'', i.lon, ''forMembers'', coalesce(to_jsonb(i.for_members), ''[]''))');
+  if def not like '%''privacy'', t.privacy%' or def not like '%forMembers%' then raise exception '_get_trip_all patch did not apply'; end if;
+  execute def;
+end $$;
+
+-- What each person receives. Organizer: everything. Private business trip,
+-- everyone else (and the invite page / calendar feed): only their own.
+create or replace function get_trip(p_code text, p_token text default null) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare j jsonb := _get_trip_all(p_code, p_token); me jsonb := j->'me';
+  mid text := j->'me'->>'id';
+  org boolean := coalesce((j->'me'->>'isOrganizer')::boolean, false);
+  orgs jsonb;
+begin
+  if j->>'kind' = 'business' and not org then
+    j := jsonb_set(j, '{expenses}', coalesce((
+      select jsonb_agg(e) from jsonb_array_elements(j->'expenses') e
+      where jsonb_typeof(me) = 'object' and (e->>'paidBy' = me->>'id' or e->>'createdBy' = me->>'id')), '[]'));
+  end if;
+  if j->>'kind' = 'business' and j->>'privacy' = 'private' and not org then
+    orgs := coalesce((select jsonb_agg(m->'id') from jsonb_array_elements(j->'members') m where (m->>'isOrganizer')::boolean), '[]');
+    j := j || jsonb_build_object(
+      'memberCount', (select count(*) from jsonb_array_elements(j->'members') m where (m->>'joined')::boolean),
+      'members', coalesce((select jsonb_agg(m) from jsonb_array_elements(j->'members') m
+                           where (m->>'isOrganizer')::boolean or m->>'id' = mid), '[]'),
+      'itinerary', coalesce((select jsonb_agg(i) from jsonb_array_elements(j->'itinerary') i
+                             where jsonb_array_length(i->'forMembers') = 0 or (mid is not null and i->'forMembers' ? mid)), '[]'),
+      'flights', coalesce((select jsonb_agg(f) from jsonb_array_elements(j->'flights') f where f->>'memberId' = mid), '[]'),
+      'stays', coalesce((select jsonb_agg(jsonb_set(s, '{guests}',
+                             case when mid is not null and s->'guests' ? mid then jsonb_build_array(mid) else '[]'::jsonb end))
+                         from jsonb_array_elements(j->'stays') s
+                         where mid is not null and (jsonb_array_length(s->'guests') = 0 or s->'guests' ? mid)), '[]'),
+      'photos', coalesce((select jsonb_agg(p) from jsonb_array_elements(j->'photos') p
+                          where mid is not null and (p->>'uploadedBy' = mid or orgs ? (p->>'uploadedBy'))), '[]'),
+      'lists', case when mid is null then '[]'::jsonb else j->'lists' end,
+      'polls', case when mid is null then '[]'::jsonb else j->'polls' end,
+      'settlements', coalesce((select jsonb_agg(x) from jsonb_array_elements(j->'settlements') x
+                               where x->>'from' = mid or x->>'to' = mid), '[]'));
+  end if;
+  return j;
+end $$;

@@ -132,6 +132,21 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
   print dialog, "Save as PDF" downloads it; card is always shown, wording changes once the trip has ended); non-organizers only receive their own
   expenses (enforced in `get_trip`, which wraps `_get_trip_all` — change trip
   contents in `_get_trip_all`). Family trips default expense splits to shares.
+- Who can see what (v10, owner 2026-09-28): business trips have
+  `trips.privacy` — 'group' (everyone sees the whole group; small conference
+  teams) or 'private' (each attendee sees only their own: members = self +
+  organizer with a `memberCount`, plans for everyone + plans naming them,
+  own flights, hotels they're in (guest list trimmed to them), own
+  expenses/photos/settlements). Enforced in `get_trip` (the wrapper), so the
+  invite page and calendar feed (no seat) get only trip basics + everyone-
+  plans. Organizer always sees everything; switch on People tab and in
+  "Edit trip details" (`privacyPicker` in common.js). Private invite pages
+  don't list names — `join_trip` matches a typed name to an organizer-added
+  seat. Plans can be for specific people (`itinerary_items.for_members`,
+  empty = everyone; `_for_members` keeps only real members; the new-plan
+  notification goes only to them). Calendar has a "Showing: Everyone / My /
+  <person>'s schedule" picker (hidden for attendees on private trips);
+  Home/Today use `myPlans()`.
 - Hotels: `stay_guests` says who stays where (a person can be at more than
   one, e.g. moving hotels). Map/plan cards show "From each hotel" (distance
   needs coordinates → Google key; Route opens Google Maps directions, since

@@ -77,15 +77,16 @@ const checkbox = (l) => `<button type="button" class="check ${l.done ? 'done' : 
   data-done="${l.id}" aria-label="${esc(l.text)}" style="cursor:pointer;background-clip:padding-box">${icon('check')}</button>`;
 
 function sharedRow(l, { trip, isOrg }) {
-  const who = l.claimedBy && memberById(trip, l.claimedBy);
   const mine = l.claimedBy === trip.me.id;
+  // On private trips other people's names aren't shared — just "Taken".
+  const who = l.claimedBy && (memberById(trip, l.claimedBy) || { name: 'Someone', hidden: true });
   const canRemove = isOrg || l.createdBy === trip.me.id;
   return `
     <div class="row" style="min-height:56px">
       ${checkbox(l)}
       <div class="grow"><div class="title" style="${l.done ? 'text-decoration:line-through;color:var(--muted)' : ''}">${esc(l.text)}</div>
-        ${who ? `<div class="sub">${mine ? "You're bringing it" : `${esc(firstName(who.name))} is bringing it`}</div>` : ''}</div>
-      ${who ? (mine ? `<button class="btn btn-xs btn-ghost" data-unclaim="${l.id}">Undo</button>` : avatar(who, 28))
+        ${who ? `<div class="sub">${mine ? "You're bringing it" : who.hidden ? 'Taken' : `${esc(firstName(who.name))} is bringing it`}</div>` : ''}</div>
+      ${who ? (mine ? `<button class="btn btn-xs btn-ghost" data-unclaim="${l.id}">Undo</button>` : who.hidden ? '' : avatar(who, 28))
         : `<button class="btn btn-xs btn-secondary" data-claim="${l.id}">${icon('hand')}I'll bring it</button>`}
       ${canRemove ? `<button class="btn btn-icon btn-xs btn-ghost" style="width:30px" data-del="${l.id}" aria-label="Remove">${icon('x')}</button>` : ''}
     </div>`;
