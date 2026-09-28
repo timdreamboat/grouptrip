@@ -25,7 +25,11 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
 3. Destination lookups (owner asked for location photos, 2026-09-22), in
    `app/places.js`: OpenStreetMap Nominatim geocodes the destination once (to
    position the Windy weather embed), and cover photos come from Wikipedia's
-   lead image + Openverse (openly licensed). The organizer picks from a grid;
+   lead image + Openverse (openly licensed). Since 2026-09-28 the first
+   (auto-picked) photo is the place's Wikidata image (P18, via Nominatim's
+   `wikidata` extratag), then the lead photo of the place's own Wikipedia
+   article (Nominatim `wikipedia` tag), then Openverse extras limited to
+   Flickr photos of "Name Region", artworks filtered. The organizer picks from a grid;
    the choice and its credit are stored on the trip. Wikimedia only serves
    standard widths (500, 960, 1280…) — other sizes return 400.
    Nominatim allows 1 request/second; `places.js` queues requests.
