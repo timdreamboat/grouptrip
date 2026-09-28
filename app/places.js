@@ -1,7 +1,13 @@
 // Destination helpers: where it is (for the weather map) and photo choices
 // for the trip cover. All free, keyless, and called straight from the browser.
 //  - Location: OpenStreetMap Nominatim (low volume; once per destination)
-//  - Photos: Wikipedia's lead image + Openverse (openly licensed photos)
+//  - Photos, best first (owner asked for a better automatic pick, 2026-09-28):
+//    1. the place's own photo on Wikidata (P18 — a curated representative
+//       photo of that exact place, found via Nominatim's wikidata tag),
+//    2. the lead photo of the place's Wikipedia article (from the same tag),
+//    3. Openverse extras: Flickr photos of "City Region", artworks filtered.
+//    Plain keyword search picked Alcatraz, an 1800s engraving ("Orlando and
+//    the Wrestler") and old Austin cars — going by the place avoids that.
 
 // Nominatim asks for at most one request per second — queue them.
 let nextSlot = 0;
@@ -15,16 +21,40 @@ async function nominatim(params) {
   return hit ?? null;
 }
 
+// One lookup per destination serves both the map position and the photos.
+const places = new Map();
+function place(destination) {
+  const key = destination.trim().toLowerCase();
+  if (!places.has(key)) {
+    places.set(key, nominatim({ q: destination, extratags: '1', addressdetails: '1' }).catch(() => { places.delete(key); return null; }));
+  }
+  return places.get(key);
+}
+
 export async function locate(destination) {
-  const hit = await nominatim({ q: destination });
+  const hit = await place(destination);
   return hit ? { lat: Number(hit.lat), lon: Number(hit.lon) } : null;
 }
 
-const NOT_A_PHOTO = /\b(map|flag|seal|coat of arms|logo|locator|diagram|chart|emblem|svg)\b/i;
+const NOT_A_PHOTO = /\b(map|flag|seal|coat of arms|logo|locator|diagram|chart|emblem|svg|engraving|etching|lithograph|painting|drawing|illustration|poster|portrait|manuscript|plate|sketch|woodcut|print|postcard|stamp|coin|banner)\b/i;
+const commonsFile = (file, width) => `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(file)}?width=${width}`;
 
-async function wikipediaPhoto(destination) {
+// The place's representative photo on Wikidata (P18).
+async function wikidataPhoto(qid) {
+  if (!/^Q\d+$/.test(qid || '')) return null;
   try {
-    const res = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(destination.trim().replace(/\s+/g, '_'))}?redirect=true`);
+    const res = await fetch(`https://www.wikidata.org/w/api.php?${new URLSearchParams({ action: 'wbgetclaims', entity: qid, property: 'P18', format: 'json', origin: '*' })}`);
+    if (!res.ok) return null;
+    const file = (await res.json()).claims?.P18?.[0]?.mainsnak?.datavalue?.value;
+    if (!file || /\.svg$/i.test(file) || NOT_A_PHOTO.test(file)) return null;
+    return { url: commonsFile(file, 1280), thumb: commonsFile(file, 500), credit: 'Photo via Wikimedia Commons',
+      link: `https://commons.wikimedia.org/wiki/File:${encodeURIComponent(file.replace(/ /g, '_'))}` };
+  } catch { return null; }
+}
+
+async function wikipediaPhoto(title) {
+  try {
+    const res = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title.trim().replace(/\s+/g, '_'))}?redirect=true`);
     if (!res.ok) return null;
     const d = await res.json();
     const src = d.originalimage?.source;
@@ -34,17 +64,20 @@ async function wikipediaPhoto(destination) {
   } catch { return null; }
 }
 
-async function openversePhotos(destination) {
+async function openversePhotos(query) {
   try {
     const q = new URLSearchParams({
-      q: destination, category: 'photograph', aspect_ratio: 'wide', size: 'large',
-      license: 'cc0,pdm,by,by-sa', mature: 'false', page_size: '12',
+      q: query, source: 'flickr', aspect_ratio: 'wide',
+      license: 'cc0,pdm,by,by-sa', mature: 'false', page_size: '20',
     });
     const res = await fetch(`https://api.openverse.org/v1/images/?${q}`);
     if (!res.ok) return [];
     const { results = [] } = await res.json();
+    const titles = new Set();
     return results
-      .filter((r) => !NOT_A_PHOTO.test(r.title || ''))
+      // Real photos only, big enough for a cover, not panoramic strips, one per photo series.
+      .filter((r) => !NOT_A_PHOTO.test(r.title || '') && (r.width ?? 1024) >= 900 && (r.width ?? 3) / (r.height ?? 2) <= 2.2)
+      .filter((r) => { const t = (r.title || '').replace(/\d+/g, '').trim().toLowerCase(); return !titles.has(t) && titles.add(t); })
       .map((r) => ({
         url: r.url,
         thumb: r.thumbnail || r.url,
@@ -54,12 +87,23 @@ async function openversePhotos(destination) {
   } catch { return []; }
 }
 
-// Best first: Wikipedia's lead photo (great for cities), then open photos.
+// Best first — the first one is what gets picked automatically.
 export async function coverOptions(destination) {
   if (!destination?.trim()) return [];
-  const [wiki, open] = await Promise.all([wikipediaPhoto(destination), openversePhotos(destination)]);
+  const hit = await place(destination);
+  const tags = hit?.extratags ?? {};
+  const article = /^en:/.test(tags.wikipedia || '') ? tags.wikipedia.slice(3) : destination;
+  // "Orlando" → "Orlando Florida": the region keeps extra photos on the right place.
+  const region = hit?.address?.state || hit?.address?.country || '';
+  const name = hit?.name || destination;
+  const [data, wiki, open] = await Promise.all([
+    wikidataPhoto(tags.wikidata),
+    wikipediaPhoto(article),
+    openversePhotos(region && !name.includes(region) ? `${name} ${region}` : name),
+  ]);
   const seen = new Set();
-  return [wiki, ...open].filter((p) => p && !seen.has(p.url) && seen.add(p.url)).slice(0, 9);
+  const key = (p) => decodeURIComponent(p.url).replace(/^.*\//, '').replace(/^\d+px-/, '').replace(/\?.*$/, '').replace(/_/g, ' ').toLowerCase();
+  return [data, wiki, ...open].filter((p) => p && !seen.has(key(p)) && seen.add(key(p))).slice(0, 9);
 }
 
 // Windy's own forecast, embedded: a map plus a day-by-day forecast for the spot.
