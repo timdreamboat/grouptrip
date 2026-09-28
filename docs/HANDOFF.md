@@ -52,6 +52,18 @@ four: **@demo-guest** (Sam Rivera) — type it on home to see the guest view.
 - Company All-Hands Summit 2026 (business, PRIVATE, Nov 4–6): 42 people (36
   joined, 6 pre-added), Tracks A/B/C + leadership + volunteer plans for
   subsets, 24 flights, 2 hotels, 14 expenses.
+Trips where @timd is NOT the organizer (added 2026-09-28, to see each role):
+- Nashville Bachelor Party (friends, org @demo-marcus): Tim is a guest who
+  owes money, hasn't added a flight or voted, is bringing the shirts.
+- Thanksgiving at the Lake House (family, org @demo-rose): Tim RSVP'd maybe.
+- AWS re:Invent — Engineering (business group, org @demo-elena): Tim has his
+  own sessions + reimbursable expenses.
+- Hope Foundation Charity Gala (business PRIVATE, org @demo-priya, 60 people):
+  Tim sees only himself + Priya, his own plans/expenses.
+- Cabo Birthday Getaway (friends, org @demo-dana): Tim pre-added but NOT
+  joined — invite page: https://timdreamboat.github.io/grouptrip/#/t/fcbbbeaced46482b924f5955280eead3
+  (once he taps his name it becomes a normal guest trip; "Let back in" as
+  @demo-dana resets it).
 Other demo usernames: demo-priya, demo-marcus, demo-dana, demo-rose,
 demo-mike, demo-elena, and summit attendees like demo-olivia.p.
 Covers for Tahoe, SF and Orlando were picked by hand — the automatic picker
