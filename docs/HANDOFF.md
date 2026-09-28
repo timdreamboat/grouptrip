@@ -37,6 +37,28 @@ and what's pending**.
   before any real build. Deal/settlement math would be a new in-app
   processing exception — needs owner approval.
 
+## Demo trips (owner, 2026-09-28)
+The owner's real trips were cleared; the database holds four demo trips for
+demos and testing. Organizer everywhere: **@timd** (Tim). Shared guest in all
+four: **@demo-guest** (Sam Rivera) — type it on home to see the guest view.
+- Lake Tahoe Friends Weekend (friends, Sep 26–30 2026 — "happening now" for
+  the Today screen): 6 people incl. one maybe + one not joined, flights,
+  cabin, 9 plans, 5 split expenses + a settlement, 2 polls, lists.
+- Orlando Family Christmas (family, Dec 19–26): household shares 4/2/1/3,
+  two hotels (who stays where), 7 plans, poll, lists.
+- Dreamforce — Sales Team (business, group, Oct 13–16): 5 people, plans for
+  specific people (breakouts, customer meetings), 2 hotels, reimbursable
+  expenses incl. company card.
+- Company All-Hands Summit 2026 (business, PRIVATE, Nov 4–6): 42 people (36
+  joined, 6 pre-added), Tracks A/B/C + leadership + volunteer plans for
+  subsets, 24 flights, 2 hotels, 14 expenses.
+Other demo usernames: demo-priya, demo-marcus, demo-dana, demo-rose,
+demo-mike, demo-elena, and summit attendees like demo-olivia.p.
+Covers for Tahoe, SF and Orlando were picked by hand — the automatic picker
+chose Alcatraz, a night street scene and an 1800s engraving "Orlando and the
+Wrestler" (Openverse keyword matches); worth fixing (prefer Wikipedia's lead
+photo of the place and filter artworks).
+
 ## Working with the owner (Tim)
 - Non-technical; wants plain-English outcomes, end-to-end work, tested before
   reporting. Explain results in a sentence or two, not code.
