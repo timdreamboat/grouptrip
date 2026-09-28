@@ -161,29 +161,60 @@ function entry(e, ctx) {
 }
 
 // Subscribe in Apple / Google / Outlook — stays in sync as the trip changes.
-function openSync({ trip }) {
-  const https = store.calendarFeed(trip.id);
-  const webcal = https.replace(/^https:/, 'webcal:');
-  const options = [
-    ['Apple Calendar', 'iPhone, iPad, Mac', webcal],
-    ['Google Calendar', 'Android and the web', `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(webcal)}`],
-    ['Outlook', 'Outlook.com and Office', `https://outlook.live.com/calendar/0/addfromweb?url=${encodeURIComponent(https)}&name=${encodeURIComponent(trip.name)}`],
-  ];
+function openSync(ctx) {
+  const { trip, isOrg } = ctx;
+  let key = trip.me?.calendarKey || null;
+  // Private trips: attendees only have their own schedule to add.
+  const whole = isOrg || !isPrivate(trip);
+  let mine = true;
   sheet({
     title: 'Add to your calendar',
     body: `
-      <p class="hint" style="margin-bottom:6px">Flights, check-ins and plans show up in your own calendar — and new ones appear automatically.</p>
-      <div class="rows">
-        ${options.map(([name, sub, href]) => `
+      ${whole && key ? `<div class="segmented" role="group" style="margin-bottom:12px">
+        <button type="button" data-feed="mine" class="on">My schedule</button>
+        <button type="button" data-feed="all">Everyone's</button>
+      </div>` : ''}
+      <p class="hint" id="feed-hint" style="margin-bottom:6px"></p>
+      <div class="rows" id="feed-options"></div>
+      <div class="link-box" style="margin-top:12px"><code id="feed-url"></code>
+        <button class="btn btn-sm btn-secondary" data-copy>${icon('copy')}Copy</button></div>
+      <p class="hint" style="margin-top:8px">Calendar apps refresh every few hours. Times are local to where things happen.</p>
+      ${key ? `<button class="btn btn-ghost btn-sm" data-new-link style="margin-top:6px">Shared your link by mistake? Get a new one</button>` : ''}`,
+    onMount(dlg) {
+      const draw = () => {
+        const https = store.calendarFeed(trip.id, mine ? key : null);
+        const webcal = https.replace(/^https:/, 'webcal:');
+        const name = mine && key ? `${trip.name} · my schedule` : trip.name;
+        const options = [
+          ['Apple Calendar', 'iPhone, iPad, Mac', webcal],
+          ['Google Calendar', 'Android and the web', `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(webcal)}`],
+          ['Outlook', 'Outlook.com and Office', `https://outlook.live.com/calendar/0/addfromweb?url=${encodeURIComponent(https)}&name=${encodeURIComponent(name)}`],
+        ];
+        dlg.querySelector('#feed-hint').textContent = mine && key
+          ? "Your plans, flights and hotel check-ins — only what's on your schedule. This link is yours; don't share it."
+          : 'Flights, check-ins and plans for the whole group — new ones appear automatically.';
+        dlg.querySelector('#feed-options').innerHTML = options.map(([n, sub, href]) => `
           <a class="sync-option" href="${esc(href)}" target="_blank" rel="noopener noreferrer">
             <div class="tl-icon">${icon('calplus')}</div>
-            <div style="flex:1"><div style="font-weight:600">${name}</div><div class="small muted">${sub}</div></div>${icon('external')}
-          </a>`).join('')}
-      </div>
-      <div class="link-box" style="margin-top:12px"><code>${esc(https)}</code>
-        <button class="btn btn-sm btn-secondary" data-copy>${icon('copy')}Copy</button></div>
-      <p class="hint" style="margin-top:8px">Calendar apps refresh every few hours. Times are local to where things happen.</p>`,
-    onMount(dlg) { dlg.querySelector('[data-copy]').onclick = () => copy(https, 'Calendar link copied'); },
+            <div style="flex:1"><div style="font-weight:600">${n}</div><div class="small muted">${sub}</div></div>${icon('external')}
+          </a>`).join('');
+        dlg.querySelector('#feed-url').textContent = https;
+        dlg.querySelector('[data-copy]').onclick = () => copy(https, 'Calendar link copied');
+      };
+      if (!key) mine = false;
+      dlg.querySelectorAll('[data-feed]').forEach((b) => b.onclick = () => {
+        mine = b.dataset.feed === 'mine';
+        dlg.querySelectorAll('[data-feed]').forEach((x) => x.classList.toggle('on', x === b));
+        draw();
+      });
+      dlg.querySelector('[data-new-link]')?.addEventListener('click', async (e) => {
+        const ok = await confirmSheet({ title: 'Get a new calendar link?', message: 'Your old link stops working. You\'ll need to add the new one to your calendar again.', confirm: 'Get a new link' });
+        if (!ok) return;
+        const next = await busy(e.currentTarget, () => store.resetMyCalendar(trip.id));
+        if (next) { key = next; trip.me.calendarKey = next; mine = true; dlg.querySelector('[data-feed=mine]')?.click(); draw(); toast('New link ready — add it to your calendar again'); }
+      });
+      draw();
+    },
   });
 }
 

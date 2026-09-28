@@ -267,4 +267,7 @@ const base = () => location.origin + location.pathname;
 export const inviteLink = (code) => `${base()}#/t/${code}`;
 
 // Subscribable calendar feed (Apple/Google/Outlook keep it in sync).
-export const calendarFeed = (code) => `${SUPABASE_URL}/functions/v1/calendar?trip=${code}`;
+// With a calendar key: just that person's schedule (key is private to them,
+// read-only, separate from their seat token).
+export const calendarFeed = (code, key = null) => `${SUPABASE_URL}/functions/v1/calendar?trip=${code}${key ? `&me=${key}` : ''}`;
+export const resetMyCalendar = (code) => act('reset_my_calendar', code);

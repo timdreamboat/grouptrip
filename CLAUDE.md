@@ -93,6 +93,13 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
 - Edge Function `calendar` (verify_jwt OFF — calendar apps can't send auth)
   serves a subscribable .ics feed at `/functions/v1/calendar?trip=<share_code>`.
   Same access as the invite link; never include private lists, tokens or money.
+  Personal feed (v11): `&me=<members.calendar_key>` → `get_my_calendar` =
+  that person's schedule only (everyone-plans + plans naming them, own
+  flights, own hotels). The calendar key is separate from the seat token
+  (links get pasted into calendar apps), read-only, rotated by "Let back in"
+  and by the person's "Get a new link" (`reset_my_calendar`). The "Add to
+  your calendar" sheet offers My schedule / Everyone's (attendees on private
+  trips only get their own).
 - Edge Function `photos` (verify_jwt on) issues signed upload URLs into the
   public `trip-photos` bucket (folder = trip's internal id, never the share
   code), deletes single photos, and purges a trip's folder before the trip is

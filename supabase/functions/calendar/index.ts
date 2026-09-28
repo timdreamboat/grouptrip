@@ -1,5 +1,9 @@
 // Subscribable calendar feed for a trip (iCalendar / .ics).
-// GET /functions/v1/calendar?trip=<share_code>
+// GET /functions/v1/calendar?trip=<share_code>            the whole trip
+// GET /functions/v1/calendar?trip=<share_code>&me=<key>   one person's schedule
+//
+// The personal feed uses the person's private calendar key (never their seat
+// token): plans for everyone + plans naming them, their flights, their hotels.
 //
 // Calendar apps (Apple, Google, Outlook) poll this URL, so it can't send an
 // auth header — it's deployed with verify_jwt off. Access is the same as the
@@ -14,7 +18,7 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
 
 type Trip = {
-  id: string; name: string; destination?: string; startDate?: string; endDate?: string;
+  id: string; name: string; destination?: string; startDate?: string; endDate?: string; personName?: string;
   members: { id: string; name: string }[];
   flights: { id: string; memberId: string; flightNumber: string; date: string; depAirport?: string; depTime?: string; arrAirport?: string; arrTime?: string; arrDate?: string }[];
   itinerary: { id: string; day?: string; time?: string; title: string; notes?: string; place?: string }[];
@@ -60,7 +64,7 @@ function build(trip: Trip) {
   const who = (id: string) => trip.members.find((m) => m.id === id)?.name ?? 'Someone';
   const lines = [
     'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//GroupTrip//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
-    `X-WR-CALNAME:${esc(trip.name)}`, 'X-PUBLISHED-TTL:PT1H', 'REFRESH-INTERVAL;VALUE=DURATION:PT1H',
+    `X-WR-CALNAME:${esc(trip.personName ? `${trip.name} · ${trip.personName.split(/\s+/)[0]}'s schedule` : trip.name)}`, 'X-PUBLISHED-TTL:PT1H', 'REFRESH-INTERVAL;VALUE=DURATION:PT1H',
   ];
 
   if (trip.startDate) {
@@ -111,13 +115,16 @@ function build(trip: Trip) {
 }
 
 Deno.serve(async (req) => {
-  const code = new URL(req.url).searchParams.get('trip') ?? '';
+  const params = new URL(req.url).searchParams;
+  const code = params.get('trip') ?? '';
+  const me = params.get('me');
   if (!/^[0-9a-f]{32}$/.test(code)) return new Response('Missing or invalid trip', { status: 400 });
+  if (me !== null && !/^[0-9a-f]{32}$/.test(me)) return new Response('Invalid calendar link', { status: 400 });
 
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_trip`, {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${me ? 'get_my_calendar' : 'get_trip'}`, {
     method: 'POST',
     headers: { apikey: ANON_KEY, Authorization: `Bearer ${ANON_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ p_code: code }),
+    body: JSON.stringify(me ? { p_code: code, p_key: me } : { p_code: code }),
   });
   if (!res.ok) return new Response('Trip not found', { status: 404 });
   const trip = await res.json() as Trip;
@@ -126,7 +133,7 @@ Deno.serve(async (req) => {
     headers: {
       'Content-Type': 'text/calendar; charset=utf-8',
       'Content-Disposition': `inline; filename="grouptrip.ics"`,
-      'Cache-Control': 'public, max-age=300',
+      'Cache-Control': `${me ? 'private' : 'public'}, max-age=300`,
       'Access-Control-Allow-Origin': '*',
     },
   });

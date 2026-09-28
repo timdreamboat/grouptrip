@@ -2165,3 +2165,68 @@ begin
   end if;
   return j;
 end $$;
+
+
+-- ============ v11: personal calendar feed (owner, 2026-09-28) ============
+-- Each person gets a private, read-only calendar key (separate from their seat
+-- token — calendar links get pasted into apps, so they must not be able to act
+-- as the person). /functions/v1/calendar?trip=<code>&me=<key> shows only that
+-- person's schedule: plans for everyone + plans naming them, their own
+-- flights, and hotels they're staying at. Never expenses, lists or photos.
+
+alter table members add column if not exists calendar_key text unique
+  default replace(gen_random_uuid()::text, '-', '');
+update members set calendar_key = replace(gen_random_uuid()::text, '-', '') where calendar_key is null;
+alter table members alter column calendar_key set not null;
+
+-- The person's own key comes with their trip view (only to them).
+do $$
+declare def text := pg_get_functiondef('public._get_trip_all(text,text)'::regprocedure);
+begin
+  def := replace(def, 'jsonb_build_object(''id'', me.id, ''isOrganizer'', me.is_organizer)',
+                      'jsonb_build_object(''id'', me.id, ''isOrganizer'', me.is_organizer, ''calendarKey'', me.calendar_key)');
+  if def not like '%calendarKey%' then raise exception '_get_trip_all patch did not apply'; end if;
+  execute def;
+end $$;
+
+create or replace function get_my_calendar(p_code text, p_key text) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare m members; j jsonb; mid text;
+begin
+  select * into m from members
+  where trip_id = _trip(p_code) and calendar_key = p_key and joined_at is not null;
+  if m.id is null then raise exception 'Calendar not found'; end if;
+  mid := m.id::text;
+  j := get_trip(p_code, m.token);
+  return jsonb_build_object(
+    'id', j->'id', 'name', j->'name', 'destination', j->'destination',
+    'startDate', j->'startDate', 'endDate', j->'endDate', 'personName', m.name,
+    'members', jsonb_build_array(jsonb_build_object('id', m.id, 'name', m.name)),
+    'itinerary', coalesce((select jsonb_agg(i) from jsonb_array_elements(j->'itinerary') i
+                           where jsonb_array_length(i->'forMembers') = 0 or i->'forMembers' ? mid), '[]'),
+    'flights', coalesce((select jsonb_agg(f) from jsonb_array_elements(j->'flights') f where f->>'memberId' = mid), '[]'),
+    'stays', coalesce((select jsonb_agg(s) from jsonb_array_elements(j->'stays') s
+                       where jsonb_array_length(s->'guests') = 0 or s->'guests' ? mid), '[]'));
+end $$;
+
+-- "Let back in" also retires the old calendar link.
+create or replace function reset_member(p_code text, p_token text, p_id uuid) returns void
+language plpgsql security definer set search_path = public as $$
+declare o members := _organizer(p_code, p_token);
+begin
+  if p_id = o.id then raise exception 'You''re the organizer — just enter your username on your new device'; end if;
+  update members set token = replace(gen_random_uuid()::text, '-', ''),
+    calendar_key = replace(gen_random_uuid()::text, '-', ''), joined_at = null, username = null, user_id = null
+  where id = p_id and trip_id = o.trip_id and joined_at is not null;
+  if not found then raise exception 'They haven''t joined yet — just send them the invite link'; end if;
+  delete from push_subscriptions where member_id = p_id;
+end $$;
+
+-- A person can get a fresh calendar link if theirs was shared by mistake.
+create or replace function reset_my_calendar(p_code text, p_token text) returns text
+language plpgsql security definer set search_path = public as $$
+declare a members := _actor(p_code, p_token); k text := replace(gen_random_uuid()::text, '-', '');
+begin
+  update members set calendar_key = k where id = a.id;
+  return k;
+end $$;
