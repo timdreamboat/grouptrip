@@ -2253,3 +2253,277 @@ begin
   where id = a.id;
   delete from push_subscriptions where member_id = a.id;
 end $$;
+
+-- ============ v13: username PIN + optional passkeys (owner, 2026-09-28) ============
+-- "Add the pin to the username and build in the optional passkey." Every
+-- username gets a 6-digit PIN (bcrypt-hashed). Entering the username + PIN, or
+-- using a passkey (Face ID / fingerprint / phone passcode, checked by the
+-- `passkey` Edge Function), gives that device a device key. Listing a
+-- username's trips and joining/creating under it need that key. Usernames from
+-- before v13 have no PIN until someone sets one (the app asks straight away):
+-- until then their trips list still opens without one, but joining or creating
+-- needs the PIN first. Wrong PINs: 5 tries, then locked 15 minutes, doubling
+-- each further time (max 24 hours).
+
+create table usernames (
+  username       text primary key check (username ~ '^[a-z0-9_.-]{3,30}$'),
+  pin_hash       text not null,
+  failed         int not null default 0,
+  locked_until   timestamptz,
+  created_at     timestamptz not null default now(),
+  pin_changed_at timestamptz not null default now()
+);
+create table username_devices (
+  key_hash     text primary key,          -- sha256 of the key the device keeps
+  username     text not null references usernames(username) on delete cascade,
+  via          text not null,             -- 'new' | 'pin' | 'passkey'
+  created_at   timestamptz not null default now(),
+  last_used_at timestamptz not null default now()
+);
+create index on username_devices (username);
+create table passkeys (
+  id            uuid primary key default gen_random_uuid(),
+  username      text not null references usernames(username) on delete cascade,
+  credential_id text not null unique,     -- base64url
+  public_key    text not null,            -- base64url COSE key
+  counter       bigint not null default 0,
+  transports    text[] not null default '{}',
+  device        text,                     -- "iPhone", "Mac"… for the settings list
+  created_at    timestamptz not null default now(),
+  last_used_at  timestamptz
+);
+create index on passkeys (username);
+create table passkey_challenges (
+  id         uuid primary key default gen_random_uuid(),
+  kind       text not null check (kind in ('register', 'login')),
+  username   text,
+  challenge  text not null,
+  created_at timestamptz not null default now()
+);
+alter table usernames enable row level security;
+alter table username_devices enable row level security;
+alter table passkeys enable row level security;
+alter table passkey_challenges enable row level security;
+revoke all on usernames, username_devices, passkeys, passkey_challenges from anon, authenticated;
+
+create function _check_pin(p text) returns void
+language plpgsql immutable as $$
+begin
+  if coalesce(p, '') !~ '^[0-9]{6}$' then raise exception 'Your PIN is 6 numbers'; end if;
+  if p ~ '^(.)\1{5}$' or position(p in '01234567890') > 0 or position(p in '09876543210') > 0 then
+    raise exception 'That PIN is easy to guess — try a less obvious one';
+  end if;
+end $$;
+
+create function _key_hash(k text) returns text
+language sql immutable set search_path = public as $$
+  select encode(extensions.digest(coalesce(k, ''), 'sha256'), 'hex');
+$$;
+
+create function _issue_device(u text, p_via text) returns text
+language plpgsql security definer set search_path = public as $$
+declare k text := encode(extensions.gen_random_bytes(24), 'hex');
+begin
+  insert into username_devices (key_hash, username, via) values (_key_hash(k), u, p_via);
+  return k;
+end $$;
+
+create function _device_ok(u text, k text) returns boolean
+language plpgsql security definer set search_path = public as $$
+begin
+  if k is null then return false; end if;
+  update username_devices set last_used_at = now() where key_hash = _key_hash(k) and username = u;
+  return found;
+end $$;
+
+-- May this device act as the username? Yes with its device key. A username
+-- from before PINs (no row yet) may only list its trips (p_strict = false).
+create function _username_ok(u text, k text, p_strict boolean) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if exists (select 1 from usernames where username = u) then
+    if not _device_ok(u, k) then raise exception 'PIN_REQUIRED: Enter your PIN for @%', u; end if;
+  elsif p_strict then
+    raise exception 'PIN_NEEDED: Create a PIN for @% first', u;
+  end if;
+end $$;
+
+-- What the sign-in sheet needs to know about a typed username.
+create function username_status(p_username text) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare u text := _clean_username(p_username);
+begin
+  return jsonb_build_object(
+    'username', u,
+    'taken', exists (select 1 from usernames where username = u) or exists (select 1 from members where username = u),
+    'hasPin', exists (select 1 from usernames where username = u),
+    'hasPasskey', exists (select 1 from passkeys where username = u));
+end $$;
+
+-- New username (or one from before PINs): set its PIN, get a device key.
+create function create_pin(p_username text, p_pin text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare u text := _clean_username(p_username);
+begin
+  perform _check_pin(p_pin);
+  if exists (select 1 from usernames where username = u) then
+    raise exception 'That username already has a PIN — enter it instead';
+  end if;
+  insert into usernames (username, pin_hash) values (u, extensions.crypt(p_pin, extensions.gen_salt('bf', 8)));
+  return jsonb_build_object('username', u,
+    'deviceKey', _issue_device(u, case when exists (select 1 from members where username = u) then 'pin' else 'new' end));
+end $$;
+
+-- Username + PIN on a device. Answers {ok:false, error} instead of raising,
+-- so the wrong-try count is saved.
+create function unlock_username(p_username text, p_pin text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare u text := _clean_username(p_username); r usernames; n int;
+begin
+  select * into r from usernames where username = u for update;
+  if r.username is null then return jsonb_build_object('ok', false, 'error', 'That username doesn''t have a PIN yet'); end if;
+  if r.locked_until > now() then
+    return jsonb_build_object('ok', false, 'error', format('Too many wrong tries. Try again in %s minutes.',
+      ceil(extract(epoch from r.locked_until - now()) / 60)));
+  end if;
+  if r.pin_hash = extensions.crypt(coalesce(p_pin, ''), r.pin_hash) then
+    update usernames set failed = 0, locked_until = null where username = u;
+    return jsonb_build_object('ok', true, 'username', u, 'deviceKey', _issue_device(u, 'pin'));
+  end if;
+  n := r.failed + 1;
+  if n % 5 = 0 then
+    update usernames set failed = n,
+      locked_until = now() + least(interval '24 hours', interval '15 minutes' * power(2, n / 5 - 1))
+    where username = u;
+    return jsonb_build_object('ok', false, 'error', format('Too many wrong tries. Try again in %s minutes.',
+      ceil(extract(epoch from least(interval '24 hours', interval '15 minutes' * power(2, n / 5 - 1))) / 60)));
+  end if;
+  update usernames set failed = n where username = u;
+  return jsonb_build_object('ok', false, 'error',
+    format('Wrong PIN — %s %s left', 5 - n % 5, case when 5 - n % 5 = 1 then 'try' else 'tries' end));
+end $$;
+
+create function change_pin(p_username text, p_device_key text, p_pin text) returns void
+language plpgsql security definer set search_path = public as $$
+declare u text := _clean_username(p_username);
+begin
+  perform _username_ok(u, p_device_key, true);
+  perform _check_pin(p_pin);
+  update usernames set pin_hash = extensions.crypt(p_pin, extensions.gen_salt('bf', 8)),
+    failed = 0, locked_until = null, pin_changed_at = now()
+  where username = u;
+end $$;
+
+-- "Use a different username": this device's key stops working.
+create function forget_device(p_username text, p_device_key text) returns void
+language sql security definer set search_path = public as $$
+  delete from username_devices where username = _clean_username(p_username) and key_hash = _key_hash(p_device_key);
+$$;
+
+create function my_passkeys(p_username text, p_device_key text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare u text := _clean_username(p_username);
+begin
+  perform _username_ok(u, p_device_key, true);
+  return coalesce((select jsonb_agg(jsonb_build_object('id', id, 'device', device,
+      'createdAt', created_at, 'lastUsedAt', last_used_at) order by created_at)
+    from passkeys where username = u), '[]');
+end $$;
+
+create function remove_passkey(p_username text, p_device_key text, p_id uuid) returns void
+language plpgsql security definer set search_path = public as $$
+declare u text := _clean_username(p_username);
+begin
+  perform _username_ok(u, p_device_key, true);
+  delete from passkeys where id = p_id and username = u;
+end $$;
+
+-- Trips list: now needs the device key once the username has a PIN.
+drop function if exists my_trips(text, jsonb);
+create function my_trips(p_username text, p_seats jsonb default '[]', p_device_key text default null) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare u text := _clean_username(p_username); s jsonb;
+begin
+  perform _username_ok(u, p_device_key, false);
+  for s in select * from jsonb_array_elements(case when jsonb_typeof(p_seats) = 'array' then p_seats else '[]' end) loop
+    update members m set username = u
+    where m.trip_id = (select id from trips where share_code = s->>'code')
+      and m.token = s->>'token' and m.username is null and m.joined_at is not null
+      and not exists (select 1 from members x where x.trip_id = m.trip_id and x.username = u);
+  end loop;
+  return jsonb_build_object(
+    'username', u,
+    'hasPin', exists (select 1 from usernames where username = u),
+    'trips', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'id', t.share_code, 'token', m.token, 'name', t.name, 'destination', t.destination,
+        'startDate', t.start_date, 'endDate', t.end_date, 'kind', t.kind, 'cover', t.cover_url,
+        'role', case when m.is_organizer then 'organizer' else 'guest' end, 'myName', m.name,
+        'going', (select coalesce(jsonb_agg(jsonb_build_object('name', g.name) order by g.created_at), '[]')
+                  from members g where g.trip_id = t.id and g.rsvp = 'going'))
+        order by t.start_date nulls last, t.created_at)
+      from members m join trips t on t.id = m.trip_id
+      where m.username = u and m.joined_at is not null), '[]'));
+end $$;
+
+-- Creating and joining under a username need its device key.
+drop function if exists create_trip(text, text, date, date, text, text, text, text);
+create function create_trip(p_name text, p_destination text, p_start date, p_end date, p_currency text,
+  p_organizer text, p_kind text, p_username text, p_device_key text default null) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare t trips; m members; u text := _clean_username(p_username);
+begin
+  perform _username_ok(u, p_device_key, true);
+  insert into trips (name, destination, start_date, end_date, currency, kind)
+  values (trim(p_name), nullif(trim(p_destination), ''), p_start, p_end, coalesce(nullif(upper(trim(p_currency)), ''), 'USD'),
+          case when p_kind in ('friends', 'family', 'business') then p_kind else 'friends' end)
+  returning * into t;
+  insert into members (trip_id, name, is_organizer, rsvp, joined_at, username)
+  values (t.id, trim(p_organizer), true, 'going', now(), u)
+  returning * into m;
+  return jsonb_build_object('code', t.share_code, 'memberId', m.id, 'token', m.token);
+end $$;
+
+drop function if exists join_trip(text, text, text);
+create function join_trip(p_code text, p_name text, p_username text, p_device_key text default null) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare m members; u text := _clean_username(p_username); t uuid := _trip(p_code);
+begin
+  perform _username_ok(u, p_device_key, true);
+  select * into m from members where trip_id = t and username = u;
+  if m.id is null and (select privacy = 'private' and kind = 'business' from trips where id = t) then
+    update members set joined_at = now(), username = u, rsvp = case when rsvp = 'invited' then 'going' else rsvp end
+    where id = (select id from members where trip_id = t and joined_at is null
+                  and lower(trim(name)) = lower(trim(p_name)) order by created_at limit 1)
+    returning * into m;
+  end if;
+  if m.id is null then
+    insert into members (trip_id, name, rsvp, joined_at, username)
+    values (t, trim(p_name), 'going', now(), u)
+    returning * into m;
+  elsif m.joined_at is null then
+    update members set joined_at = now() where id = m.id returning * into m;
+  end if;
+  return jsonb_build_object('memberId', m.id, 'token', m.token);
+end $$;
+
+drop function if exists claim_member(text, uuid, text);
+create function claim_member(p_code text, p_member uuid, p_username text, p_device_key text default null) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare m members; u text := _clean_username(p_username); t uuid := _trip(p_code);
+begin
+  perform _username_ok(u, p_device_key, true);
+  select * into m from members where trip_id = t and username = u and joined_at is not null;
+  if m.id is not null then return jsonb_build_object('memberId', m.id, 'token', m.token); end if;
+  update members set joined_at = now(), username = u,
+    rsvp = case when rsvp = 'invited' then 'going' else rsvp end
+  where id = p_member and trip_id = t and joined_at is null
+  returning * into m;
+  if m.id is null then raise exception 'That name has already been claimed. Ask the organizer for help.'; end if;
+  return jsonb_build_object('memberId', m.id, 'token', m.token);
+end $$;
+
+-- Internal pieces: not callable from the app (the passkey Edge Function uses
+-- _device_ok and _issue_device with the service key).
+revoke execute on function _check_pin(text), _key_hash(text), _issue_device(text, text), _device_ok(text, text),
+  _username_ok(text, text, boolean) from public, anon, authenticated;

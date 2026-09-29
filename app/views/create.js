@@ -6,7 +6,7 @@ import { locate, suggestDestinations } from '../places.js';
 import { mapEmbed } from '../embeds.js';
 import { mountCoverPicker } from './cover.js';
 import { KINDS, firstName } from './common.js';
-import { askUsername } from './username.js';
+import { askUsername, withUnlock } from './username.js';
 
 const STEPS = 3;
 
@@ -134,7 +134,8 @@ export function render(root) {
       if (!data.name || !data.organizer) return toast('Add a trip name and your name', { error: true });
       if (!store.username() && !(await askUsername({ title: 'Save your trip', reason: `Pick a username to save "${data.name}". Enter it on any phone or laptop to manage your trips there.` }))) return;
       const code = await busy(form.querySelector('.btn-primary'), async () => {
-        const c = await store.createTrip(data);
+        const c = await withUnlock(() => store.createTrip(data));
+        if (!c) return false;
         // Cover photo + map location (for the weather). Nice-to-have: never block creating the trip.
         const where = data.where ? { lat: data.where.lat, lon: data.where.lon } : await locate(data.destination).catch(() => null);
         await store.updateTrip(c, { ...(where ?? {}), ...(data.cover ? { cover: data.cover } : {}) }).catch(() => {});

@@ -3,6 +3,7 @@
 // type it, plus a username (asked once per device) that ties the trip to them.
 import { esc, icon, avatarStack, avatar, busy, toast } from '../ui.js';
 import * as store from '../store.js';
+import { askUsername, withUnlock } from './username.js';
 import { heroHTML, going, organizer, firstName, tripCover, isPrivate } from './common.js';
 
 export function render(root, trip, onJoined) {
@@ -38,7 +39,7 @@ export function render(root, trip, onJoined) {
             <button class="btn btn-primary btn-lg btn-block">Join trip ${icon('arrow')}</button>
             <p class="hint" style="text-align:center;margin:-2px 0 0">${me
               ? `Joining as <b>@${esc(me)}</b>`
-              : 'No account or password. Enter your username on any device to see your trips.'}</p>
+              : 'No account needed. Your username and PIN bring your trips to any phone or laptop.'}</p>
           </form>
         </div>
       </div>
@@ -69,14 +70,11 @@ export function render(root, trip, onJoined) {
       userIn.focus();
       return toast('Pick a username: 3–30 letters or numbers (dots, dashes and underscores are fine)', { error: true });
     }
-    let back = false;
-    const ok = await busy(e.submitter, async () => {
-      if (userIn) {
-        await store.setUsername(userIn.value);
-        if (store.tokenFor(trip.id)) { back = true; return; } // already on this trip under that username
-      }
-      await (w.memberId ? store.claimMember(trip.id, w.memberId) : store.joinTrip(trip.id, w.name));
-    });
-    if (ok) onJoined(back ? 'Welcome back' : "You're in! Welcome to the trip");
+    // New here (or new on this device): the username's PIN comes first.
+    if (userIn && !(await askUsername({ username: userIn.value, title: 'Your username' }))) return;
+    if (userIn && store.tokenFor(trip.id)) return onJoined('Welcome back'); // already on this trip under that username
+    const ok = await busy(e.submitter, () => withUnlock(() =>
+      (w.memberId ? store.claimMember(trip.id, w.memberId) : store.joinTrip(trip.id, w.name))));
+    if (ok) onJoined("You're in! Welcome to the trip");
   };
 }

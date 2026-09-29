@@ -21,8 +21,12 @@ and what's pending**.
 - Owner: "Remove login functionality and just do username and tie the
   username to each trip the user has." Sign-in (email code, Google, Apple,
   passkeys) and the admin page are gone. People pick a username; typing it on
-  any device brings back every trip under it. No password, so anyone who
-  types a username acts as that person — told to the owner; their call.
+  any device brings back every trip under it.
+- PIN + passkeys (2026-09-28, v13): each username has a 6-digit PIN; a
+  passkey (Face ID / fingerprint) is optional and offered after the PIN
+  ("Not now" asks again in 3 days, 3 times max). See CLAUDE.md for details.
+  **All demo-* usernames have PIN `246810`.** @timd had no PIN when this
+  shipped — the app asks Tim to set one next time My trips opens.
 - To test roles: use different usernames in private windows.
 - Supabase Auth settings in the dashboard are now unused (nothing to set up).
 
@@ -169,8 +173,16 @@ trips with "zz-…" usernames for tests and delete them after.
   still "serve" via the service worker's cache — restart it with preview_start.
 - Screenshots fail when the browser pane is hidden; verify with
   javascript_tool / get_page_text, or download images and view them.
-- Test identities: just usernames now — `store.setUsername('zz-…')`,
-  `store.forgetUsername()` between people, `localStorage.clear()` at the end.
+- Test identities: usernames + PIN — `store.signedIn(await store.createPin('zz-…', '<6 digits>'))`
+  for a new one, `store.signedIn(await store.unlockWithPin(u, pin))` for an
+  existing one, `store.forgetUsername()` between people, `localStorage.clear()`
+  at the end; delete test rows from `usernames` too (cascades devices/passkeys).
+- Passkeys can't be tested with a real authenticator in the preview (it would
+  pop a Touch ID prompt on the owner's Mac). A software-authenticator script
+  (Node: P-256 key + hand-built CBOR, "none" attestation) tested the whole
+  server flow on 2026-09-28; the real Face ID test is on the owner's phone.
+- `.claude/launch.json` has `app-8081` for when another session holds 8080
+  (8081 is also an allowed passkey origin).
 - The permission checker blocked (don't retry): an admin "test as someone
   else" login without codes, and signing people in from an email with no
   proof. Deploys/migrations normally go through.
@@ -182,8 +194,6 @@ trips with "zz-…" usernames for tests and delete them after.
 ## Possible next steps (owner hasn't chosen)
 - App Store + Google Play (native apps): plan drafted in
   `docs/APP-STORES.md` (Capacitor shell around `app/`). Owner: no changes yet.
-- Short PIN on top of usernames so knowing someone's username isn't enough
-  to change/delete their trips (told to owner as the main open risk).
 - South Lake Tahoe's Wikidata photo is a dusk street scene (picker's one weak
   spot seen); could prefer lake/landmark photos for lake destinations.
 - Google Maps key test; phone test of install + push (below).

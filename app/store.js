@@ -1,7 +1,8 @@
 // The only file that talks to the database (Supabase). Every trip change goes
 // through a share-code function in supabase/schema.sql; the person's seat token
-// says who is acting. There's no sign-in: a username ties a person's seats
-// together so their trips show up on any device.
+// says who is acting. There's no sign-in: a username (locked with a PIN, and
+// optionally a passkey) ties a person's seats together so their trips show up
+// on any device.
 
 import { SUPABASE_URL, SUPABASE_KEY } from './config.js';
 
@@ -25,7 +26,13 @@ async function rpc(fn, args) {
     body: JSON.stringify(args),
   });
   const body = await res.json().catch(() => null);
-  if (!res.ok) throw new Error(friendly(body?.message));
+  if (!res.ok) {
+    // PIN_REQUIRED (enter the PIN on this device) / PIN_NEEDED (username has no PIN yet)
+    const pin = /^(PIN_REQUIRED|PIN_NEEDED): (.*)$/.exec(body?.message || '');
+    const err = new Error(pin ? pin[2] : friendly(body?.message));
+    if (pin) err.code = pin[1];
+    throw err;
+  }
   return body;
 }
 
@@ -66,19 +73,31 @@ export function forgetTrip(code) {
 export const joinedCodes = () => Object.keys(read(IDS, {}));
 
 // ---------- username ----------
-// Picking a username ties this device's seats to it and brings back every trip
-// under that username (from any device). No password — the owner's choice.
+// A username + its 6-digit PIN (or a passkey) ties this device's seats to it and
+// brings back every trip under that username (from any device). Proving it
+// gives this device a key that later calls send along (v13).
 const USER = 'grouptrip.username';
+const DEVICE = 'grouptrip.devicekey';
 export const username = () => read(USER, null);
+export const deviceKey = () => read(DEVICE, null);
 export const cleanUsername = (u) => String(u || '').trim().toLowerCase().replace(/^@/, '');
 export const validUsername = (u) => /^[a-z0-9_.-]{3,30}$/.test(cleanUsername(u));
+export const validPin = (p) => /^[0-9]{6}$/.test(String(p || ''));
 
-export async function setUsername(u) {
-  const name = cleanUsername(u);
-  if (!validUsername(name)) throw new Error('Usernames are 3–30 letters or numbers (dots, dashes and underscores are fine)');
-  const r = await syncMyTrips(name);
-  write(USER, r.username);
-  return r;
+// { taken, hasPin, hasPasskey } for a typed username.
+export const usernameStatus = (u) => rpc('username_status', { p_username: cleanUsername(u) });
+export const createPin = (u, pin) => rpc('create_pin', { p_username: cleanUsername(u), p_pin: pin });
+// Resolves { ok, username, deviceKey } or { ok: false, error } (wrong PIN, locked).
+export const unlockWithPin = (u, pin) => rpc('unlock_username', { p_username: cleanUsername(u), p_pin: pin });
+export const changePin = (pin) => rpc('change_pin', { p_username: username(), p_device_key: deviceKey(), p_pin: pin });
+export const myPasskeys = () => rpc('my_passkeys', { p_username: username(), p_device_key: deviceKey() });
+export const removePasskey = (id) => rpc('remove_passkey', { p_username: username(), p_device_key: deviceKey(), p_id: id });
+
+// This device proved the username (PIN or passkey): remember it, then bring its trips here.
+export async function signedIn({ username: name, deviceKey: key }) {
+  write(USER, name);
+  write(DEVICE, key);
+  return syncMyTrips(name).catch(() => ({ username: name, trips: [] }));
 }
 // The username's trips from the server: saves the seat on each so every trip
 // opens as them on this device. Seats joined here before are tied to it first.
@@ -86,7 +105,7 @@ export async function setUsername(u) {
 export async function syncMyTrips(name = username()) {
   if (!name) { await pruneTrips(); return { trips: [] }; }
   const seats = Object.entries(read(IDS, {})).map(([code, token]) => ({ code, token }));
-  const r = await rpc('my_trips', { p_username: name, p_seats: seats });
+  const r = await rpc('my_trips', { p_username: name, p_seats: seats, p_device_key: deviceKey() });
   const codes = r.trips.map((t) => t.id);
   // Every seat on this device was just tied to the username, so a trip we were
   // part of that's missing from the server's list is no longer ours.
@@ -105,9 +124,10 @@ async function pruneTrips() {
 }
 // Switching usernames: forget every trip on this device (they stay under the old username).
 export function forgetUsername() {
+  if (username() && deviceKey()) rpc('forget_device', { p_username: username(), p_device_key: deviceKey() }).catch(() => {});
   listTrips().forEach((t) => forgetTrip(t.id));
   joinedCodes().forEach((c) => forgetTrip(c));
-  try { localStorage.removeItem(USER); } catch { /* ignore */ }
+  try { localStorage.removeItem(USER); localStorage.removeItem(DEVICE); } catch { /* ignore */ }
 }
 
 // ---------- reading ----------
@@ -135,18 +155,18 @@ export async function getTrip(code) {
 export async function createTrip(f) {
   const r = await rpc('create_trip', {
     p_name: f.name, p_destination: f.destination, p_start: f.startDate || null, p_end: f.endDate || null,
-    p_currency: f.currency || 'USD', p_organizer: f.organizer, p_kind: f.kind || 'friends', p_username: username(),
+    p_currency: f.currency || 'USD', p_organizer: f.organizer, p_kind: f.kind || 'friends', p_username: username(), p_device_key: deviceKey(),
   });
   saveToken(r.code, r.token);
   return r.code;
 }
-// Both need a username first (setUsername). Already on the trip under it? You get your seat back.
+// Both need a username first, proven on this device (signedIn). Already on the trip under it? You get your seat back.
 export async function joinTrip(code, name) {
-  const r = await rpc('join_trip', { p_code: code, p_name: name, p_username: username() });
+  const r = await rpc('join_trip', { p_code: code, p_name: name, p_username: username(), p_device_key: deviceKey() });
   saveToken(code, r.token);
 }
 export async function claimMember(code, memberId) {
-  const r = await rpc('claim_member', { p_code: code, p_member: memberId, p_username: username() });
+  const r = await rpc('claim_member', { p_code: code, p_member: memberId, p_username: username(), p_device_key: deviceKey() });
   saveToken(code, r.token);
 }
 

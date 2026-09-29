@@ -79,10 +79,23 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
   from "Enter username" on home. Every seat carries `members.username`;
   `my_trips(username, seats)` returns that username's trips with seat tokens
   (and first ties this device's un-named seats to it), so typing the username
-  on any device brings the trips back. No password by owner's choice: anyone
-  who types a username acts as that person. `views/username.js` has the
-  sheets; `store.js` keeps it in localStorage (`grouptrip.username`).
-  Switching username forgets this device's trips. Supabase Auth, passkeys,
+  on any device brings the trips back. PIN + passkeys (v13, owner
+  2026-09-28): every username has a 6-digit PIN (`usernames` table, bcrypt;
+  easy PINs refused; 5 wrong tries → locked 15 min, doubling, max 24h).
+  Username + PIN (`unlock_username`) or a passkey (Edge Function `passkey`,
+  SimpleWebAuthn, rpID = site host; allowed origins listed in the function)
+  gives the device a key (`username_devices`, stored hashed) that
+  `my_trips`/`create_trip`/`join_trip`/`claim_member` require (`_username_ok`).
+  Usernames from before v13 with no PIN can still list trips; the app asks
+  them to set one. Passkeys are optional: offered right after the PIN, then
+  "Not now" re-asks every 3 days, 3 times max (`maybeOfferPasskey`). Settings
+  (tap @username): passkeys list/add/remove, Change PIN, switch. Lost PIN:
+  change it on a signed-in device, use a passkey, or organizer "Let back in".
+  `views/username.js` has the sheets, `passkey.js` the browser side;
+  `store.js` keeps `grouptrip.username` + `grouptrip.devicekey` in
+  localStorage. Switching username forgets this device's trips and its key.
+  Passkeys are tied to the domain: moving to a custom domain means everyone
+  re-adds them (owner OK with that pre-release). Supabase Auth (old v7 passkeys),
   Google/Apple, the admin page and the `admins` table are removed (v7
   `auth.js`/`signin.js`/`admin.js` deleted; `members.user_id` column is
   unused). The `signup` Edge Function is a retired stub (410). Toasts are
@@ -184,7 +197,7 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
   `balances()`. Receipts live in the trip's photo folder (not the album).
 
 ## Outside connections are safe on their own (v9, owner 2026-09-24)
-Because a username is all it takes to act as someone, partner connections must
+Even with a PIN, a GroupTrip username is a light lock, so partner connections must
 not depend on GroupTrip identity: Venmo, OpenTable and booking sites always
 open on their own site/app (or their own embedded page), where the person
 signs in and confirms there. GroupTrip never stores or passes partner logins.

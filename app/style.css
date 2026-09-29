@@ -134,6 +134,8 @@ h3 { font-size: 16px; font-weight: 600; letter-spacing: -0.015em; margin: 0; }
 .field textarea { height: auto; min-height: 88px; padding: 12px 14px; resize: vertical; }
 .input:focus, .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 4px var(--ring); }
 .input-xl { height: 64px; font-size: 22px; font-weight: 500; border-radius: 18px; }
+.pin-input { text-align: center; letter-spacing: .5em; text-indent: .5em; font-variant-numeric: tabular-nums; }
+.link-btn { background: none; border: 0; padding: 4px; color: var(--muted); font: inherit; font-size: 14px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .form { display: grid; gap: 14px; }
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .grid-4 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }

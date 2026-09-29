@@ -60,7 +60,7 @@ export function render(root) {
           <a class="btn btn-accent btn-lg" href="#/new">Plan a trip ${icon('arrow')}</a>
           <div class="features">
             ${[
-              ['users', 'Invite in one tap', 'Share a link. Friends join with a name and a username — no account or password.'],
+              ['users', 'Invite in one tap', 'Share a link. Friends join with a name and a username — no account needed.'],
               ['plane', 'Everyone\'s flights', 'Type a flight number — we fill in the rest.'],
               ['utensils', 'Book together', 'Reserve OpenTable restaurants right in the plan.'],
               ['wallet', 'Split fairly', 'Log costs, settle up with Venmo in one tap.'],

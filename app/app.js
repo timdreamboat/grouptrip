@@ -12,6 +12,7 @@ import * as tripView from './views/trip.js';
 import { locate, coverOptions } from './places.js';
 import * as pwa from './pwa.js';
 import { askForNotifications } from './views/getapp.js';
+import { askUsername, maybeOfferPasskey } from './views/username.js';
 
 const root = document.getElementById('app');
 let current = { code: null, tab: null, trip: null };
@@ -114,9 +115,19 @@ async function refreshTrips() {
   if (Date.now() - lastSync < 20000) return;
   lastSync = Date.now();
   const before = JSON.stringify(store.listTrips());
-  await store.syncMyTrips().catch(() => {});
-  if (!current.code && location.hash.replace(/^#\/?/, '') === '' && JSON.stringify(store.listTrips()) !== before) route();
+  const r = await store.syncMyTrips().catch((err) => ({ err }));
+  const onHome = () => !current.code && location.hash.replace(/^#\/?/, '') === '';
+  if (onHome() && JSON.stringify(store.listTrips()) !== before) route();
+  if (!onHome() || document.querySelector('dialog[open]')) return;
+  // Usernames from before PINs get one now; a device that hasn't entered the
+  // PIN yet is asked for it (once per visit). Otherwise, maybe offer a passkey.
+  const u = store.username();
+  if (u && !pinAsked && (r.err?.code === 'PIN_REQUIRED' || r.hasPin === false)) {
+    pinAsked = true;
+    if (await askUsername({ username: u })) { lastSync = Date.now(); route(); }
+  } else if (u && r.hasPin) maybeOfferPasskey();
 }
+let pinAsked = false;
 async function start() {
   route();
   refreshTrips();
