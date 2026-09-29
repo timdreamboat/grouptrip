@@ -2,7 +2,7 @@
 
 ## The rule (set by the owner, 2026-09-22)
 **Every connection shows the partner's own site or official widget, embedded in
-GroupTrip.** GroupTrip does not re-create partner features or process their data.
+GroupTripIt.** GroupTripIt does not re-create partner features or process their data.
 It only holds the trip's shared details: who's coming, which flight, which
 restaurant, and so on. It then shows each partner's live embed in one place for the
 whole group. When a partner won't allow embedding, we show a button that opens its
@@ -10,9 +10,9 @@ site in a new tab.
 
 ## What actually embeds (tested in a browser, 2026-09-22)
 Sites decide for themselves whether other apps may show them. We loaded each one
-inside GroupTrip-style frames to check.
+inside GroupTripIt-style frames to check.
 
-| Service | Embeds? | How | What GroupTrip stores |
+| Service | Embeds? | How | What GroupTripIt stores |
 |---|---|---|---|
 | **OpenTable** | ✅ Yes, official | Restaurant booking page (`opentable.com/restref/client/?rid=…`) or the official "Make a Reservation" widget. The full booking flow runs inside our page. | Restaurant's OpenTable ID (`rid`) |
 | **Flight tracking (adsb.fi)** | ✅ Yes | Live flight map: `globe.adsb.fi/?callsign=UAL1`. Community-run and free. | Flight number + date |
@@ -30,7 +30,7 @@ inside GroupTrip-style frames to check.
 | Kayak flight tracker | ❓ Partly | Only the header loaded, so it's not reliable. | — |
 
 ## Flights
-Each person adds their **flight number + date**. GroupTrip shows:
+Each person adds their **flight number + date**. GroupTripIt shows:
 - a live embedded map of that flight (adsb.fi), and
 - buttons that open FlightAware or the airline's page for full status.
 
@@ -46,7 +46,7 @@ ticket (UA) becomes the code the map uses (UAL), for example "UA 1" → `UAL1`.
 ## Restaurants
 - **OpenTable: fully embeddable.** An itinerary item stores the restaurant's
   OpenTable ID, and the group sees and uses OpenTable's own booking screen
-  inside GroupTrip. No partner approval or API key is needed.
+  inside GroupTripIt. No partner approval or API key is needed.
 - **Resy/Tock and others:** a "Reserve on Resy" button that opens their page.
 
 ## Cover photos & calendar (added 2026-09-22)

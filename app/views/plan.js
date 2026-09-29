@@ -249,7 +249,7 @@ function item(it, { isOrg, trip }, pinNo = 0) {
         ${it.opentableRid ? `<button class="btn btn-sm btn-primary" data-ot="${it.id}">${icon('utensils')}Reserve a table</button>` : ''}
         ${it.place ? `<button class="btn btn-sm btn-secondary" data-map="${it.id}">${icon('map')}Map</button>` : ''}
         ${it.place && trip.stays.length ? `<button class="btn btn-sm btn-secondary" data-from="${it.id}">${icon('bed')}From hotels</button>` : ''}
-        ${safeUrl(it.bookingUrl) ? `<a class="btn btn-sm btn-outline" href="${esc(safeUrl(it.bookingUrl))}" target="_blank" rel="noopener noreferrer" title="Opens ${esc(siteName(it.bookingUrl))} — you sign in there, not in GroupTrip">Book on ${esc(siteName(it.bookingUrl))} ${icon('external')}</a>` : ''}
+        ${safeUrl(it.bookingUrl) ? `<a class="btn btn-sm btn-outline" href="${esc(safeUrl(it.bookingUrl))}" target="_blank" rel="noopener noreferrer" title="Opens ${esc(siteName(it.bookingUrl))} — you sign in there, not in GroupTripIt">Book on ${esc(siteName(it.bookingUrl))} ${icon('external')}</a>` : ''}
       </div>` : ''}
     </article>
   </div>`;

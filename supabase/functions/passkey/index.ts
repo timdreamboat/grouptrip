@@ -6,7 +6,7 @@
 //   Adding a passkey needs this device's key (it already entered the PIN).
 // POST { action: 'login-options', username? }                       → { challengeId, options }
 // POST { action: 'login-verify', challengeId, response }            → { username, deviceKey }
-//   No username = the phone offers any GroupTrip passkey it has.
+//   No username = the phone offers any GroupTripIt passkey it has.
 //
 // Passkeys are tied to the site's address (rpID), so only our own origins are
 // allowed. The service-role key never leaves this function.
@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ error: 'POST only' }, 405);
   const origin = req.headers.get('Origin') ?? '';
   const rpID = ORIGINS[origin];
-  if (!rpID) return json({ error: 'Passkeys only work on the GroupTrip site' }, 403);
+  if (!rpID) return json({ error: 'Passkeys only work on the GroupTripIt site' }, 403);
 
   try {
     const body = await req.json();
@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
       if (action === 'register-options') {
         const existing = await db(`passkeys?username=eq.${q(username)}&select=credential_id,transports`);
         const options = await generateRegistrationOptions({
-          rpName: 'GroupTrip', rpID, userName: username, userDisplayName: `@${username}`,
+          rpName: 'GroupTripIt', rpID, userName: username, userDisplayName: `@${username}`,
           attestationType: 'none',
           excludeCredentials: existing.map((c: { credential_id: string; transports: string[] }) =>
             ({ id: c.credential_id, transports: c.transports })),
@@ -127,7 +127,7 @@ Deno.serve(async (req) => {
       const ch = await takeChallenge(body.challengeId, 'login');
       const credId = String(body.response?.id ?? '');
       const [pk] = await db(`passkeys?credential_id=eq.${q(credId)}&select=*`);
-      if (!pk) throw new Refused("This passkey isn't linked to a GroupTrip username any more. Use your PIN.");
+      if (!pk) throw new Refused("This passkey isn't linked to a GroupTripIt username any more. Use your PIN.");
       if (ch.username && ch.username !== pk.username) throw new Refused("That passkey is for a different username");
       const v = await verifyAuthenticationResponse({
         response: body.response, expectedChallenge: ch.challenge, expectedOrigin: origin, expectedRPID: rpID,

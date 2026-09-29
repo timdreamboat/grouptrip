@@ -259,14 +259,14 @@ function bind(el, ctx) {
     if (t.dataset.nudge) {
       const m = memberById(trip, t.dataset.nudge);
       const text = t.dataset.kind === 'join'
-        ? `Hey ${firstName(m.name)}! Join our trip "${trip.name}" on GroupTrip:`
+        ? `Hey ${firstName(m.name)}! Join our trip "${trip.name}" on GroupTripIt:`
         : `Hey ${firstName(m.name)}, can you add your flight for "${trip.name}"?`;
       share({ title: trip.name, text, url: store.inviteLink(trip.id) });
       return;
     }
     switch (t.dataset.action) {
       case 'copy-invite': copy(store.inviteLink(trip.id), 'Invite link copied'); break;
-      case 'share-invite': share({ title: trip.name, text: `Join our trip "${trip.name}" on GroupTrip:`, url: store.inviteLink(trip.id) }); break;
+      case 'share-invite': share({ title: trip.name, text: `Join our trip "${trip.name}" on GroupTripIt:`, url: store.inviteLink(trip.id) }); break;
       case 'edit-trip': openEditTrip(ctx); break;
       case 'add-flight': openAddFlight(ctx); break;
       case 'me': openMe(ctx); break;

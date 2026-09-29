@@ -1,4 +1,4 @@
--- GroupTrip schema (v2: organizer vs guest roles). Money is integer cents.
+-- GroupTripIt schema (v2: organizer vs guest roles). Money is integer cents.
 --
 -- Access model — no accounts:
 -- * The invite link carries the trip's share_code. Anyone with it can view
@@ -1480,7 +1480,7 @@ begin
   else
     perform _notify(new.trip_id, array[new.to_member],
       (select name from members where id = new.from_member) || ' paid you ' || _money(new.amount_cents, cur),
-      'Marked as paid in GroupTrip.', 'money');
+      'Marked as paid in GroupTripIt.', 'money');
   end if;
   return null;
 end $$;

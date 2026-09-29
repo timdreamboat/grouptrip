@@ -49,7 +49,7 @@ export function render(root, ctx, tabId) {
   root.innerHTML = `
     <div class="shell">
       <aside class="sidebar">
-        <a class="brand" href="#/"><span class="brand-mark">${icon('plane')}</span>GroupTrip</a>
+        <a class="brand" href="#/"><span class="brand-mark">${icon('plane')}</span>GroupTripIt</a>
         <a class="my-trips" href="#/">${icon('grid')}My trips${tripCount > 1 ? `<span class="count">${tripCount}</span>` : ''}</a>
         <div class="eyebrow" style="margin:0 4px -12px">This trip</div>
         <a class="side-trip" href="${href(TABS[0])}" style="text-decoration:none">

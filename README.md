@@ -1,4 +1,4 @@
-# GroupTrip
+# GroupTripIt
 
 Plan a trip with friends and split the costs, all in one place.
 
@@ -8,8 +8,8 @@ Plan a trip with friends and split the costs, all in one place.
 - **Expenses**: who paid, and who it was for
 - **Settle up**: the fewest payments to square everyone up, with Venmo buttons
 
-Partner sites (OpenTable, maps, flight tracking) show up inside GroupTrip as
-their own pages. GroupTrip doesn't copy their data. See `docs/API-RESEARCH.md`.
+Partner sites (OpenTable, maps, flight tracking) show up inside GroupTripIt as
+their own pages. GroupTripIt doesn't copy their data. See `docs/API-RESEARCH.md`.
 
 ## Live app
 https://timdreamboat.github.io/grouptrip/ (published from `app/` on every push to main)

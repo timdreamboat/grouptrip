@@ -1,7 +1,7 @@
-# Plan — GroupTrip in the App Store and Google Play
+# Plan — GroupTripIt in the App Store and Google Play
 
 Status: **draft, not started** (owner, 2026-09-28: "draft a plan that we can use
-in the future"). Nothing here is built. Today people install GroupTrip from the
+in the future"). Nothing here is built. Today people install GroupTripIt from the
 browser ("Add to Home Screen"), and notifications already work that way,
 including on the iPhone lock screen (tested 2026-09-28).
 
@@ -50,9 +50,9 @@ Without those, it would likely be rejected.
 ### Phase 0 — Decisions (owner)
 - Approve the costs above.
 - Individual vs company account (see above).
-- App name. "GroupTrip" may already be taken on the stores; check before
-  paying. The bundle ID will be something like `com.<you>.grouptrip`, and it
-  can't be changed later.
+- App name: GroupTripIt (owner, 2026-09-28). Check it is free on both stores
+  before paying. The bundle ID will be something like `com.<you>.grouptripit`,
+  and it can't be changed later.
 - iPhone only, or iPad too? iPhone-only is simpler (fewer screenshots, less
   review surface). The iPad would still run the iPhone version.
 
@@ -108,11 +108,11 @@ Both stores require these, and none of them exist yet:
   we ask. Send as high priority so they reach the lock screen.
 
 ### Phase 4 — Invite links open the app
-- A tapped invite link should open GroupTrip if it's installed, otherwise the
+- A tapped invite link should open GroupTripIt if it's installed, otherwise the
   website (Universal Links on iPhone, App Links on Android).
 - Both need a small verification file at the **root** of the web domain. With
   GitHub Pages at `timdreamboat.github.io/grouptrip/` we don't control the
-  root. A custom domain (e.g. `grouptrip.app`, if available) solves it and
+  root. A custom domain (grouptripit.com — unregistered on 2026-09-28) solves it and
   looks better on the store page. Existing links keep working if the old
   address redirects.
 
@@ -132,7 +132,7 @@ Both stores require these, and none of them exist yet:
 - Privacy "nutrition label" (Apple) and Data safety form (Google). Honest
   answers: name/username, trip content, photos, and push tokens; no tracking or
   ads; Venmo/booking happen on their own sites.
-- Payments: no problem. GroupTrip sells nothing, and Venmo payments between
+- Payments: no problem. GroupTripIt sells nothing, and Venmo payments between
   people are allowed outside Apple's in-app purchase rules.
 - Review typically takes 1–3 days on Apple, from hours to a few days on Google.
   First submissions often get one round of questions.

@@ -1,10 +1,10 @@
 # GigTrip — product spec (V1 mock, 2026-09-23)
 
-GigTrip is GroupTrip's "next level" for **music artist managers and their
+GigTrip is GroupTripIt's "next level" for **music artist managers and their
 touring party**: plan single concerts, festival slots and whole tours in one
 place, instead of Excel for dates/money and ClickUp for advancing tasks.
-It is a separate site with its own name and look, built on GroupTrip's code
-and backend, and linked both ways ("Made by GroupTrip").
+It is a separate site with its own name and look, built on GroupTripIt's code
+and backend, and linked both ways ("Made by GroupTripIt").
 
 Status: **clickable mock only** (`gigtrip/mock/index.html`, fake data, no
 database). Nothing here is built for real until managers have given feedback
@@ -19,7 +19,7 @@ and the owner approves the build.
 | **Artist manager** (organizer) | Desk, laptop | Every date for every artist at a glance (pencil / hold / confirmed), offers coming in, each show's deal, advancing progress, tour budget vs actual |
 | **Tour manager (TM)** | Road, phone | Advance each show, publish the day sheet, run guest list, settle with the promoter at night, track per diems and expenses |
 | **Band + crew** | Road, phone | Today's day sheet, where to be when, my flight / my room / the van, request guest list spots. **No money** unless given it |
-| **Agent, promoter, venue** (later) | Anywhere | Read-only day sheet or advance link — no sign-in, like GroupTrip's invite link |
+| **Agent, promoter, venue** (later) | Anywhere | Read-only day sheet or advance link — no sign-in, like GroupTripIt's invite link |
 
 Both desk and road matter equally: manager screens are desktop-first,
 touring-party screens are phone-first.
@@ -33,9 +33,9 @@ touring-party screens are phone-first.
 - **Group texts / email PDFs**: day sheets, flight details, guest lists. →
   Today (day sheet), Travel, Guest list, calendar subscription.
 
-## 3. How GigTrip maps onto GroupTrip (reuse first)
+## 3. How GigTrip maps onto GroupTripIt (reuse first)
 
-| GroupTrip (today) | GigTrip | What's new |
+| GroupTripIt (today) | GigTrip | What's new |
 |---|---|---|
 | Trip (`trips`) | **Tour**. A one-off concert or festival slot is a tour with one show | `status` per show: pencil → hold (1/2/3) → confirmed → cancelled; artist on the tour |
 | Plans by day (`views/plan.js`) | **Show day + day sheet** | Fixed slots: lobby call, load-in, line check, soundcheck, dinner, doors, support, set, curfew, settlement, load-out, bus call |
@@ -102,8 +102,8 @@ All amounts in integer cents, like `app/money.js`.
   $44,170 net; − $18,450 expenses = $25,720; 85% = $21,862 > $9,000
   guarantee → artist earns $21,862; − $4,500 deposit = **$17,362 due**.
 
-## 6. Data model sketch (Supabase, same project as GroupTrip)
-New tables, all locked behind `SECURITY DEFINER` functions like GroupTrip:
+## 6. Data model sketch (Supabase, same project as GroupTripIt)
+New tables, all locked behind `SECURITY DEFINER` functions like GroupTripIt:
 
 - `artists` (id, name, roster owner)
 - `tours` → reuse `trips` with `kind = 'tour'` and `artist_id`
@@ -173,7 +173,7 @@ menus follow what each viewer is allowed to see.
 ## V1 mock scope (2026-09-23) — the pitch version
 Management can add, edit and delete everything; other roles edit only what
 their access allows. Every form is one shared dialog (`openForm`) — the real
-build reuses GroupTrip's "add form doubles as edit form" pattern.
+build reuses GroupTripIt's "add form doubles as edit form" pattern.
 - **Roster**: artists (press photo upload), tours per artist.
 - **Season**: list + sortable table, search, filters, bulk status change,
   **Import from Excel/CSV** (paste or file) and **Export** (copy CSV).
@@ -209,7 +209,7 @@ land on Today. A tour manager only sees the artists they're assigned to
 **Artist profile picture** (owner, 2026-09-23): management sets it by tapping
 the picture on the artist page or in the artist form (with preview and
 "Remove picture"). The device crops it to a square and shrinks it to 320px
-before upload, as GroupTrip does for photos; it shows on the artist home
+before upload, as GroupTripIt does for photos; it shows on the artist home
 cards, the top-bar switcher and the artist page. Real build: `artists.photo_path`
 in the org's storage folder.
 

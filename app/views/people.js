@@ -87,7 +87,7 @@ export function render(el, ctx) {
   el.onclick = async (e) => {
     const t = e.target.closest('[data-action],[data-del],[data-nudge],[data-reset]');
     if (!t) return;
-    const inviteText = `Join our trip "${trip.name}" on GroupTrip:`;
+    const inviteText = `Join our trip "${trip.name}" on GroupTripIt:`;
     if (t.dataset.action === 'share') return share({ title: trip.name, text: inviteText, url: store.inviteLink(trip.id) });
     if (t.dataset.action === 'copy') return copy(store.inviteLink(trip.id), 'Invite link copied');
     if (t.dataset.action === 'me') return openMe(ctx);

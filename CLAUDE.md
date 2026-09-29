@@ -1,18 +1,18 @@
-# CLAUDE.md — GroupTrip project context for Claude Code
+# CLAUDE.md — GroupTripIt project context for Claude Code
 
 Read this first in every session, then `docs/HANDOFF.md` for current status,
 owner decisions and what's pending. The owner (Tim) works by giving plain-English
 instructions. Do the work end-to-end and explain outcomes in one or two
 sentences, not code detail.
 
-## What GroupTrip is
+## What GroupTripIt is
 A web app for planning a trip with a group of friends and splitting the costs.
 One place for: who's coming, the itinerary, shared expenses, and a
 "who owes whom" settle-up that uses the fewest possible payments.
 
 ## The core rule — embed, don't rebuild
 Every outside connection is shown as that site's own page or official widget,
-embedded in GroupTrip (iframe). GroupTrip does no processing of partner data.
+embedded in GroupTripIt (iframe). GroupTripIt does no processing of partner data.
 It stores the trip's shared details once (a single source) and assembles the embeds
 into the best view for the whole group. If a site blocks embedding, show a
 button that opens it in a new tab. Never scrape, never re-implement a partner's
@@ -197,10 +197,10 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
   `balances()`. Receipts live in the trip's photo folder (not the album).
 
 ## Outside connections are safe on their own (v9, owner 2026-09-24)
-Even with a PIN, a GroupTrip username is a light lock, so partner connections must
-not depend on GroupTrip identity: Venmo, OpenTable and booking sites always
+Even with a PIN, a GroupTripIt username is a light lock, so partner connections must
+not depend on GroupTripIt identity: Venmo, OpenTable and booking sites always
 open on their own site/app (or their own embedded page), where the person
-signs in and confirms there. GroupTrip never stores or passes partner logins.
+signs in and confirms there. GroupTripIt never stores or passes partner logins.
 Links: only `https?://` addresses become clickable (`safeUrl()` in ui.js +
 table CHECK constraints), shown as "Book on <site>" with rel noopener
 noreferrer. Venmo handles: letters/numbers/-/_ only; the pay button names the

@@ -1,6 +1,6 @@
 {
-  "name": "GroupTrip",
-  "short_name": "GroupTrip",
+  "name": "GroupTripIt",
+  "short_name": "GroupTripIt",
   "description": "Plan a group trip: who's coming, everyone's flights, the plan, and who owes whom.",
   "start_url": "./",
   "scope": "./",

@@ -11,7 +11,7 @@ import { askUsername, withUnlock } from './username.js';
 const STEPS = 3;
 
 export function render(root) {
-  document.title = 'New trip · GroupTrip';
+  document.title = 'New trip · GroupTripIt';
   const lastName = store.listTrips().find((t) => t.myName)?.myName;
   const data = { destination: '', name: '', startDate: '', endDate: '', organizer: lastName ? firstName(lastName) : '', cover: null, kind: 'friends', where: null };
   let photosFor = null; // destination the photo picker last searched

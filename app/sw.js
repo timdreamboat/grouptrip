@@ -1,6 +1,6 @@
-// GroupTrip service worker: makes the app installable, keeps it working
+// GroupTripIt service worker: makes the app installable, keeps it working
 // offline (last-seen copy of the app files), and shows push notifications.
-const CACHE = 'grouptrip-v13';
+const CACHE = 'grouptrip-v14';
 
 // The app's own files. Add new files here so they work offline too.
 const SHELL = [
@@ -46,8 +46,8 @@ self.addEventListener('fetch', (e) => {
 
 self.addEventListener('push', (e) => {
   let data = {};
-  try { data = e.data.json(); } catch { data = { title: 'GroupTrip', body: e.data?.text() }; }
-  e.waitUntil(self.registration.showNotification(data.title || 'GroupTrip', {
+  try { data = e.data.json(); } catch { data = { title: 'GroupTripIt', body: e.data?.text() }; }
+  e.waitUntil(self.registration.showNotification(data.title || 'GroupTripIt', {
     body: data.body || '',
     icon: './icons/icon-192.png',
     badge: './icons/icon-192.png',
@@ -56,7 +56,7 @@ self.addEventListener('push', (e) => {
   }));
 });
 
-// Tapping a notification opens (or focuses) GroupTrip on the right screen.
+// Tapping a notification opens (or focuses) GroupTripIt on the right screen.
 self.addEventListener('notificationclick', (e) => {
   e.notification.close();
   const url = e.notification.data?.url || './';

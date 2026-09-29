@@ -1,7 +1,7 @@
 // Sends one email through whichever provider is configured (function secrets):
 //   RESEND_API_KEY  — Resend (needs a verified domain to email other people)
 //   BREVO_API_KEY   — Brevo (a single verified sender address is enough)
-//   EMAIL_FROM      — the sender, e.g. "GroupTrip <trips@example.com>" or "you@gmail.com"
+//   EMAIL_FROM      — the sender, e.g. "GroupTripIt <trips@example.com>" or "you@gmail.com"
 // Returns false when no provider is set up.
 
 export const emailConfigured = () => Boolean(Deno.env.get('RESEND_API_KEY') || Deno.env.get('BREVO_API_KEY'));
@@ -23,7 +23,7 @@ export async function sendEmail(to: string, subject: string, html: string, text:
     const res = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: { 'api-key': brevo, 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ sender: { email: address, name: 'GroupTrip' }, to: [{ email: to }], subject, htmlContent: html, textContent: text }),
+      body: JSON.stringify({ sender: { email: address, name: 'GroupTripIt' }, to: [{ email: to }], subject, htmlContent: html, textContent: text }),
     });
     return res.ok;
   }
@@ -37,7 +37,7 @@ export function emailHtml({ heading, body, button, url, footer }: { heading: str
   return `<!doctype html><html><body style="margin:0;background:#f5f4f0;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:#16151a">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px"><tr><td align="center">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#fff;border-radius:20px;overflow:hidden">
-      <tr><td style="background:linear-gradient(135deg,#ff9f43,#ff5a2e,#ff3d7f);padding:22px 24px;color:#fff;font-weight:700;font-size:18px">✈︎ GroupTrip</td></tr>
+      <tr><td style="background:linear-gradient(135deg,#ff9f43,#ff5a2e,#ff3d7f);padding:22px 24px;color:#fff;font-weight:700;font-size:18px">✈︎ GroupTripIt</td></tr>
       <tr><td style="padding:24px">
         <h1 style="margin:0 0 10px;font-size:22px;line-height:1.25">${esc(heading)}</h1>
         <p style="margin:0 0 20px;font-size:15px;line-height:1.55;color:#4a4850">${esc(body)}</p>

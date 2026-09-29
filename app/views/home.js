@@ -1,10 +1,10 @@
-// Trips list. First visit: a landing page that explains GroupTrip.
+// Trips list. First visit: a landing page that explains GroupTripIt.
 import { esc, icon, coverBg, avatarStack, fmtRange, countdown, sheet, confirmSheet, busy, toast } from '../ui.js';
 import * as store from '../store.js';
 import { askUsername, openUsername } from './username.js';
 
 export function render(root) {
-  document.title = 'GroupTrip';
+  document.title = 'GroupTripIt';
   const user = store.username();
   const trips = store.listTrips().filter((t) => t.role !== 'invited');
   const sorted = [...trips].sort((a, b) => (a.startDate || '9999').localeCompare(b.startDate || '9999'));
@@ -12,7 +12,7 @@ export function render(root) {
   root.innerHTML = `
     <div class="site">
       <header class="site-head">
-        <a class="brand" href="#/"><span class="brand-mark">${icon('plane')}</span>GroupTrip</a>
+        <a class="brand" href="#/"><span class="brand-mark">${icon('plane')}</span>GroupTripIt</a>
         <div style="display:flex;gap:8px;align-items:center">
           ${trips.length ? `<a class="btn btn-primary btn-sm" href="#/new">${icon('plus')}New trip</a>` : ''}
           ${user ? `<button class="btn btn-secondary btn-sm" data-account aria-label="Your username"><span style="max-width:96px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">@${esc(user)}</span></button>`

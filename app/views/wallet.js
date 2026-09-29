@@ -70,8 +70,8 @@ export function render(el, ctx) {
             </div>`;
           }).join('')}
         </div>
-        ${pays.some((p) => p.from === meId && !memberById(trip, p.to)?.venmo) && trip.currency === 'USD' ? `<p class="hint" style="margin:8px 4px 0">Tip: ask them to add their Venmo in GroupTrip so the button goes straight to them.</p>` : ''}
-        ${pays.some((p) => p.from === meId) && trip.currency === 'USD' ? `<p class="hint" style="margin:8px 4px 0">Venmo opens in its own app — you sign in there and see who you're paying (name and photo) before anything is sent. GroupTrip never sees your Venmo account.</p>` : ''}
+        ${pays.some((p) => p.from === meId && !memberById(trip, p.to)?.venmo) && trip.currency === 'USD' ? `<p class="hint" style="margin:8px 4px 0">Tip: ask them to add their Venmo in GroupTripIt so the button goes straight to them.</p>` : ''}
+        ${pays.some((p) => p.from === meId) && trip.currency === 'USD' ? `<p class="hint" style="margin:8px 4px 0">Venmo opens in its own app — you sign in there and see who you're paying (name and photo) before anything is sent. GroupTripIt never sees your Venmo account.</p>` : ''}
       </section>` : ''}
 
       ${settlements.length ? `
@@ -118,7 +118,7 @@ export function render(el, ctx) {
                 <button class="btn btn-icon btn-xs btn-ghost" style="width:30px" data-del="${e.id}" aria-label="Remove expense">${icon('trash')}</button></div>` : ''}
             </div>`;
           }).join('')}
-        </div>` : `<div class="card">${emptyState('wallet', 'No expenses yet', 'Log what you paid for the group — GroupTrip works out who owes whom.',
+        </div>` : `<div class="card">${emptyState('wallet', 'No expenses yet', 'Log what you paid for the group — GroupTripIt works out who owes whom.',
           `<button class="btn btn-primary" data-action="add">${icon('plus')}Add an expense</button>`)}</div>`}
       </section>
     </div>`;

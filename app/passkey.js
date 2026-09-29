@@ -64,7 +64,7 @@ export async function createPasskey(username, deviceKey) {
   });
 }
 
-// Sign in with a passkey (for one username, or any GroupTrip passkey on the
+// Sign in with a passkey (for one username, or any GroupTripIt passkey on the
 // device when none is given). Resolves { username, deviceKey }.
 export async function usePasskey(username = null) {
   const { challengeId, options } = await call({ action: 'login-options', username });

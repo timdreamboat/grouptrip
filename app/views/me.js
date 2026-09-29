@@ -97,7 +97,7 @@ export function openMe(ctx) {
       const action = dlg.querySelector('#push-action');
       const drawPush = () => {
         if (pwa.pushNeedsInstall()) {
-          status.textContent = 'Add GroupTrip to your home screen first';
+          status.textContent = 'Add GroupTripIt to your home screen first';
           action.innerHTML = '<button class="btn btn-sm btn-secondary">How</button>';
           action.firstChild.onclick = openInstallHelp;
         } else if (!pwa.pushSupported()) {

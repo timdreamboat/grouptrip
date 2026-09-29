@@ -1,4 +1,4 @@
-// "Get GroupTrip on your phone" (install + notifications) — a dismissible
+// "Get GroupTripIt on your phone" (install + notifications) — a dismissible
 // card on Home, and the install instructions sheet.
 import { icon, sheet, toast, busy, esc } from '../ui.js';
 import * as pwa from '../pwa.js';
@@ -16,7 +16,7 @@ export function appCard() {
     <button class="btn btn-icon btn-xs btn-ghost app-card-x" data-app="dismiss" aria-label="Dismiss">${icon('x')}</button>
     <div style="display:flex;gap:14px;align-items:center">
       <img src="icons/icon-192.png" alt="" width="52" height="52" style="border-radius:14px;flex:none">
-      <div><h3>${installed ? 'Turn on notifications' : 'Get GroupTrip on your phone'}</h3>
+      <div><h3>${installed ? 'Turn on notifications' : 'Get GroupTripIt on your phone'}</h3>
         <p class="hint" style="margin-top:2px">${installed
           ? "Know when there's a new poll, a plan changes, or someone lands."
           : 'One tap from your home screen, works offline, and sends you trip updates.'}</p></div>
@@ -36,7 +36,7 @@ export async function handleAppCardClick(e, ctx) {
     try { localStorage.setItem(DISMISSED, '1'); } catch { /* ignore */ }
     t.closest('.app-card')?.remove();
   } else if (action === 'install') {
-    if (pwa.canPromptInstall()) { if (await pwa.promptInstall()) toast('Added — open GroupTrip from your home screen'); }
+    if (pwa.canPromptInstall()) { if (await pwa.promptInstall()) toast('Added — open GroupTripIt from your home screen'); }
     else openInstallHelp();
   } else if (action === 'notify') {
     const ok = await busy(t, () => pwa.enablePush());
@@ -97,13 +97,13 @@ export function openInstallHelp() {
         <li>Open this page in <b>Safari</b>.</li>
         <li>Tap the <b>Share</b> button ${icon('share', 'tiny')} at the bottom of the screen.</li>
         <li>Scroll down and tap <b>Add to Home Screen</b>, then <b>Add</b>.</li>
-        <li>Open GroupTrip from your home screen and turn on notifications.</li>
+        <li>Open GroupTripIt from your home screen and turn on notifications.</li>
       </ol>
       <p class="hint">iPhones only allow notifications for apps on the home screen.</p>` : `
       <ol class="steps">
         <li>Open your browser's menu (⋮ or ⋯).</li>
         <li>Choose <b>Install app</b> or <b>Add to Home screen</b>.</li>
-        <li>Open GroupTrip from your home screen or app list.</li>
+        <li>Open GroupTripIt from your home screen or app list.</li>
       </ol>`,
   });
 }

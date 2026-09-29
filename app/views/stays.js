@@ -40,7 +40,7 @@ export function stayCard(s, ctx) {
     <div class="tl-actions">
       ${s.address ? `<button class="btn btn-sm btn-secondary" data-stay-map="${s.id}">${icon('map')}Map</button>` : ''}
       ${s.confirmation ? `<button class="btn btn-sm btn-secondary" data-stay-conf="${s.id}">${icon('copy')}${esc(s.confirmation)}</button>` : ''}
-      ${safeUrl(s.bookingUrl) ? `<a class="btn btn-sm btn-outline" href="${esc(safeUrl(s.bookingUrl))}" target="_blank" rel="noopener noreferrer" title="Opens ${esc(siteName(s.bookingUrl))} — you sign in there, not in GroupTrip">Book on ${esc(siteName(s.bookingUrl))} ${icon('external')}</a>` : ''}
+      ${safeUrl(s.bookingUrl) ? `<a class="btn btn-sm btn-outline" href="${esc(safeUrl(s.bookingUrl))}" target="_blank" rel="noopener noreferrer" title="Opens ${esc(siteName(s.bookingUrl))} — you sign in there, not in GroupTripIt">Book on ${esc(siteName(s.bookingUrl))} ${icon('external')}</a>` : ''}
     </div>
   </article>`;
 }

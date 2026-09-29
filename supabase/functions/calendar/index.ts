@@ -63,7 +63,7 @@ function event(uid: string, fields: Record<string, string | undefined>) {
 function build(trip: Trip) {
   const who = (id: string) => trip.members.find((m) => m.id === id)?.name ?? 'Someone';
   const lines = [
-    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//GroupTrip//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//GroupTripIt//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
     `X-WR-CALNAME:${esc(trip.personName ? `${trip.name} · ${trip.personName.split(/\s+/)[0]}'s schedule` : trip.name)}`, 'X-PUBLISHED-TTL:PT1H', 'REFRESH-INTERVAL;VALUE=DURATION:PT1H',
   ];
 
@@ -132,7 +132,7 @@ Deno.serve(async (req) => {
   return new Response(build(trip), {
     headers: {
       'Content-Type': 'text/calendar; charset=utf-8',
-      'Content-Disposition': `inline; filename="grouptrip.ics"`,
+      'Content-Disposition': `inline; filename="grouptripit.ics"`,
       'Cache-Control': `${me ? 'private' : 'public'}, max-age=300`,
       'Access-Control-Allow-Origin': '*',
     },

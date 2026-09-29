@@ -194,7 +194,7 @@ export function askUsername({ title = 'Your username', reason = 'Your trips are 
                 <div style="display:flex;justify-content:center;gap:12px">
                   <button type="button" class="link-btn" data-forgot>Forgot PIN?</button>${other}
                 </div>
-                <p class="hint" data-forgot-text hidden style="margin:0">On a phone or laptop where you're still in GroupTrip, tap
+                <p class="hint" data-forgot-text hidden style="margin:0">On a phone or laptop where you're still in GroupTripIt, tap
                   your username and choose <b>Change PIN</b>. Or use your passkey. Otherwise, ask a trip's organizer to
                   <b>Let you back in</b> — you'll rejoin with a new username, and your RSVP, flights and expenses stay.</p>`,
               onPin: async (pin, fail) => {
@@ -209,7 +209,7 @@ export function askUsername({ title = 'Your username', reason = 'Your trips are 
             newPin(box, head, {
               title: s.taken ? 'Protect your username' : 'Create a PIN',
               intro: `${s.taken ? `Add a 6-digit PIN to ${who} so only you can use it.` : `Pick a 6-digit PIN for ${who}.`}
-                You'll enter it when you use GroupTrip on a new phone or laptop.`,
+                You'll enter it when you use GroupTripIt on a new phone or laptop.`,
               extra: `<div style="text-align:center">${other}</div>`,
               onPin: async (pin) => finish(await store.createPin(s.username, pin)),
               onRedraw: wireOther,

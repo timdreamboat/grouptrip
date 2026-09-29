@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
         for (const e of n.emails) {
           const ok = await sendEmail(e.email, n.title,
             emailHtml({ heading: n.title, body: n.body ?? '', button: `Open ${n.tripName}`, url: e.link,
-              footer: `You're getting this because you turned on email updates in GroupTrip. The button signs you in as ${e.name} — don't forward this email.` }),
+              footer: `You're getting this because you turned on email updates in GroupTripIt. The button signs you in as ${e.name} — don't forward this email.` }),
             `${n.title}\n\n${n.body ?? ''}\n\nOpen ${n.tripName}: ${e.link}`).catch(() => false);
           if (ok) emailed++;
         }

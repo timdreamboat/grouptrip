@@ -5,7 +5,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500;600&display=swap">
 <style>
-/* GigTrip mock. Built on GroupTrip's design system (same spacing, radii,
+/* GigTrip mock. Built on GroupTripIt's design system (same spacing, radii,
    buttons, sheets) with its own identity: gaffer-tape yellow, stencil-style
    condensed display type, mono for show times. */
 :root {
@@ -413,7 +413,7 @@ dialog.sheet .field select, dialog.sheet .field input { max-width: 100%; }
     <nav id="sidenav"></nav>
     <div class="foot">
       <span>Prototype · sample data</span><button class="btn btn-outline btn-sm" data-act="help" data-id="__page" style="justify-content:flex-start">? What is this page</button>
-      <a href="https://timdreamboat.github.io/grouptrip/" target="_blank" rel="noopener">Made by GroupTrip ↗</a>
+      <a href="https://timdreamboat.github.io/grouptrip/" target="_blank" rel="noopener">Made by GroupTripIt ↗</a>
     </div>
   </aside>
   <div>
@@ -1965,7 +1965,7 @@ V.settle = () => {
       </div>
       <dl class="kv" id="settle-sheet">${settleRows(s, r)}</dl>
       <div class="row wrap">${edit ? `<button class="btn btn-primary" data-act="markSettled" data-id="${s.id}">${s.settled != null ? 'Update settled amount' : 'Mark as settled'}</button>` : `<button class="btn btn-primary" data-toast="Both sign on the TM's phone; PDF goes to management (mock)">Sign as promoter</button>`}
-        <button class="btn btn-secondary" data-toast="Makes a printable sheet like GroupTrip's expense report (mock)">Printable sheet</button></div>
+        <button class="btn btn-secondary" data-toast="Makes a printable sheet like GroupTripIt's expense report (mock)">Printable sheet</button></div>
     </section>
     <div class="stack">
       <section class="card stack"><div class="row between"><h2>Show expenses</h2>${edit ? addBtn('newExp', 'Add', s.id) : ''}</div>
@@ -2090,7 +2090,7 @@ V.travel = () => {
   return `
   <div class="head"><div><div class="eyebrow">${mgr || edit ? 'Everyone\'s travel' : esc(p.name) + ' · ' + esc(p.role)}</div><h1 class="display">${mgr || edit ? 'Travel' : 'My travel'}</h1>
     <div class="sub muted">${edit ? 'Each item shows only for the people it applies to.' : 'Only yours.'}</div></div>${edit ? addBtn('newTravel', 'Add travel', '', 'btn-tape') : ''}</div>
-  <div class="grid2"><div class="stack">${group('flight', 'Flights')}<p class="note">Real build: flight times fill in from the flight number, as in GroupTrip.</p></div>
+  <div class="grid2"><div class="stack">${group('flight', 'Flights')}<p class="note">Real build: flight times fill in from the flight number, as in GroupTripIt.</p></div>
     <div class="stack">${group('van', 'Van')}${group('hotel', 'Hotels')}${group('other', 'Other')}
       ${!edit && p.room ? `<p class="note">Your room tonight: ${esc(p.room)}</p>` : ''}</div></div>`;
 };
@@ -2195,7 +2195,7 @@ V.activity = () => {
     <section class="card"><h2 style="margin-bottom:4px">Recent</h2><div class="list">${DB.activity.filter(a => isMgr() || !/\$|Settled|Budget|Deposit/.test(a.text)).slice(0, 30).map(a => `
       <div class="li">${avatar(a.who)}<div class="grow"><div>${esc(a.text)}</div><div class="small muted">${esc(P(a.who).name)} · ${esc(a.at)}</div></div></div>`).join('')}</div></section>
   </div>
-  <p class="note">Real build: each of these also arrives as a phone notification (GroupTrip's push), filtered by what each person can see.</p>`;
+  <p class="note">Real build: each of these also arrives as a phone notification (GroupTripIt's push), filtered by what each person can see.</p>`;
 };
 
 V.settings = () => `
@@ -2225,7 +2225,7 @@ V.about = () => `
   <section class="card prose">
     <p><b>GigTrip is for artist managers and everyone who makes a show happen.</b> Your dates sheet, offers, deals and settlements, advance tasks, who brings what, day sheets, travel and guest lists — in one place, instead of Excel, ClickUp and group texts.</p>
     <p><b>Management edits everything and decides who sees what.</b> Add artists, tours and shows; import your Excel dates; upload riders and contracts; set templates. The tour manager, artist, band &amp; crew and the venue each see only what you allow — costs and profit can be hidden separately.</p>
-    <p>Built on <a href="https://timdreamboat.github.io/grouptrip/" target="_blank" rel="noopener">GroupTrip</a>, which already runs travel, notifications, calendars and expenses for groups.</p>
+    <p>Built on <a href="https://timdreamboat.github.io/grouptrip/" target="_blank" rel="noopener">GroupTripIt</a>, which already runs travel, notifications, calendars and expenses for groups.</p>
     <h2>Moving from Excel, ClickUp or another tool?</h2>
     <p>Settings › <a href="#imports">Imports</a> takes your dates sheet (.xlsx or .csv), a ClickUp list export, Master Tour or Daysheets exports, Artist Growth or Prism reports, or a calendar (.ics). You match the columns once, check a preview, and get a receipt showing where every row landed. Everything imported carries an "Imported" tag and can be undone in one tap.</p>
     <p class="muted">Use <b>Demo as</b> to switch between management, tour manager, artist, band &amp; crew (you're Nico, the VJ) and venue (Greg, production manager). All people, venues and numbers are made up. Edits stay in this browser — reset them in Settings.</p>

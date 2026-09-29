@@ -1,4 +1,4 @@
-# Handoff — where GroupTrip stands (updated 2026-09-28)
+# Handoff — where GroupTripIt stands (updated 2026-09-28)
 
 Read this after `CLAUDE.md` when starting a new session. `CLAUDE.md` explains
 how the app is built and the rules; this file is **current status, decisions
@@ -33,7 +33,7 @@ and what's pending**.
 ## GigTrip (new, 2026-09-23 — mock only)
 - A "next level" for music artist managers + touring party (tours, shows,
   day sheets, advancing, deals/settlement, tour budget). Separate site and
-  brand, built on GroupTrip later.
+  brand, built on GroupTripIt later.
 - Clickable mock: `gigtrip/mock/index.html` (one file, fake data, no
   database; not on GitHub Pages). Private preview link:
   https://claude.ai/artifact/6ckEWFC9bMBHE2iFr7d1UY
@@ -154,8 +154,17 @@ trips with "zz-…" usernames for tests and delete them after.
   installed app. Server side is built but idle.
 - "Before sharing" items (rate limiting, backups, privacy note) — **skipped**
   by the owner for now.
+- App renamed **GroupTripIt** (2026-09-28; grouptrip.com was taken). Shown
+  everywhere people see it. Internal names stay `grouptrip` on purpose: the
+  repo, Pages URL, Supabase project, localStorage keys (renaming would lose
+  people's saved trips), calendar event UIDs (renaming would duplicate events
+  in calendar apps) and the `grouptrip.quiet` setting.
 
 ## Pending on the owner
+- **Claim the name** — grouptripit.com (and grouptripit.app) were
+  unregistered on 2026-09-28, and @grouptripit looked free on Instagram,
+  TikTok, X, Facebook, YouTube, Pinterest, Bluesky and GitHub. Once the
+  domain is bought, point GitHub Pages at it (see `docs/APP-STORES.md`).
 1. **Google Maps key** → paste into `app/config.js` `GOOGLE_MAPS_KEY` (and
    optionally a Map ID in `GOOGLE_MAP_ID`). Unlocks: all pins at once,
    info-window cards, Google Places lookup for plan/hotel locations,
