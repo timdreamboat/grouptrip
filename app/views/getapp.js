@@ -1,6 +1,6 @@
 // "Get GroupTrip on your phone" (install + notifications) — a dismissible
 // card on Home, and the install instructions sheet.
-import { icon, sheet, toast, busy } from '../ui.js';
+import { icon, sheet, toast, busy, esc } from '../ui.js';
 import * as pwa from '../pwa.js';
 
 const DISMISSED = 'grouptrip.appcard.dismissed';
@@ -43,6 +43,49 @@ export async function handleAppCardClick(e, ctx) {
     if (ok) { toast("Notifications are on for your trips on this device"); ctx.refresh(); }
   }
   return true;
+}
+
+// Opening a trip from the home-screen app with notifications off asks once;
+// "Not now" asks again after a few days, three times at most. iPhones only
+// show the permission prompt after a tap, so this is a sheet with a button.
+const ASKED = 'grouptrip.pushask';
+const ASK_AGAIN_MS = 3 * 24 * 3600 * 1000;
+export function askForNotifications(ctx) {
+  if (!pwa.isStandalone() || !pwa.pushSupported() || pwa.pushEnabled()) return;
+  if (Notification.permission === 'denied') return; // only the phone's Settings can undo that
+  let asked = { count: 0, at: 0 };
+  try { asked = { ...asked, ...JSON.parse(localStorage.getItem(ASKED) || '{}') }; } catch { /* ignore */ }
+  if (asked.count >= 3 || Date.now() - asked.at < ASK_AGAIN_MS) return;
+  setTimeout(() => {
+    if (document.querySelector('dialog[open]') || location.hash.indexOf(ctx.code) < 0) return;
+    try { localStorage.setItem(ASKED, JSON.stringify({ count: asked.count + 1, at: Date.now() })); } catch { /* ignore */ }
+    sheet({
+      title: 'Turn on notifications?',
+      body: `
+        <div style="display:flex;gap:14px;align-items:center;margin-bottom:12px">
+          <img src="icons/icon-192.png" alt="" width="52" height="52" style="border-radius:14px;flex:none">
+          <p class="muted" style="margin:0">Get updates about <b>${esc(ctx.trip.name)}</b> and your other trips on this phone.</p>
+        </div>
+        <ul class="steps">
+          <li>New plans and polls</li>
+          <li>When someone adds an expense with you</li>
+          <li>A morning heads-up on each trip day</li>
+        </ul>
+        <p class="hint">You can switch them off anytime from your picture in the top corner.</p>`,
+      foot: `<button class="btn btn-secondary" data-later>Not now</button>
+             <button class="btn btn-primary" data-on>${icon('bell')}Turn on</button>`,
+      onMount(el, close) {
+        el.querySelector('[data-later]').onclick = close;
+        el.querySelector('[data-on]').onclick = async (ev) => {
+          if (await busy(ev.currentTarget, pwa.enablePush)) {
+            close();
+            toast('Notifications are on for your trips on this device');
+            ctx.refresh();
+          }
+        };
+      },
+    });
+  }, 900);
 }
 
 export function openInstallHelp() {

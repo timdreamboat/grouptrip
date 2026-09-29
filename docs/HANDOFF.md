@@ -104,6 +104,11 @@ trips with "zz-…" usernames for tests and delete them after.
 - My trips (v12): stale/deleted cards pruned (`existing_trips`), card "⋯"
   menu → Delete trip (organizer) / Leave trip (guest, `leave_trip`).
 - Cover picker: Wikidata P18 → place's Wikipedia photo → Flickr extras.
+- Notifications prompt (2026-09-28): opening a trip from the home-screen app
+  with notifications off shows a "Turn on notifications?" sheet
+  (`askForNotifications` in views/getapp.js). "Not now" asks again after 3
+  days, 3 times max; never asks once the phone has blocked them. Owner's
+  iPhone push confirmed working (test sent 2026-09-28).
 
 ## What's built (all live)
 - Usernames (2026-09-24): no sign-in; a username ties each person's trips
@@ -154,8 +159,8 @@ trips with "zz-…" usernames for tests and delete them after.
    is written but untested** — test it as soon as the key arrives (restrict the
    key to `https://timdreamboat.github.io/*` and `http://localhost:8080/*`,
    APIs: Maps JavaScript API + Places API (New)).
-2. **Phone test** of Add to home screen + notifications (server-side sending
-   is verified; the device side isn't).
+2. ~~Phone test of notifications~~ — owner's iPhone subscribed 2026-09-28;
+   test push sent and accepted by Apple.
 
 ## Lessons for working in this repo
 - The preview browser caches JS modules: after editing, run

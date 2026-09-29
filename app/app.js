@@ -11,6 +11,7 @@ import * as invite from './views/invite.js';
 import * as tripView from './views/trip.js';
 import { locate, coverOptions } from './places.js';
 import * as pwa from './pwa.js';
+import { askForNotifications } from './views/getapp.js';
 
 const root = document.getElementById('app');
 let current = { code: null, tab: null, trip: null };
@@ -83,7 +84,7 @@ async function openTrip(code, tab, { animate = true, keepScroll = false } = {}) 
     tripView.flash();
   }, { animate: animate && !keepScroll });
   enrich(ctx);
-  if (!followed.has(code) && !trip._offline) { followed.add(code); pwa.followTrip(code); }
+  if (!followed.has(code) && !trip._offline) { followed.add(code); pwa.followTrip(code); askForNotifications(ctx); }
 }
 const followed = new Set(); // trips this session made sure get notifications
 
