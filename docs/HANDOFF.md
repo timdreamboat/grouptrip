@@ -180,6 +180,8 @@ trips with "zz-…" usernames for tests and delete them after.
   usernames replaced sign-in.
 
 ## Possible next steps (owner hasn't chosen)
+- App Store + Google Play (native apps): plan drafted in
+  `docs/APP-STORES.md` (Capacitor shell around `app/`). Owner: no changes yet.
 - Short PIN on top of usernames so knowing someone's username isn't enough
   to change/delete their trips (told to owner as the main open risk).
 - South Lake Tahoe's Wikidata photo is a dusk street scene (picker's one weak

@@ -73,5 +73,8 @@
 ## Later (money)
 - Categories and a spending summary
 
+## Later — native apps
+- App Store + Google Play downloads: plan in `docs/APP-STORES.md` (draft, not started).
+
 ## Later ideas
 - Date polls ("which weekend works?"), packing list, sign-in with email link
