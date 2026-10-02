@@ -220,6 +220,11 @@ different: organizer home = planning dashboard (invite, readiness, waiting
 on); guest home = RSVP, personal to-dos, balance, next up.
 
 ## Standing conventions
+- After any change to `app/` or `supabase/`, run the `/qa` skill
+  (`.claude/skills/qa`) before reporting — the owner should never have to
+  ask whether it was tested. `/uat` (`.claude/skills/uat`) is the full
+  experience review across every role and tab; run it when asked or before
+  a release, and write its report to `docs/reviews/`.
 - Everything free-tier unless the owner explicitly approves a cost.
 - Small commits, plain-English messages.
 - Settle-up math lives in `app/money.js`; if you change it, keep the rule that
