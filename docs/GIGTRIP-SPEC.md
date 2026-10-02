@@ -216,6 +216,15 @@ only the tabs their access allows (Day sheet, Contacts). The logo always goes
 to the viewer's own home (Artists for management/TMs, Home for artist/crew,
 Today for the venue).
 
+**Tour and show photos** (owner, user testing 2026-10-01): management sets
+a wide cover photo per tour and per show (tap the cover, or the photo
+section at the top of the tour/show form; device-cropped 16:7 at 960px). It
+shows on the artist/crew Home tour cards, the tour page banner, the show page
+banner (a show without its own photo uses its tour's) and as a thumbnail on
+one-off shows. No photo → a gradient in the artist's colour with an "Add photo"
+prompt for management. Real build: `tours.cover_path`, `shows.cover_path` in
+the org's storage folder.
+
 **Artist profile picture** (owner, 2026-09-23): management sets it by tapping
 the picture on the artist page or in the artist form (with preview and
 "Remove picture"). The device crops it to a square and shrinks it to 320px

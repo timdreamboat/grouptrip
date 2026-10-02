@@ -342,9 +342,21 @@ textarea.csv { font: 13px/1.5 var(--font-mono); min-height: 180px; }
 .tcard:hover { border-color: var(--line-strong); }
 .tcard:focus-visible { outline: 3px solid var(--ring); }
 .tcard.past { opacity: .7; }
-.tcover { aspect-ratio: 16 / 7; display: flex; align-items: flex-end; gap: 10px; padding: 12px; color: var(--tape-ink); }
-.tcover .ph { width: 40px; height: 40px; border-radius: 12px; border: 2px solid rgba(255, 255, 255, .7); }
-.tcover .tn { font: 800 26px/1 var(--font-display); text-transform: uppercase; letter-spacing: .01em; text-shadow: 0 1px 0 rgba(255, 255, 255, .35); }
+.tcover { aspect-ratio: 16 / 7; display: flex; align-items: flex-end; gap: 10px; padding: 12px; color: #fff; background-size: cover; background-position: center; position: relative; min-width: 0; }
+.tcover::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to top, rgba(0, 0, 0, .55), rgba(0, 0, 0, 0) 60%); pointer-events: none; }
+.tcover > * { position: relative; z-index: 1; }
+.tcover.banner { aspect-ratio: auto; height: clamp(120px, 22vw, 220px); border-radius: 20px; width: 100%; }
+.coveredit { position: relative; display: block; cursor: pointer; border-radius: 20px; min-width: 0; }
+.coveredit input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.coveredit .cam { position: absolute; top: 10px; right: 10px; z-index: 2; display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border-radius: 999px; background: rgba(0, 0, 0, .55); color: #fff; font-size: 12.5px; font-weight: 600; backdrop-filter: blur(6px); }
+.coveredit .cam svg { width: 14px; height: 14px; }
+.coveredit:focus-within { outline: 3px solid var(--ring); outline-offset: 2px; }
+.tcard .coveredit { border-radius: 0; }
+.cvprev { width: 100%; aspect-ratio: 16 / 7; object-fit: cover; border-radius: 14px; display: block; background: var(--surface-2); }
+.cvprev.empty { display: grid; place-items: center; color: var(--muted); font-size: 13px; border: 2px dashed var(--line-strong); }
+.thumb.wide { width: 72px; height: 44px; border-radius: 8px; object-fit: cover; }
+.tcover .ph { width: 40px; height: 40px; border-radius: 12px; border: 2px solid rgba(255, 255, 255, .8); }
+.tcover .tn { font: 800 26px/1 var(--font-display); text-transform: uppercase; letter-spacing: .01em; text-shadow: 0 1px 3px rgba(0, 0, 0, .5); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tbody { padding: 12px 14px; display: grid; gap: 6px; }
 .hgrid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
 .acard { min-width: 0; display: flex; gap: 12px; align-items: center; text-align: left; padding: 12px; border-radius: 18px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; width: 100%; color: var(--text); }
@@ -876,7 +888,7 @@ E.show = (id, preset = {}) => {
   const defA = preset.artist || (cur() !== 'all' ? cur() : DB.artists[0].id);
   const v = s ? JSON.parse(JSON.stringify(s)) : { artist: defA, tour: preset.tour ?? (DB.tours.find(t => t.artist === defA)?.id || ''), date: preset.date || '2027-06-12', city: '', venue: '', cap: 1000, status: 'hold', hold: 1, cur: 'USD', guestCap: 24, deal: { type: 'vs', g: 1000000, pct: 85, dep: 500000, depDue: '', depPaid: false }, ...preset };
   openForm({
-    title: s ? `Edit ${cityOf(s)}` : 'Add a show', wide: true, value: v,
+    title: s ? `Edit ${cityOf(s)}` : 'Add a show', wide: true, value: v, top: coverField(s, 'Show photo (optional — the tour photo is used when there isn’t one)'),
     fields: [
       { k: 'artist', label: 'Artist', type: 'select', options: DB.artists.map(a => [a.id, a.name]) },
       { k: 'tour', label: 'Tour', type: 'select', options: [['', 'One-off (no tour)'], ...DB.tours.map(t => [t.id, `${t.name} · ${artist(t.artist).name}`])] },
@@ -891,9 +903,10 @@ E.show = (id, preset = {}) => {
       { k: 'hospitality', label: 'Hospitality', full: true }, { k: 'wifi', label: 'Wi-Fi' }, { k: 'guestCap', label: 'Guest list spots', type: 'number' },
       { k: 'note', label: 'Notes (e.g. festival set time)', full: true },
     ],
-    onSave(o) {
-      const t = s || { id: uid('sh'), settled: null, deal: {} };
+    onSave(o, form) {
+      const t = s || { id: uid('sh'), settled: null, deal: {}, cover: null };
       Object.entries(o).forEach(([k, val]) => setp(t, k, val));
+      applyCoverField(t, form);
       if (!t.ll) { const key = Object.keys(CITIES).find(c => t.city.toLowerCase().startsWith(c)); if (key) t.ll = CITIES[key]; }
       if (!s) {
         DB.shows.push(t);
@@ -905,6 +918,7 @@ E.show = (id, preset = {}) => {
     },
     onDelete: s && (() => { DB.shows = DB.shows.filter(x => x !== s); ['tasks', 'slots', 'docs', 'contacts', 'guests', 'showExp'].forEach(k => { DB[k] = DB[k].filter(x => x.show !== s.id); }); log(`Deleted show: ${s.city} (${short(s.date)})`); S.showId = 'nyc'; toast('Show deleted'); }),
   });
+  bindCoverField();
 };
 E.artist = id => {
   const a = id ? artist(id) : null;
@@ -931,14 +945,31 @@ E.artist = id => {
     toAvatar(f).then(u => { $('#avprev').innerHTML = `<img class="bigph aph" src="${u}" alt="">`; }, () => toast("That file isn't a picture we can read"));
   });
 };
+// picture section at the top of the tour and show forms, with preview and remove
+function coverField(o, label) {
+  return `<div class="stack" style="gap:6px"><b>${label}</b><div id="cvprev">${o && o.cover ? `<img class="cvprev" src="${o.cover}" alt="">` : '<div class="cvprev empty">No photo yet</div>'}</div>
+    <div class="row wrap" style="gap:8px"><label class="btn btn-secondary btn-sm" for="f-coverfile" style="position:relative">${icon('upload')} ${o && o.cover ? 'Change' : 'Choose'} photo<input type="file" id="f-coverfile" name="coverfile" accept="image/*" style="position:absolute;inset:0;opacity:0;cursor:pointer"></label>
+    ${o && o.cover ? '<label class="small" for="f-cvrm" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="f-cvrm" name="cvrm"> Remove photo</label>' : ''}<span class="small muted">Wide photos work best — we crop to the middle.</span></div></div>`;
+}
+function bindCoverField() {
+  const fi = $('#f-coverfile'); if (!fi) return;
+  fi.addEventListener('change', e => { const f = e.target.files[0]; if (!f) return; toCover(f).then(u => { $('#cvprev').innerHTML = `<img class="cvprev" src="${u}" alt="">`; }, () => toast("That file isn't a picture we can read")); });
+}
+function applyCoverField(o, form) {
+  if (form.elements.cvrm?.checked) o.cover = null;
+  const f = form.elements.coverfile?.files[0];
+  if (f) toCover(f).then(u => { o.cover = u; save(); route(); }, () => {});
+}
 E.tour = (id, preset = {}) => {
   const t = id ? tour(id) : null;
   openForm({
     title: t ? `Edit ${t.name}` : 'Add a tour', value: t || { artist: preset.artist || 'jv', season: 'Fall 2027' },
+    top: coverField(t, 'Tour photo'),
     fields: [{ k: 'name', label: 'Tour name', req: true, full: true }, { k: 'artist', label: 'Artist', type: 'select', options: DB.artists.map(a => [a.id, a.name]) }, { k: 'season', label: 'Season' }],
-    onSave(o) { const x = t || { id: uid('t') }; Object.assign(x, o); if (!t) { DB.tours.push(x); S.tourId = x.id; } log(`${t ? 'Updated' : 'Added'} tour ${x.name}`); toast('Tour saved'); },
+    onSave(o, form) { const x = t || { id: uid('t'), cover: null }; Object.assign(x, o); applyCoverField(x, form); if (!t) { DB.tours.push(x); S.tourId = x.id; } log(`${t ? 'Updated' : 'Added'} tour ${x.name}`); toast('Tour saved'); },
     onDelete: t && (() => { DB.shows.filter(s => s.tour === t.id).forEach(s => { s.tour = ''; }); DB.tours = DB.tours.filter(x => x !== t); S.tourId = DB.tours[0]?.id; log(`Deleted tour ${t.name}`); }),
   });
+  bindCoverField();
 };
 E.offer = id => {
   const o = id ? DB.offers.find(x => x.id === id) : null;
@@ -1088,6 +1119,33 @@ function toAvatar(file) {
     img.onerror = () => { URL.revokeObjectURL(url); fail(new Error('not an image')); };
     img.src = url;
   });
+}
+// cover photo for a tour or a show: wide crop (16:7), shrunk to 960px, kept on the record like the artist picture
+function toCover(file) {
+  return new Promise((ok, fail) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      const W = 960, H = 420, r = W / H; let sw = img.naturalWidth, sh = img.naturalHeight, sx = 0, sy = 0;
+      if (sw / sh > r) { const nw = sh * r; sx = (sw - nw) / 2; sw = nw; } else { const nh = sw / r; sy = (sh - nh) / 2; sh = nh; }
+      const c = document.createElement('canvas'); c.width = W; c.height = H;
+      c.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, W, H);
+      URL.revokeObjectURL(url); ok(c.toDataURL('image/jpeg', .82));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); fail(new Error('not an image')); };
+    img.src = url;
+  });
+}
+const coverTarget = key => { const [kind, id] = key.split(':'); return kind === 'tour' ? tour(id) : show(id); };
+function setCover(key, file) {
+  const o = coverTarget(key); if (!o) return;
+  toCover(file).then(u => { o.cover = u; commit('Photo saved — everyone sees it now', `Changed the photo for ${o.name || cityOf(o)}`); }, () => toast("That file isn't a picture we can read"));
+}
+// the cover strip: the photo if there is one, else a gradient in the artist's colour; managers tap it to change it
+function coverBlock(key, o, a, inner = '', cls = '') {
+  const bg = o.cover ? `background-image:url(${o.cover})` : `background:linear-gradient(135deg,hsl(${a.hue} 60% 38%),hsl(${(a.hue + 50) % 360} 55% 24%))`;
+  const body = `<div class="tcover ${cls} ${o.cover ? 'has' : ''}" style="${bg}">${inner}</div>`;
+  if (!isMgr()) return body;
+  return `<label class="coveredit" for="cv-${key.replace(':', '-')}" title="${o.cover ? 'Change photo' : 'Add a photo'}">${body}<span class="cam">${icon('upload')}<span>${o.cover ? 'Change photo' : 'Add photo'}</span></span><input type="file" accept="image/*" id="cv-${key.replace(':', '-')}" data-coverfor="${key}" aria-label="${o.cover ? 'Change' : 'Add'} photo"></label>`;
 }
 function setArtistPhoto(a, file) {
   toAvatar(file).then(u => { a.photo = u; commit(`New picture for ${a.name}`, `Changed ${a.name}'s profile picture`); }, () => toast("That file isn't a picture we can read"));
@@ -1780,7 +1838,7 @@ V.myhome = () => {
     .sort((x, y) => (x.done - y.done) || ((x.next?.date || '9').localeCompare(y.next?.date || '9')));
   const oneOffs = mine.filter(s => !s.tour);
   const card = ({ t, shows, next, done }) => `<button class="tcard ${done ? 'past' : ''}" data-act="gotour" data-id="${t.id}">
-    <div class="tcover" style="background:linear-gradient(135deg,hsl(${a.hue} 85% 62%),hsl(${(a.hue + 40) % 360} 80% 52%))">${artistPh(a, 'ph')}<span class="tn">${esc(t.name)}</span></div>
+    ${coverBlock('tour:' + t.id, t, a, `${artistPh(a, 'ph')}<span class="tn">${esc(t.name)}</span>`)}
     <div class="tbody"><div class="row between"><span class="small muted">${esc(t.season)}${shows.length ? ` · ${short(shows[0].date)} – ${short(shows[shows.length - 1].date)}` : ''}</span><span class="small muted">${shows.length} show${shows.length === 1 ? '' : 's'}</span></div>
       <div>${done ? '<span class="chip st-settled plain">Finished</span>' : next ? (next.date === NOW.date ? `<span class="chip st-pending plain">Show today · ${esc(cityOf(next))}</span>` : `<b>Next:</b> ${short(next.date)} · ${esc(cityOf(next))} <span class="muted">· ${daysUntil(next.date) === 1 ? 'tomorrow' : 'in ' + daysUntil(next.date) + ' days'}</span>`) : '<span class="muted">No dates yet</span>'}</div></div></button>`;
   return `
@@ -1788,7 +1846,7 @@ V.myhome = () => {
     <div class="sub muted">${tours.length} tour${tours.length === 1 ? '' : 's'}${oneOffs.length ? ` · ${oneOffs.length} one-off show${oneOffs.length === 1 ? '' : 's'}` : ''}${today ? ` · show today in ${esc(cityOf(today))}` : ''}</div></div>
     ${today ? `<button class="btn btn-tape" data-go="today">${icon('today')} Today's day sheet</button>` : ''}</div>
   <div class="hgrid">${tours.map(card).join('')}</div>
-  ${oneOffs.length ? `<section class="card"><h2 style="margin-bottom:4px">One-off shows</h2><div class="list">${oneOffs.map(s => `<div class="li click" data-show="${s.id}">${dateBox(s.date, s.date === NOW.date)}<div class="grow"><b>${esc(s.city)}</b> · ${esc(s.venue)}<div class="small muted">${fmtDate(s.date)}${s.note ? ' · ' + esc(s.note) : ''}</div></div>${statusChip(s)}</div>`).join('')}</div></section>` : ''}
+  ${oneOffs.length ? `<section class="card"><h2 style="margin-bottom:4px">One-off shows</h2><div class="list">${oneOffs.map(s => `<div class="li click" data-show="${s.id}">${s.cover ? `<img class="thumb wide" src="${s.cover}" alt="">` : dateBox(s.date, s.date === NOW.date)}<div class="grow"><b>${esc(s.city)}</b> · ${esc(s.venue)}<div class="small muted">${fmtDate(s.date)}${s.note ? ' · ' + esc(s.note) : ''}</div></div>${statusChip(s)}</div>`).join('')}</div></section>` : ''}
   ${!tours.length && !oneOffs.length ? '<p class="muted">Nothing booked yet. Management adds shows; they appear here.</p>' : ''}`;
 };
 
@@ -1806,6 +1864,7 @@ V.tour = () => {
     <div class="sub muted">${shows.length} shows${shows.length ? ` · ${short(shows[0].date)} – ${short(shows[shows.length - 1].date)}` : ''}</div></div>
     <div class="addbar"><label class="viewas" for="tourpick">Tour <select id="tourpick">${tours.map(x => `<option value="${x.id}" ${x.id === t.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label>
       ${mgr ? editBtn('tour', t.id, 'Edit tour') + addBtn('newShowTour', 'Add show', t.id, 'btn-tape') : ''}</div></div>
+  ${coverBlock('tour:' + t.id, t, artist(t.artist), `${artistPh(artist(t.artist), 'ph')}<span class="tn">${esc(t.name)}</span>`, 'banner')}
   <div class="grid2 wide-left">
     <section class="card map"><div class="row between" style="margin-bottom:8px"><h2>Routing</h2><span class="small muted">Real build: Google map embed</span></div>${routeMap(shows)}</section>
     ${costs ? `<section class="card stack"><h2>Money</h2>
@@ -1915,6 +1974,7 @@ V.show = () => {
     <div class="row wrap">${s.settled != null ? '<span class="chip st-settled">Settled</span>' : statusChip(s)}
       ${isVenue() ? '' : `<label class="viewas" for="pick">Show <select id="pick">${curShows().map(x => `<option value="${x.id}" ${x.id === s.id ? 'selected' : ''}>${short(x.date)} · ${esc(cityOf(x))} · ${esc(artist(x.artist).name)}</option>`).join('')}</select></label>`}
       ${isMgr() ? editBtn('show', s.id, 'Edit show') : ''}</div></div>
+  ${coverBlock('show:' + s.id, s.cover ? s : (tour(s.tour)?.cover ? tour(s.tour) : s), artist(s.artist), `${artistPh(artist(s.artist), 'ph')}<span class="tn">${esc(s.venue)}</span>`, 'banner')}
   <section class="card stack">
     <div class="tabs" role="tablist">${tabs.map(([k, l]) => `<button role="tab" aria-selected="${S.showTab === k}" data-tab="${k}">${k === 'advance' ? `${l} ${pctDone(s.id)}%` : l}</button>`).join('')}</div>
     ${body}
@@ -2394,6 +2454,7 @@ document.addEventListener('change', e => {
   if (d.over) { const p = DB.people[d.over]; if (el.value === (DB.access[p.kind] || {})[d.area]) delete p.over[d.area]; else p.over[d.area] = el.value; return commit(`${p.name.split(' ')[0]}'s access updated`, `Changed ${p.name}'s access: ${d.area} → ${el.value}`); }
   if (d.upload) uploadFiles(d.upload, d.id, el.files);
   if (d.artistphoto && el.files[0]) setArtistPhoto(artist(d.artistphoto), el.files[0]);
+  if (d.coverfor && el.files[0]) setCover(d.coverfor, el.files[0]);
 });
 document.addEventListener('input', e => {
   if (e.target.id === 'hq') { S.hq = e.target.value; const pos = e.target.selectionStart; route(); const q = $('#hq'); q.focus(); q.setSelectionRange(pos, pos); return; }
