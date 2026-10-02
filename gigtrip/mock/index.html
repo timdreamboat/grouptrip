@@ -333,6 +333,14 @@ textarea.csv { font: 13px/1.5 var(--font-mono); min-height: 180px; }
 .achip .ph { width: 28px; height: 28px; border-radius: 50%; flex: none; }
 .achip span.nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .aph { display: grid; place-items: center; font: 900 18px/1 var(--font-display); color: var(--tape-ink); object-fit: cover; }
+.tcard { all: unset; display: grid; border-radius: 20px; overflow: hidden; border: 1px solid var(--line); background: var(--surface); cursor: pointer; color: var(--text); min-width: 0; }
+.tcard:hover { border-color: var(--line-strong); }
+.tcard:focus-visible { outline: 3px solid var(--ring); }
+.tcard.past { opacity: .7; }
+.tcover { aspect-ratio: 16 / 7; display: flex; align-items: flex-end; gap: 10px; padding: 12px; color: var(--tape-ink); }
+.tcover .ph { width: 40px; height: 40px; border-radius: 12px; border: 2px solid rgba(255, 255, 255, .7); }
+.tcover .tn { font: 800 26px/1 var(--font-display); text-transform: uppercase; letter-spacing: .01em; text-shadow: 0 1px 0 rgba(255, 255, 255, .35); }
+.tbody { padding: 12px 14px; display: grid; gap: 6px; }
 .hgrid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
 .acard { min-width: 0; display: flex; gap: 12px; align-items: center; text-align: left; padding: 12px; border-radius: 18px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; width: 100%; color: var(--text); }
 .acard:hover { border-color: var(--line-strong); }
@@ -745,7 +753,7 @@ const ICONS = {
   access: 'M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z M9.5 12l2 2 3.5-4', mymoney: 'M3 7h18v12H3z M3 11h18 M16 15h2',
   artists: 'M12 3a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z M6 11a6 6 0 0 0 12 0 M12 17v4 M9 21h6',
   activity: 'M6 16V11a6 6 0 1 1 12 0v5l2 2H4z M10 21h4', settings: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0-1.2-2.9H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 2.9-1.2V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0 1.2 2.9H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z',
-  more: 'M5 12h.01 M12 12h.01 M19 12h.01', overview: 'M12 3a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z M6 11a6 6 0 0 0 12 0 M12 17v4 M9 21h6', about: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z M12 11v5 M12 8v.01',
+  more: 'M5 12h.01 M12 12h.01 M19 12h.01', myhome: 'M3 11l9-8 9 8 M5 10v10h5v-6h4v6h5V10', overview: 'M12 3a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z M6 11a6 6 0 0 0 12 0 M12 17v4 M9 21h6', about: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z M12 11v5 M12 8v.01',
   chev: 'M9 6l6 6-6 6', sun: 'M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10z M12 2v2 M12 20v2 M4.9 4.9l1.4 1.4 M17.7 17.7l1.4 1.4 M2 12h2 M20 12h2 M4.9 19.1l1.4-1.4 M17.7 6.3l1.4-1.4', moon: 'M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z', imports: 'M12 16V4 M7 9l5-5 5 5 M4 16v4h16v-4', home: 'M4 5h7v7H4z M13 5h7v7h-7z M4 14h7v6H4z M13 14h7v6h-7z', edit: 'M4 20h4L19 9l-4-4L4 16z M14 6l4 4', plus: 'M12 5v14 M5 12h14', file: 'M6 3h9l4 4v14H6z M14 3v5h5',
   upload: 'M12 16V4 M7 9l5-5 5 5 M4 16v4h16v-4', comment: 'M4 5h16v11H8l-4 4z',
 };
@@ -756,13 +764,14 @@ const uploadZone = (target, id, text = 'Drop files here or tap to upload') => `<
 
 // ---------- navigation (follows what the viewer may see) ----------
 // sidebar groups: which heading each page sits under
-const GROUPS = [['Overview', ['home', 'overview', 'today', 'activity']], ['Booking', ['board', 'offers', 'tour']], ['Shows', ['show', 'settle', 'guests', 'travel']], ['Money', ['money', 'mymoney']], ['Team', ['party', 'access']], ['Setup', ['settings', 'imports', 'about']]];
+const GROUPS = [['Overview', ['home', 'myhome', 'overview', 'today', 'activity']], ['Booking', ['board', 'offers', 'tour']], ['Shows', ['show', 'settle', 'guests', 'travel']], ['Money', ['money', 'mymoney']], ['Team', ['party', 'access']], ['Setup', ['settings', 'imports', 'about']]];
 function navFor() {
   if (isMgr()) return [['home', 'Artists'], ['board', 'Season'], ['show', 'Show'], ['money', 'Money']].concat(cur() !== 'all' ? [['overview', 'Artist page']] : []).concat([['activity', 'Activity'], ['offers', 'Offers'], ['tour', 'Tours'], ['settle', 'Settle'], ['guests', 'Guests'], ['travel', 'Travel'], ['party', 'Party'], ['access', 'Access'], ['settings', 'Settings'], ['imports', 'Imports'], ['about', 'About & help']]);
   const n = [];
-  if (hasHome()) n.push(['home', 'Artists']);
+  if (hasHome()) n.push(['home', 'Artists']); else if (!isVenue()) n.push(['myhome', 'Home']);
   if (can('day')) n.push(['today', 'Today']);
-  if (can('advance') || can('costs')) n.push(['show', 'Show']);
+  if (can('advance') || can('costs') || can('day')) n.push(['show', 'Show']);
+  if (!isVenue() && can('day') && DB.tours.some(t => inCur(t.artist))) n.push(['tour', 'Tours']);
   if (can('costs')) n.push(['settle', 'Settle']);
   if (can('guests')) n.push(['guests', 'Guests']);
   if (can('travel')) n.push(['travel', 'Travel']);
@@ -1125,6 +1134,7 @@ const HELP = {
   activity: { what: 'What needs attention, and who changed what.', do: ['Tap an item to go fix it', 'Overdue tasks, deposits, expiring offers and guest requests land here first'], who: 'Anyone who can edit advance tasks.' },
   settings: { what: 'Templates, rates, appearance and your imports.', do: ['Edit the advance and day-sheet templates once; every new show uses them', 'Import data or see what an earlier import created', 'Light or dark mode'], who: 'Management.' },
   imports: { what: 'Every import you have done, what it created and where it went.', do: ['Open the shows, tasks or contacts an import created', 'Undo an import if it came in wrong', 'Import another file'], who: 'Management.' },
+  myhome: { what: 'Your tours and one-off shows, each on its own card, with what is next.', do: ['Tap a tour to see every date and the routing', 'Tap a show to see its day sheet and contacts', 'Today takes you straight to the current day sheet'], who: 'Artists and crew. Management and tour managers get the Artists page instead.' },
   today: { what: 'The day sheet for today, plus the venue, your hotel and who to call.', do: ['Tick off what you are bringing', 'Add the day to your calendar'], who: 'Everyone on the road.' },
 };
 const helpBtn = page => HELP[page] ? `<button class="helpbtn" type="button" data-act="help" data-id="${page}" aria-label="What is this page?">?</button>` : '';
@@ -1742,37 +1752,62 @@ V.offers = () => {
   ${done.length ? `<h2>Answered</h2>${done.map(card).join('')}` : ''}`;
 };
 
+V.myhome = () => {
+  const p = P(me()), a = artist(cur());
+  const mine = curShows().filter(s => s.status !== 'cancelled');
+  const today = mine.find(s => s.date === NOW.date);
+  const tours = DB.tours.filter(t => t.artist === a.id).map(t => { const shows = mine.filter(s => s.tour === t.id); const next = shows.find(s => s.date >= NOW.date); return { t, shows, next, done: shows.length && !next }; })
+    .sort((x, y) => (x.done - y.done) || ((x.next?.date || '9').localeCompare(y.next?.date || '9')));
+  const oneOffs = mine.filter(s => !s.tour);
+  const card = ({ t, shows, next, done }) => `<button class="tcard ${done ? 'past' : ''}" data-act="gotour" data-id="${t.id}">
+    <div class="tcover" style="background:linear-gradient(135deg,hsl(${a.hue} 85% 62%),hsl(${(a.hue + 40) % 360} 80% 52%))">${artistPh(a, 'ph')}<span class="tn">${esc(t.name)}</span></div>
+    <div class="tbody"><div class="row between"><span class="small muted">${esc(t.season)}${shows.length ? ` · ${short(shows[0].date)} – ${short(shows[shows.length - 1].date)}` : ''}</span><span class="small muted">${shows.length} show${shows.length === 1 ? '' : 's'}</span></div>
+      <div>${done ? '<span class="chip st-settled plain">Finished</span>' : next ? (next.date === NOW.date ? `<span class="chip st-pending plain">Show today · ${esc(cityOf(next))}</span>` : `<b>Next:</b> ${short(next.date)} · ${esc(cityOf(next))} <span class="muted">· ${daysUntil(next.date) === 1 ? 'tomorrow' : 'in ' + daysUntil(next.date) + ' days'}</span>`) : '<span class="muted">No dates yet</span>'}</div></div></button>`;
+  return `
+  <div class="head"><div><div class="eyebrow">${esc(p.name)} · ${esc(p.role)}</div><h1 class="display">${p.kind === 'artist' ? 'Your tours' : esc(a.name)}</h1>
+    <div class="sub muted">${tours.length} tour${tours.length === 1 ? '' : 's'}${oneOffs.length ? ` · ${oneOffs.length} one-off show${oneOffs.length === 1 ? '' : 's'}` : ''}${today ? ` · show today in ${esc(cityOf(today))}` : ''}</div></div>
+    ${today ? `<button class="btn btn-tape" data-go="today">${icon('today')} Today's day sheet</button>` : ''}</div>
+  ${mySupplyCard()}
+  <div class="hgrid">${tours.map(card).join('')}</div>
+  ${oneOffs.length ? `<section class="card"><h2 style="margin-bottom:4px">One-off shows</h2><div class="list">${oneOffs.map(s => `<div class="li click" data-show="${s.id}">${dateBox(s.date, s.date === NOW.date)}<div class="grow"><b>${esc(s.city)}</b> · ${esc(s.venue)}<div class="small muted">${fmtDate(s.date)}${s.note ? ' · ' + esc(s.note) : ''}</div></div>${statusChip(s)}</div>`).join('')}</div></section>` : ''}
+  ${!tours.length && !oneOffs.length ? '<p class="muted">Nothing booked yet. Management adds shows; they appear here.</p>' : ''}`;
+};
+
 V.tour = () => {
   const tours = DB.tours.filter(x => inCur(x.artist));
   if (!tours.some(x => x.id === S.tourId)) S.tourId = tours[0]?.id;
   const t = tour(S.tourId);
-  if (!t) return `<div class="head"><div><div class="eyebrow">${esc(cur() === 'all' ? 'All artists' : artist(cur()).name)}</div><h1 class="display">Tours</h1></div>${addBtn('newTour', 'Add tour', cur() === 'all' ? '' : cur(), 'btn-tape')}</div><p class="muted">No tours yet — this artist only has one-off shows. See them on the Season page.</p>`;
+  if (!t) return `<div class="head"><div><div class="eyebrow">${esc(cur() === 'all' ? 'All artists' : artist(cur()).name)}</div><h1 class="display">Tours</h1></div>${isMgr() ? addBtn('newTour', 'Add tour', cur() === 'all' ? '' : cur(), 'btn-tape') : ''}</div><p class="muted">No tours yet — only one-off shows.</p>`;
   const shows = DB.shows.filter(s => s.tour === t.id).sort((a, b) => a.date.localeCompare(b.date));
+  const mgr = isMgr(), costs = can('costs');
+  const next = shows.find(x => x.date >= NOW.date && x.status !== 'cancelled');
   const total = shows.filter(s => s.status !== 'cancelled').reduce((a, s) => a + showFee(s), 0);
   return `
   <div class="head"><div><div class="eyebrow">${esc(artist(t.artist).name)} · ${esc(t.season)}</div><h1 class="display">${esc(t.name)}</h1>
     <div class="sub muted">${shows.length} shows${shows.length ? ` · ${short(shows[0].date)} – ${short(shows[shows.length - 1].date)}` : ''}</div></div>
     <div class="addbar"><label class="viewas" for="tourpick">Tour <select id="tourpick">${tours.map(x => `<option value="${x.id}" ${x.id === t.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label>
-      ${editBtn('tour', t.id, 'Edit tour')}${addBtn('newShowTour', 'Add show', t.id, 'btn-tape')}</div></div>
+      ${mgr ? editBtn('tour', t.id, 'Edit tour') + addBtn('newShowTour', 'Add show', t.id, 'btn-tape') : ''}</div></div>
   <div class="grid2 wide-left">
     <section class="card map"><div class="row between" style="margin-bottom:8px"><h2>Routing</h2><span class="small muted">Real build: Google map embed</span></div>${routeMap(shows)}</section>
-    <section class="card stack"><h2>Money</h2>
+    ${costs ? `<section class="card stack"><h2>Money</h2>
       <dl class="kv"><dt>Show fees (settled + expected)</dt><dd>${money(total)}</dd>
       <dt>Deposits received</dt><dd>${money(shows.filter(s => s.deal.depPaid).reduce((a, s) => a + s.deal.dep, 0))}</dd>
       <dt>Settled</dt><dd>${shows.filter(s => s.settled != null).length} of ${shows.length} shows</dd></dl>
-      <button class="btn btn-secondary btn-sm" data-go="money">${icon('budget')} Budget + deposits</button></section>
+      ${can('profit') ? `<button class="btn btn-secondary btn-sm" data-go="money">${icon('budget')} Budget + deposits</button>` : ''}</section>`
+    : `<section class="card stack"><h2>Next up</h2>${next ? `<div class="row">${dateBox(next.date, next.date === NOW.date)}<div><b>${esc(next.city)}</b><div class="small muted">${esc(next.venue)} · ${next.date === NOW.date ? 'today' : daysUntil(next.date) === 1 ? 'tomorrow' : 'in ' + daysUntil(next.date) + ' days'}</div></div></div>` : '<p class="muted" style="margin:0">Nothing left on this run.</p>'}
+      <button class="btn btn-secondary btn-sm" data-go="today">${icon('today')} Today's day sheet</button></section>`}
   </div>
   <section class="card"><h2 style="margin-bottom:6px">Shows</h2><div class="list">
     ${shows.map(s => `
       <div class="li click" data-show="${s.id}">
         ${dateBox(s.date, s.date === NOW.date)}
         <div class="grow"><div><b>${esc(s.city)}</b> · ${esc(s.venue)}${s.date === NOW.date ? ' <span class="chip st-pending plain">Today</span>' : ''}</div>
-          <div class="small muted">${esc(dealText(s.deal, s.cur))}${s.note ? ' · ' + esc(s.note) : ''}</div>
-          <div class="row small wrap" style="gap:10px;margin-top:6px"><div class="bar ${pctDone(s.id) === 100 ? 'good' : ''}" style="width:120px"><i style="width:${pctDone(s.id)}%"></i></div>
+          <div class="small muted">${costs ? esc(dealText(s.deal, s.cur)) : fmtDate(s.date)}${s.note ? ' · ' + esc(s.note) : ''}</div>
+          ${mgr ? `<div class="row small wrap" style="gap:10px;margin-top:6px"><div class="bar ${pctDone(s.id) === 100 ? 'good' : ''}" style="width:120px"><i style="width:${pctDone(s.id)}%"></i></div>
             <span class="muted">${pctDone(s.id)}% advanced</span>
             <span class="${taskDone(s.id, 'Contract') ? '' : 'muted'}">${taskDone(s.id, 'Contract') ? '✓' : '○'} contract</span>
-            <span class="${s.deal.depPaid ? '' : 'muted'}">${s.deal.depPaid ? '✓' : '○'} deposit</span></div></div>
-        ${s.settled != null ? '<span class="chip st-settled">Settled</span>' : statusChip(s)}
+            <span class="${s.deal.depPaid ? '' : 'muted'}">${s.deal.depPaid ? '✓' : '○'} deposit</span></div>` : ''}</div>
+        ${s.settled != null && costs ? '<span class="chip st-settled">Settled</span>' : statusChip(s)}
       </div>`).join('') || '<p class="muted">No shows on this tour yet.</p>'}
   </div></section>`;
 };

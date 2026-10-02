@@ -206,6 +206,16 @@ the top bar switches back. Managers land on the artist's page; tour managers
 land on Today. A tour manager only sees the artists they're assigned to
 (`members.artists`). Roles with one artist (artist, crew, venue) skip home.
 
+**Home for artists and crew** (owner, 2026-10-01): roles with a single
+artist land on **Home** — one card per tour (cover, season, date range, show
+count, "Show today" or next show with countdown; finished tours dimmed), then
+one-off shows, with their "You're bringing" list and a Today shortcut. Tapping a
+tour opens the tour page read-only: routing, "Next up" instead of Money, no
+edit buttons, dates instead of deals. Tapping a show opens the show page with
+only the tabs their access allows (Day sheet, Contacts). The logo always goes
+to the viewer's own home (Artists for management/TMs, Home for artist/crew,
+Today for the venue).
+
 **Artist profile picture** (owner, 2026-09-23): management sets it by tapping
 the picture on the artist page or in the artist form (with preview and
 "Remove picture"). The device crops it to a square and shrinks it to 320px
