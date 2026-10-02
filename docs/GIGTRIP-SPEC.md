@@ -216,6 +216,14 @@ only the tabs their access allows (Day sheet, Contacts). The logo always goes
 to the viewer's own home (Artists for management/TMs, Home for artist/crew,
 Today for the venue).
 
+**Manager and tour manager have the same access** (owner, 2026-10-01): both
+can see and edit everything (deals, settlement, budgets, day sheets, people,
+who-sees-what, imports). The difference is scope and job: management = the
+office, the whole roster; tour manager = the road, only the artists they are
+assigned to (`members.artists`). The Access page's role-defaults table covers
+artist / crew / venue / agent only, and explains the two roles. Supersedes the
+earlier "TM sees costs but not profit" default in §7.
+
 **Tour start and end dates** (owner, user testing 2026-10-01): a tour has
 its own `start`/`end` (seeded for every sample tour). Picking a start sets the
 end to the next day the moment it changes (unless a later end is already set),

@@ -668,7 +668,7 @@ function seed() {
     },
     settings: { perDiem: 5000, agentPct: 10, mgmtPct: 15, currency: 'USD' },
     access: {
-      tm:     { season: 'off',  day: 'edit', advance: 'edit', travel: 'edit', guests: 'edit', mymoney: 'view', costs: 'edit', profit: 'off' },
+      tm:     { season: 'edit', day: 'edit', advance: 'edit', travel: 'edit', guests: 'edit', mymoney: 'edit', costs: 'edit', profit: 'edit' },
       artist: { season: 'off',  day: 'view', advance: 'off',  travel: 'view', guests: 'view', mymoney: 'view', costs: 'off',  profit: 'off' },
       crew:   { season: 'off',  day: 'view', advance: 'view', travel: 'view', guests: 'view', mymoney: 'view', costs: 'off',  profit: 'off' },
       venue:  { season: 'off',  day: 'view', advance: 'edit', travel: 'off',  guests: 'view', mymoney: 'off',  costs: 'view', profit: 'off' },
@@ -751,8 +751,9 @@ function commit(msg, logText) { if (logText) log(logText); save(); route(); if (
 
 // ---------- access ----------
 const me = () => ME[S.role];
-const isMgr = () => P(me()).kind === 'manager';
-function level(pid, area) { const p = P(pid); if (p.kind === 'manager') return 'edit'; return p.over[area] || (DB.access[p.kind] || {})[area] || 'off'; }
+const MGMT = ['manager', 'tm'];   // same access and editing abilities; a TM only sees the artists they're assigned to
+const isMgr = () => MGMT.includes(P(me()).kind);
+function level(pid, area) { const p = P(pid); if (MGMT.includes(p.kind)) return 'edit'; return p.over[area] || (DB.access[p.kind] || {})[area] || 'off'; }
 const can = (area, min = 'view', pid = me()) => LV[level(pid, area)] >= LV[min];
 const canEdit = area => can(area, 'edit');
 const isVenue = () => P(me()).kind === 'venue';
@@ -1219,7 +1220,7 @@ const HELP = {
   travel: { what: 'Flights, van legs and hotels.', do: ['Each item shows only to the people it applies to', 'Add travel for one person or everyone on the road'], who: 'Crew see only their own. Management and the tour manager see everyone’s.' },
   mymoney: { what: 'Your own pay, per diems and expenses. Nobody else’s.', do: ['Add an expense with a receipt photo', 'See what is still owed back to you'], who: 'Only you and management.' },
   party: { what: 'Everyone on this artist’s team and the venue crew for tonight.', do: ['Tap a person to open their card', 'Management: set what they bring and what they can see', 'Each person ticks off their own items'], who: 'Everyone. Phone numbers hide from the venue except the tour manager’s.' },
-  access: { what: 'Who sees what. Defaults for each role; change one person on their card in Party.', do: ['Hidden / View / Edit for every area', 'Money is three separate areas so costs and profit can be hidden separately', '"See it as…" to check the result'], who: 'Management only.' },
+  access: { what: 'Who sees what. Management and tour managers have the same full access to everything; the defaults here are for everyone else, and any one person can be changed on their card in Party.', do: ['Hidden / View / Edit for every area, per role', 'Money is three separate areas so costs and profit can be hidden separately', '"See it as…" to check the result'], who: 'Management and tour managers. Manager = the office: the whole roster, offers, holds and the money across the year. Tour manager = the road: assigned to specific artists, running day sheets, advancing, travel, guest lists and the night-of settlement. Same powers, different scope.' },
   activity: { what: 'What needs attention, and who changed what.', do: ['Tap an item to go fix it', 'Overdue tasks, deposits, expiring offers and guest requests land here first'], who: 'Anyone who can edit advance tasks.' },
   settings: { what: 'Templates, rates, appearance and your imports.', do: ['Edit the advance and day-sheet templates once; every new show uses them', 'Import data or see what an earlier import created', 'Light or dark mode'], who: 'Management.' },
   imports: { what: 'Every import you have done, what it created and where it went.', do: ['Open the shows, tasks or contacts an import created', 'Undo an import if it came in wrong', 'Import another file'], who: 'Management.' },
@@ -2249,7 +2250,7 @@ function personCard(k) {
   const supplyLabel = p.kind === 'venue' ? 'Venue provides' : 'Brings';
   return `<details class="pcard" data-person="${k}" ${S.open.has(k) ? 'open' : ''}>
     <summary>${avatar(k)}<div class="grow"><b>${esc(p.name)}</b>${mine ? ' <span class="chip plain">You</span>' : ''}<div class="small muted">${esc(p.role)}${list.length ? ` · ${supplyLabel.toLowerCase()} ${list.length} item${list.length > 1 ? 's' : ''}` : ''}</div></div>
-      ${mgr && custom ? '<span class="chip st-pending plain">Custom access</span>' : ''}${icon('chev', 'chev')}</summary>
+      ${mgr && custom ? '<span class="chip st-pending plain">Custom access</span>' : ''}${MGMT.includes(p.kind) && mgr ? `<span class="chip plain" title="${p.kind === 'tm' ? 'Same access as management, for the artists they are assigned to' : 'Full access to everything'}">${p.kind === 'tm' ? 'Full · assigned artists' : 'Full access'}</span>` : ''}${icon('chev', 'chev')}</summary>
     <div class="more">
       <div class="row between"><dl class="kv small" style="flex:1">
         ${showPhone ? `<dt>Phone</dt><dd class="mono" style="user-select:all">${esc(p.ph || '—')}</dd>` : ''}
@@ -2267,7 +2268,7 @@ function personCard(k) {
           : `<p class="small muted" style="margin:0">Nothing set yet.</p>`}
         ${mgr ? `<form class="addrow" data-addsup="${k}"><input id="add-${k}" placeholder="${p.kind === 'venue' ? 'e.g. Projector + screen' : 'e.g. HDMI → SDI converter'}" autocomplete="off" aria-label="Add an item for ${esc(p.name)}"><button class="btn btn-secondary btn-sm" type="submit">Add</button></form>` : ''}
       </div>
-      ${mgr && p.kind !== 'manager' ? `<div class="stack" style="gap:6px">
+      ${mgr && !MGMT.includes(p.kind) ? `<div class="stack" style="gap:6px">
         <div class="row between"><span class="minihead">What ${esc(p.name.split(' ')[0])} can see</span>${custom ? `<button class="btn btn-outline btn-sm" data-act="resetAccess" data-id="${k}">Back to ${esc(KINDS[p.kind])} defaults</button>` : ''}</div>
         <div class="accgrid">${AREAS.map(([a, l]) => { const o = p.over[a]; const v = level(k, a); return `<span>${l}</span>
           <select class="lvl ${o ? 'custom' : ''}" data-l="${v}" id="ov-${k}-${a}" data-over="${k}" data-area="${a}" aria-label="${esc(l)} for ${esc(p.name)}">
@@ -2289,22 +2290,26 @@ V.party = () => {
 };
 
 V.access = () => {
-  const cols = ['tm', 'artist', 'crew', 'venue', 'agent'];
+  const cols = ['artist', 'crew', 'venue', 'agent'];
   const custom = Object.keys(DB.people).filter(k => Object.keys(DB.people[k].over || {}).length);
   return `
   <div class="head"><div><div class="eyebrow">Management only</div><h1 class="display">Who sees what</h1>
     <div class="sub muted">Defaults for each role. Change one person on their card in Party.</div></div></div>
   <section class="card"><div class="scroll-x"><table>
-    <thead><tr><th>Area</th><th>Management</th>${cols.map(c => `<th>${KINDS[c]}</th>`).join('')}</tr></thead>
+    <thead><tr><th>Area</th><th>Management + tour manager</th>${cols.map(c => `<th>${KINDS[c]}</th>`).join('')}</tr></thead>
     <tbody>${AREAS.map(([a, l]) => `<tr><td style="white-space:normal;min-width:180px">${l}</td><td><span class="chip st-confirmed plain">Edit</span></td>
       ${cols.map(c => `<td><select class="lvl" data-l="${DB.access[c][a]}" id="acc-${c}-${a}" data-acc="${c}" data-area="${a}" aria-label="${esc(l)} for ${KINDS[c]}">
         ${['off', 'view', 'edit'].map(x => `<option value="${x}" ${DB.access[c][a] === x ? 'selected' : ''}>${x === 'off' ? 'Hidden' : x === 'view' ? 'View' : 'Edit'}</option>`).join('')}</select></td>`).join('')}</tr>`).join('')}</tbody>
   </table></div>
-  <div class="row wrap" style="margin-top:14px"><span class="small muted">Try it:</span>${['tm', 'artist', 'crew', 'venue'].map(c => `<button class="btn btn-outline btn-sm" data-act="preview" data-id="${c}">See it as ${KINDS[c]}</button>`).join('')}</div></section>
+  <div class="row wrap" style="margin-top:14px"><span class="small muted">Try it:</span>${['artist', 'crew', 'venue'].map(c => `<button class="btn btn-outline btn-sm" data-act="preview" data-id="${c}">See it as ${KINDS[c]}</button>`).join('')}</div></section>
   <div class="grid2">
+    <section class="card stack"><h2>Manager vs tour manager</h2>
+      <p style="margin:0"><b>Both have full access</b> — they can see and edit everything: deals, settlement, budgets, the day sheet, people and who sees what.</p>
+      <p style="margin:0">The difference is <b>scope and job</b>. <b>Management</b> is the office: the whole roster, offers and holds, the money across the year. A <b>tour manager</b> is the road: assigned to specific artists and sees only those, running day sheets, advancing, travel, guest lists and the night-of settlement.</p>
+      <p class="note">Assign a tour manager's artists on their card in Party. In this sample, Dana has 5 of the 12 artists.</p></section>
     <section class="card stack"><h2>Money has three levels</h2>
       <dl class="kv small"><dt>My money</dt><dd>own pay, per diems, expenses</dd><dt>Show costs</dt><dd>deals, venue expenses, settlement</dd><dt>Profit</dt><dd>budget, commissions, net</dd></dl>
-      <p class="note">A tour manager can settle a show without seeing what the tour makes; crew see their own pay and nothing else.</p></section>
+      <p class="note">Crew see their own pay and nothing else; the venue sees its own show's settlement and nothing about the tour.</p></section>
     <section class="card"><h2 style="margin-bottom:4px">People with their own access</h2>
       ${custom.length ? `<div class="list">${custom.map(k => `<div class="li click" data-act="openPerson" data-id="${k}">${avatar(k)}<div class="grow"><b>${esc(P(k).name)}</b><div class="small muted">${Object.entries(P(k).over).map(([a, v]) => `${AREAS.find(x => x[0] === a)[1].split(' (')[0]}: ${v === 'off' ? 'hidden' : v}`).join(' · ')}</div></div></div>`).join('')}</div>`
         : '<p class="muted" style="margin:0">Nobody yet — everyone follows their role.</p>'}</section>
