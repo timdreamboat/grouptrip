@@ -1582,7 +1582,7 @@ function buildImport(dry) {
       const tName = g(r, 'tour');
       if (tName && a) { let t = DB.tours.find(x => x.artist === a.id && norm(x.name) === norm(tName)); if (!t) { t = tag({ id: uid('t'), artist: a.id, name: tName, season: '' }); DB.tours.push(t); counts.tours++; ids.tours.push(t.id); } tourId = t.id; }
       const s = tag({ id: uid('sh'), artist: a ? a.id : DB.artists[0].id, tour: tourId, date, city, venue: venue || 'TBC', cap: parseInt(g(r, 'cap'), 10) || 0, status, hold: 1,
-        cur: /cad|c\$/.test(norm(g(r, 'cur'))) ? 'CAD' : /eur|€/.test(norm(g(r, 'cur'))) ? 'EUR' : /gbp|£/.test(norm(g(r, 'cur'))) ? 'GBP' : 'USD',
+        cur: (() => { const hint = norm(g(r, 'cur')) || (g(r, 'g') + ' ' + g(r, 'dep')).toLowerCase(); return /cad|ca\$|c\$/.test(hint) ? 'CAD' : /eur|€/.test(hint) ? 'EUR' : /gbp|£/.test(hint) ? 'GBP' : 'USD'; })(),   // "CA$9,500" in the money column counts as a currency hint
         address: g(r, 'address'), wifi: '', parking: '', hospitality: '', note: [g(r, 'note'), g(r, 'promoter') ? 'Promoter: ' + g(r, 'promoter') : ''].filter(Boolean).join(' · '), guestCap: 24, settled: null,
         deal: { type: dealType, g: gCents, pct: parseInt(g(r, 'pct'), 10) || 85, dep, depDue: parseDate(g(r, 'depDue')), depPaid: /yes|true|paid|received|✓|x/.test(norm(g(r, 'depPaid'))) } });
       const key = Object.keys(CITIES).find(c => norm(s.city).startsWith(c)); if (key) s.ll = CITIES[key];
