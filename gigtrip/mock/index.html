@@ -528,12 +528,25 @@ function seed() {
     ['glass', '', '2027-06-10', 'Toronto, ON', 'St. Clair Hall', 1200, 'pencil', 800000],
     ['tams', '', '2027-04-30', 'Atlanta, GA', 'Peachline Theater', 1300, 'confirmed', 1000000], ['tams', '', '2027-05-01', 'Baltimore, MD', 'Harborlight', 1000, 'hold', 800000],
     ['nine', '', '2027-05-15', 'Calgary, AB', 'Stampede Hall', 1800, 'pencil', 1000000],
+    // Juniper Vale's year: a finished winter residency, the Low Tide Tour (above), a festival, a private date, and the fall tour
+    ['jv', 't6', '2027-02-05', 'Toronto, ON', 'The Marlowe Hall · residency night 1', 1100, 'confirmed', 1100000],
+    ['jv', 't6', '2027-02-12', 'Toronto, ON', 'The Marlowe Hall · residency night 2', 1100, 'confirmed', 1100000],
+    ['jv', 't6', '2027-02-19', 'Toronto, ON', 'The Marlowe Hall · residency night 3', 1100, 'confirmed', 1100000],
+    ['jv', 't6', '2027-02-26', 'Toronto, ON', 'The Marlowe Hall · residency night 4', 1100, 'confirmed', 1100000],
+    ['jv', '', '2027-07-10', 'Ottawa, ON', 'Riverside Festival · Main Stage', 15000, 'confirmed', 2500000],
+    ['jv', '', '2027-08-14', 'Huntsville, ON', 'Private — Lakeside wedding', 150, 'hold', 1500000],
+    ['jv', 't5', '2027-09-17', 'Toronto, ON', 'Massey Rooms', 2700, 'confirmed', 2200000],
+    ['jv', 't5', '2027-09-19', 'Montréal, QC', 'Théâtre Corona', 1200, 'confirmed', 1300000],
+    ['jv', 't5', '2027-09-24', 'Chicago, IL', 'The Foundry', 1500, 'confirmed', 1400000],
+    ['jv', 't5', '2027-09-26', 'Detroit, MI', 'Motor Hall', 1500, 'hold', 1300000],
+    ['jv', 't5', '2027-09-28', 'Cleveland, OH', 'Lakehouse Hall', 900, 'hold', 900000],
+    ['jv', 't5', '2027-10-01', 'Pittsburgh, PA', 'Steel & Sparrow', 1000, 'pencil', 950000],
   ];
   extraShows.forEach(([artist, tourId, date, city, venue, cap, status, g], i) => {
     const key = Object.keys(CITIES).find(c => city.toLowerCase().startsWith(c));
     const depDue = addDays(date, -30);
     shows.push(S('x' + i, { artist, tour: tourId, date, city, venue, cap, status, hold: 1, cur: /, (ON|QC|NS|AB)$/.test(city) ? 'CAD' : 'USD', ll: key ? CITIES[key] : null,
-      deal: { type: 'vs', g, pct: 85, dep: g / 2, depDue, depPaid: depDue < NOW.date } }));
+      deal: { type: 'vs', g, pct: 85, dep: g / 2, depDue, depPaid: depDue < NOW.date }, settled: tourId === 't6' ? g : null }));
   });
   const advTemplate = [
     ['Contract signed', 'rae', 45], ['Deposit received', 'rae', 30], ['Tech rider sent', 'luis', 21], ['Input list + stage plot confirmed', 'luis', 14],
@@ -569,7 +582,7 @@ function seed() {
     ellie: ['Merch stock (see count sheet)', 'Card readers ×2', 'Display grid + lights'],
   };
   return {
-    v: 3,
+    v: 4,
     artists: [
       { id: 'jv', name: 'Juniper Vale', genre: 'Indie folk', home: 'Toronto, ON', agent: 'Jordan Blake · Fieldhouse', hue: 48, photo: null },
       { id: 'co', name: 'The Coastlines', genre: 'Alt-rock', home: 'Vancouver, BC', agent: 'Jordan Blake · Fieldhouse', hue: 200, photo: null },
@@ -580,6 +593,8 @@ function seed() {
       { id: 't2', artist: 'co', name: 'West Coast Run', season: 'Spring 2027' },
       { id: 't3', artist: 'kes', name: 'Northern Lights Run', season: 'Spring 2027' },
       { id: 't4', artist: 'saff', name: 'Warehouse Nights', season: 'Spring 2027' },
+      { id: 't5', artist: 'jv', name: 'Harvest Tour', season: 'Fall 2027' },
+      { id: 't6', artist: 'jv', name: 'Winter Residency', season: 'Winter 2027' },
     ],
     shows,
     offers: [
@@ -661,9 +676,9 @@ function blank() {
   return d;
 }
 // ---------- storage (this browser only) ----------
-const KEY = 'gigtrip.v3.db';
+const KEY = 'gigtrip.v4.db';
 const FILES = {};   // uploaded files live in memory for the mock (object URLs)
-function load() { try { const v = JSON.parse(localStorage.getItem(KEY)); return v && v.v === 3 ? v : null; } catch { return null; } }
+function load() { try { const v = JSON.parse(localStorage.getItem(KEY)); return v && v.v === 4 ? v : null; } catch { return null; } }
 function save() { try { localStorage.setItem(KEY, JSON.stringify(DB)); } catch {} }
 let DB = load() || seed();
 
