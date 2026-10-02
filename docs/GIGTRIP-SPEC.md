@@ -228,6 +228,14 @@ team); single-artist show picker lists upcoming shows without the artist name;
 Getting started only for management; Add a show has Deal and Venue details as
 collapsed sections; expense rows wrap on phones; venue wording on its list.
 
+**Summary cards filter** (owner, 2026-10-01): the four cards on the Season
+board (Confirmed / Holds / Pencils / Open offers) are buttons — tap to show
+only that status (yellow edge + "Showing … only · Show everything"), tap again
+to clear; the artist page's Confirmed/Holds cards open the Season board
+filtered to that artist and status, Settled opens the commission statement,
+Needs attention opens Activity; the deposit cards (Outstanding / Overdue /
+Received) filter the deposits table the same way. `statBtn()` renders them.
+
 **UAT polish** (2026-10-01): prototype notes (`proto()`) show only to
 management; tour rows show "On stage 9:00 pm" for talent instead of the
 date twice; hotels show one date range and "Checked out"; the venue's day

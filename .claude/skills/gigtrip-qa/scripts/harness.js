@@ -59,6 +59,11 @@
   S.role = 'artist'; S.artistId = 'jv'; S.tourId = 't1'; render('tour'); check(!/Real build|Mock clock|mock clock/.test(txt()), 'Artist sees prototype notes on the tour page');
   render('today'); check(!/mock clock/i.test(txt()), 'Artist sees the mock clock on Today');
   S.role = 'crew'; render('travel'); check(!/Real build/.test(txt()) && !/Hotel[\s\S]*Done/.test(txt()), 'Crew travel shows a prototype note or "Done" on a hotel');
+  S.role = 'manager'; S.artistId = 'all'; S.status = 'all'; render('board'); const allRows = main.querySelectorAll('.li').length; ACT.statusFilter('hold'); render('board');
+  check(S.status === 'hold' && main.querySelectorAll('.li').length < allRows && [...main.querySelectorAll('.li .chip:not(.plain)')].every(c => /Hold/.test(c.textContent)), 'Tapping the Holds card did not filter the Season board to holds');
+  check(main.querySelector('.statbtn[aria-pressed="true"]')?.textContent.includes('Holds'), 'The Holds card is not shown as pressed while filtering');
+  ACT.statusFilter('hold'); render('board'); check(S.status === 'all' && main.querySelectorAll('.li').length === allRows, 'Tapping the Holds card again did not clear the filter');
+  S.moneyTab = 'deposits'; S.depFilter = ''; render('money'); const depRows = main.querySelectorAll('tbody tr').length; ACT.depFilter('received'); render('money'); check(main.querySelectorAll('tbody tr').length < depRows && [...main.querySelectorAll('tbody .chip')].every(c => c.textContent === 'Received'), 'Tapping the Received card did not filter the deposits table'); S.depFilter = '';
   S.role = 'venue'; S.showId = 'tor'; render('show'); check(S.showId === 'nyc', 'Venue can open a show that is not theirs');
   S.role = 'artist'; S.artistId = 'jv'; S.tourId = 't1'; render('tour'); check(!/Show fees|Deposits received/.test(txt()), 'Artist tour page shows money');
   render('myhome'); check(!/You.re bringing/.test(txt()), "Artist Home shows 'You're bringing' without a show in view");

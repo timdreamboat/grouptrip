@@ -201,6 +201,11 @@ main > * { max-width: 1080px; width: 100%; margin-inline: auto; }
 .stat b { font: 800 30px/1 var(--font-display); letter-spacing: .01em; }
 .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
 .stats .card { padding: 14px 16px; }
+button.statbtn { font: inherit; color: inherit; text-align: left; cursor: pointer; width: 100%; transition: border-color .15s, transform .15s; }
+button.statbtn:hover { border-color: var(--line-strong); }
+button.statbtn:active { transform: scale(.985); }
+button.statbtn[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--tape); border-color: transparent; }
+button.statbtn[aria-pressed="true"] .eyebrow { color: var(--accent-ink); }
 
 .check { display: flex; gap: 12px; align-items: flex-start; padding: 10px 0; border-top: 1px solid var(--line); cursor: pointer; }
 .check:first-child { border-top: 0; }
@@ -718,7 +723,7 @@ const ME = { manager: 'rae', tm: 'dana', artist: 'juni', crew: 'nico', venue: 'g
 let savedRole = store.get('role', 'manager'); if (savedRole === 'band') savedRole = 'crew';
 const S = {
   role: ME[savedRole] ? savedRole : 'manager', artistId: store.get('artist', null), hq: '', hsort: 'next', showId: 'nyc', tourId: 't1', showTab: '', moneyTab: 'deposits', commArtist: 'jv',
-  artist: 'all', status: 'all', seasonView: 'list', sort: { k: 'date', dir: 1 }, sel: new Set(), open: new Set(), q: '',
+  artist: 'all', status: 'all', depFilter: '', seasonView: 'list', sort: { k: 'date', dir: 1 }, sel: new Set(), open: new Set(), q: '',
 };
 
 // ---------- helpers ----------
@@ -1249,6 +1254,8 @@ const HELP = {
 };
 // Notes about what the real build will do are for the owner and management, never for talent or venues.
 const proto = text => isMgr() ? text : '';
+// summary cards that act as filters: the pressed one shows a yellow edge; tapping it again clears the filter
+const statBtn = (act, id, label, value, pressed, extra = '') => `<button type="button" class="card stat statbtn" data-act="${act}" data-id="${esc(id)}" aria-pressed="${!!pressed}" title="${pressed ? 'Tap to show everything' : 'Tap to show only these'}"><span class="eyebrow">${label}</span><b ${extra}>${value}</b></button>`;
 const helpBtn = page => HELP[page] ? `<button class="helpbtn" type="button" data-act="help" data-id="${page}" aria-label="What is this page?">?</button>` : '';
 function openHelp(page) {
   const h = HELP[page]; if (!h) return;
@@ -1768,11 +1775,12 @@ V.board = () => {
     <div class="sub muted">${cur() === 'all' ? 'Every date for every artist — your Excel dates sheet, shared.' : 'Every date for this artist. Switch to All artists for the whole roster.'}</div></div>
     ${edit ? `<div class="addbar">${addBtn('newShow', 'Add show', '', 'btn-tape')}<button class="btn btn-secondary btn-sm" data-act="import">${icon('upload')} Import from Excel…</button><button class="btn btn-secondary btn-sm" data-act="export">Export</button></div>` : ''}</div>
   <div class="stats">
-    <div class="card stat"><span class="eyebrow">Confirmed</span><b>${count('confirmed')}</b></div>
-    <div class="card stat"><span class="eyebrow">Holds</span><b>${count('hold')}</b></div>
-    <div class="card stat"><span class="eyebrow">Pencils</span><b>${count('pencil')}</b></div>
-    <div class="card stat"><span class="eyebrow">Open offers</span><b>${count('offer')}</b></div>
+    ${statBtn('statusFilter', 'confirmed', 'Confirmed', count('confirmed'), S.status === 'confirmed')}
+    ${statBtn('statusFilter', 'hold', 'Holds', count('hold'), S.status === 'hold')}
+    ${statBtn('statusFilter', 'pencil', 'Pencils', count('pencil'), S.status === 'pencil')}
+    ${statBtn('statusFilter', 'offer', 'Open offers', count('offer'), S.status === 'offer')}
   </div>
+  ${S.status !== 'all' ? `<div class="row wrap" style="gap:8px"><span class="small muted">Showing ${(STATUSES.find(x => x[0] === S.status) || ['', 'imported'])[1].toLowerCase()} only</span><button class="btn btn-outline btn-sm" data-act="statusFilter" data-id="${S.status}">Show everything</button></div>` : ''}
   <div class="stack">
     <div class="row wrap between"><div class="seg" data-filter="seasonView"><button aria-pressed="${S.seasonView === 'list'}" data-v="list">List</button><button aria-pressed="${S.seasonView === 'table'}" data-v="table">Table</button></div>
       <label class="field" for="q" style="flex:1;max-width:320px"><span class="sr">Search</span><input id="q" type="search" placeholder="Search city, venue, artist" value="${esc(S.q)}" style="height:36px"></label></div>
@@ -1824,10 +1832,10 @@ V.overview = () => {
   <div class="head"><div class="row" style="gap:14px">${isMgr() ? `<label class="avedit" for="av-${a.id}" title="Change picture">${artistPh(a, 'bigph')}<span class="cam">${icon('upload')}</span><input type="file" accept="image/*" id="av-${a.id}" data-artistphoto="${a.id}" aria-label="Change ${esc(a.name)}'s picture"></label>` : artistPh(a, 'bigph')}<div><div class="eyebrow">${esc([a.genre, a.home].filter(Boolean).join(' · '))}</div><h1 class="display">${esc(a.name)}</h1></div></div>
     <div class="addbar">${editBtn('artist', a.id, `Edit ${a.name}`)}${addBtn('newTour', 'Add tour', a.id)}${addBtn('newShowFor', 'Add show', a.id, 'btn-tape')}</div></div>
   <div class="stats">
-    <div class="card stat"><span class="eyebrow">Confirmed</span><b>${shows.filter(s => s.status === 'confirmed').length}</b></div>
-    <div class="card stat"><span class="eyebrow">Holds</span><b>${shows.filter(s => s.status === 'hold').length}</b></div>
-    <div class="card stat"><span class="eyebrow">Settled this season</span><b>${money(earned)}</b></div>
-    <div class="card stat"><span class="eyebrow">Needs attention</span><b style="color:${att.length ? 'var(--bad)' : 'inherit'}">${att.length}</b></div>
+    ${statBtn('boardStatus', 'confirmed', 'Confirmed', shows.filter(s => s.status === 'confirmed').length, false)}
+    ${statBtn('boardStatus', 'hold', 'Holds', shows.filter(s => s.status === 'hold').length, false)}
+    ${statBtn('moneyTab', 'commission', 'Settled this season', money(earned), false)}
+    ${statBtn('go', 'activity', 'Needs attention', att.length, false, att.length ? 'style="color:var(--bad)"' : '')}
   </div>
   <div class="grid2 wide-left">
     <section class="card"><h2 style="margin-bottom:4px">Coming up</h2><div class="list">${upcoming.slice(0, 8).map(s => `
@@ -2159,12 +2167,15 @@ V.money = () => {
     const rows = DB.shows.filter(s => inCur(s.artist) && s.deal.dep && s.status !== 'cancelled').sort((a, b) => (a.deal.depDue || '9').localeCompare(b.deal.depDue || '9'));
     const state = s => s.deal.depPaid ? ['Received', 'st-confirmed'] : !s.deal.depDue ? ['No date', 'st-pencil'] : daysUntil(s.deal.depDue) < 0 ? ['Overdue', 'st-cancelled'] : daysUntil(s.deal.depDue) <= 14 ? ['Due soon', 'st-pending'] : ['Upcoming', 'st-hold'];
     const out = rows.filter(s => !s.deal.depPaid);
+    const overdue = s => !s.deal.depPaid && s.deal.depDue && daysUntil(s.deal.depDue) < 0;
+    const shown = S.depFilter === 'out' ? out : S.depFilter === 'overdue' ? rows.filter(overdue) : S.depFilter === 'received' ? rows.filter(s => s.deal.depPaid) : rows;
     body = `<div class="stats">
-        <div class="card stat"><span class="eyebrow">Outstanding</span><b>${money(out.reduce((a, s) => a + s.deal.dep, 0))}</b></div>
-        <div class="card stat"><span class="eyebrow">Overdue</span><b style="color:var(--bad)">${money(out.filter(s => s.deal.depDue && daysUntil(s.deal.depDue) < 0).reduce((a, s) => a + s.deal.dep, 0))}</b></div>
-        <div class="card stat"><span class="eyebrow">Received</span><b>${money(rows.filter(s => s.deal.depPaid).reduce((a, s) => a + s.deal.dep, 0))}</b></div></div>
+        ${statBtn('depFilter', 'out', 'Outstanding', money(out.reduce((a, s) => a + s.deal.dep, 0)), S.depFilter === 'out')}
+        ${statBtn('depFilter', 'overdue', 'Overdue', money(rows.filter(overdue).reduce((a, s) => a + s.deal.dep, 0)), S.depFilter === 'overdue', 'style="color:var(--bad)"')}
+        ${statBtn('depFilter', 'received', 'Received', money(rows.filter(s => s.deal.depPaid).reduce((a, s) => a + s.deal.dep, 0)), S.depFilter === 'received')}</div>
+      ${S.depFilter ? `<div class="row wrap" style="gap:8px"><span class="small muted">Showing ${S.depFilter === 'out' ? 'outstanding' : S.depFilter} only · ${shown.length} of ${rows.length}</span><button class="btn btn-outline btn-sm" data-act="depFilter" data-id="${S.depFilter}">Show everything</button></div>` : ''}
       <div class="scroll-x"><table><thead><tr><th>Due</th><th>Artist</th><th>Show</th><th class="r">Deposit</th><th>Status</th><th></th></tr></thead>
-      <tbody>${rows.map(s => { const [l, c] = state(s); return `<tr><td>${short(s.deal.depDue)}</td><td>${esc(artist(s.artist).name)}</td><td>${short(s.date)} · ${esc(cityOf(s))}</td><td class="r">${money(s.deal.dep, false, s.cur)}</td><td><span class="chip ${c}">${l}</span></td>
+      <tbody>${shown.map(s => { const [l, c] = state(s); return `<tr><td>${short(s.deal.depDue)}</td><td>${esc(artist(s.artist).name)}</td><td>${short(s.date)} · ${esc(cityOf(s))}</td><td class="r">${money(s.deal.dep, false, s.cur)}</td><td><span class="chip ${c}">${l}</span></td>
         <td>${edit && !s.deal.depPaid ? `<button class="btn btn-outline btn-sm" data-act="depPaid" data-id="${s.id}">Mark received</button>` : ''}</td></tr>`; }).join('')}</tbody></table></div>
       <p class="note">Real build: "Needs attention" and a push reminder 7 days before each deposit is due.</p>`;
   } else if (S.moneyTab === 'commission') {
@@ -2426,6 +2437,11 @@ const ACT = {
   newShow: () => E.show(null), newShowFor: id => E.show(null, { artist: id, tour: DB.tours.find(t => t.artist === id)?.id || '' }), newShowTour: id => E.show(null, { tour: id, artist: tour(id).artist }),
   show: id => E.show(id), artist: id => E.artist(id), newArtist: () => E.artist(null), tour: id => E.tour(id), newTour: id => E.tour(null, { artist: id || 'jv' }),
   gotour: id => { S.tourId = id; go('tour'); },
+  statusFilter: id => { S.status = S.status === id ? 'all' : id; S.sel.clear(); route(); },
+  boardStatus: id => { S.status = id; S.sel.clear(); go('board'); },
+  moneyTab: id => { S.moneyTab = id; if (id === 'commission' && cur() !== 'all') S.commArtist = cur(); go('money'); },
+  depFilter: id => { S.depFilter = S.depFilter === id ? '' : id; route(); },
+  go: id => go(id),
   goHome: () => go(navFor()[0][0]),
   pickArtist: id => {
     S.artistId = id; store.set('artist', id); S.sel.clear(); S.showTab = '';
