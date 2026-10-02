@@ -145,6 +145,38 @@ export function routeUrl(from, to) {
   return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(at(from))}&destination=${encodeURIComponent(at(to))}`;
 }
 
+// ---------- place type-ahead (plans, hotels) ----------
+// Same Photon search, but for restaurants, shops, attractions, streets and
+// addresses, nearest `near` (the trip's destination) first. `tag` narrows it
+// (e.g. 'tourism' for hotels). Each pick carries lat/lon, so plans and hotels
+// get a map pin even without a Google key.
+export function placeSuggester({ near = null, tag = null } = {}) {
+  return async (q, signal) => {
+    const params = new URLSearchParams({ q, limit: '12', lang: 'en' });
+    if (near?.lat != null && near?.lon != null) {
+      params.set('lat', near.lat); params.set('lon', near.lon);
+      params.set('zoom', '11'); params.set('location_bias_scale', '0.5');
+    }
+    if (tag) params.set('osm_tag', tag);
+    const res = await fetch(`https://photon.komoot.io/api/?${params}`, { signal });
+    if (!res.ok) return [];
+    const { features = [] } = await res.json();
+    const seen = new Set();
+    return features.flatMap(({ properties: p, geometry }) => {
+      const street = [p.housenumber, p.street].filter(Boolean).join(' ');
+      const name = p.name || street;
+      if (!name) return [];
+      const town = p.city || p.town || p.village || p.county || '';
+      const detail = [p.name && street ? street : null, town, p.state, p.country].filter((x) => x && x !== name).join(', ');
+      const key = `${name}|${detail}`;
+      if (seen.has(key)) return [];
+      seen.add(key);
+      const [lon, lat] = geometry.coordinates;
+      return [{ name, detail, lat, lon, address: [street || null, town, p.state, p.postcode].filter(Boolean).join(', ') }];
+    }).slice(0, 6);
+  };
+}
+
 // ---------- destination type-ahead ----------
 // Photon (komoot's free, keyless OpenStreetMap search) is built for search-as-you-type,
 // unlike Nominatim. Returns cities, regions, lakes, parks — not streets or shops.

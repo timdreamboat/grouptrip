@@ -1,5 +1,6 @@
 // Where we're staying: address, check-in/out, confirmation, map, booking link.
-import { esc, icon, avatar, avatarStack, fmtDay, fmtTime, sheet, embedSheet, confirmSheet, busy, copy, toast, emptyState, safeUrl, siteName, linkDates } from '../ui.js';
+import { esc, icon, avatar, avatarStack, fmtDay, fmtTime, sheet, embedSheet, confirmSheet, busy, copy, toast, emptyState, safeUrl, siteName, linkDates, suggest } from '../ui.js';
+import { placeSuggester } from '../places.js';
 import { guestsOf, namesOf, firstName } from './common.js';
 import * as store from '../store.js';
 import * as embed from '../embeds.js';
@@ -111,6 +112,18 @@ export function openAddStay(ctx, stay = null) {
     onMount(dlg, close) {
       const form = dlg.querySelector('#stay-form');
       linkDates(form, null, ['checkIn', 'checkOut']);
+      // Hotel names and addresses suggest as they type (nearest the destination
+      // first); a pick fills the address and pins the place without a Google key.
+      let picked = null; // { name, address, lat, lon }
+      const near = trip.lat != null ? trip : null;
+      suggest(form.elements.name, {
+        search: placeSuggester({ near, tag: 'tourism' }),
+        onPick: (p) => { picked = p; if (!form.elements.address.value.trim() && p.address) form.elements.address.value = p.address; },
+      });
+      suggest(form.elements.address, {
+        search: placeSuggester({ near }),
+        onPick: (p) => { picked = { ...p, address: p.address || p.name }; form.elements.address.value = picked.address; },
+      });
       form.onsubmit = async (e) => {
         e.preventDefault();
         const f = Object.fromEntries(new FormData(form));
@@ -120,7 +133,9 @@ export function openAddStay(ctx, stay = null) {
           // Pin it on the map (with a Google key); keep the old pin if the place didn't change.
           const same = stay && stay.name === f.name.trim() && (stay.address || '') === f.address.trim();
           let at = same && stay.lat != null ? { lat: stay.lat, lon: stay.lon } : null;
-          if (!same && hasGoogleKey) at = await googleFindPlace(stayQuery({ name: f.name.trim(), address: f.address.trim() }, trip), trip).catch(() => null);
+          const fromPick = picked && (picked.name === f.name.trim() || picked.address === f.address.trim());
+          if (!same && fromPick) at = { lat: picked.lat, lon: picked.lon };
+          else if (!same && hasGoogleKey) at = await googleFindPlace(stayQuery({ name: f.name.trim(), address: f.address.trim() }, trip), trip).catch(() => null);
           const data = { ...f, lat: at?.lat ?? '', lon: at?.lon ?? '', guests: [...form.querySelectorAll('[name=guest]:checked')].map((c) => c.value) };
           delete data.guest;
           return stay ? store.updateStay(trip.id, stay.id, data) : store.addStay(trip.id, data);

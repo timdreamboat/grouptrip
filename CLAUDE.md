@@ -37,6 +37,11 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
    (photon.komoot.io, free/keyless OSM search built for as-you-type; Nominatim
    forbids autocomplete). Picking a suggestion saves its lat/lon and shows
    Google's keyless map embed of it. Widget: `suggest()` in `ui.js`.
+   Plan places and hotel name/address fields suggest too (owner, 2026-10-01:
+   "any location field should have the auto fill"): `placeSuggester()` in
+   `places.js`, Photon biased to the trip's lat/lon (`osm_tag=tourism` for
+   hotel names). A pick stores the place's lat/lon, so plans and hotels get
+   pins and "From each hotel" distances without a Google key.
 4. Calendar map is Google (owner: "OpenStreetMap doesn't work — use Google",
    2026-09-22). `views/tripmap.js` has two modes:
    - No key (today): Google's free embed (`maps.google.com/maps?q=…&output=embed`),

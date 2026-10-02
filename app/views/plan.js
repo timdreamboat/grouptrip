@@ -1,13 +1,13 @@
 // Calendar: one day-by-day timeline of plans, flights and check-ins, plus
 // a subscribable feed. Organizers add and remove plans; everyone can open
 // the embedded OpenTable booking and maps.
-import { esc, icon, fmtDay, fmtTime, tripDays, sheet, embedSheet, confirmSheet, busy, toast, copy, emptyState, safeUrl, siteName } from '../ui.js';
+import { esc, icon, fmtDay, fmtTime, tripDays, sheet, embedSheet, confirmSheet, busy, toast, copy, emptyState, safeUrl, siteName, suggest } from '../ui.js';
 import * as store from '../store.js';
 import * as embed from '../embeds.js';
 import { going, organizer, firstName, nameOf, words, isPrivate } from './common.js';
 import { handleStayClick } from './stays.js';
 import { mountTripMap, focusPin, pinned, staysOnMap, stayQuery, hasGoogleKey, googleFindPlace, placeQuery, fromHotelsHTML } from './tripmap.js';
-import { distanceText } from '../places.js';
+import { distanceText, placeSuggester } from '../places.js';
 
 // Plans can be for everyone (no names) or for specific people.
 export const isFor = (it, id) => !it.forMembers?.length || it.forMembers.includes(id);
@@ -332,6 +332,19 @@ export function openAddItem(ctx, day, preset = {}) {
       form.elements.place.addEventListener('input', () => {
         clearTimeout(timer);
         timer = setTimeout(() => lookup(form.elements.place.value.trim()), 700);
+      });
+      // Suggestions as they type, nearest the destination first. Picking one
+      // pins the plan right away (no Google key needed).
+      suggest(form.elements.place, {
+        search: placeSuggester({ near: trip.lat != null ? trip : trip.stays.find((st) => st.lat != null) }),
+        onPick: (p) => {
+          clearTimeout(timer);
+          const label = [p.name, p.detail].filter(Boolean).join(', ');
+          found = { q: p.name, hit: { lat: p.lat, lon: p.lon, label } };
+          status.className = 'place-status found';
+          status.innerHTML = `${icon('pin', 'tiny')}Pinned: ${esc(label)}
+            <iframe class="place-preview" title="Map preview" loading="lazy" src="${esc(embed.mapEmbed(label))}"></iframe>`;
+        },
       });
 
       const forBox = dlg.querySelector('#for-people');

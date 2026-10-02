@@ -610,7 +610,7 @@ dialog.viewer::backdrop { background: #000; }
   background: var(--accent); color: #fff; font-size: 12px; font-weight: 700; flex: none;
 }
 .tl-icon.numbered { background: var(--accent); color: #fff; font-weight: 700; font-size: 15px; }
-.place-status { font-size: 13px; display: flex; align-items: center; gap: 6px; min-height: 18px; }
+.place-status { font-size: 13px; display: flex; align-items: center; gap: 6px; min-height: 18px; flex-wrap: wrap; }
 .place-status.found { color: var(--good); }
 .place-status.missing { color: var(--warn); }
 /* ---------- Google map (Calendar) ---------- */
