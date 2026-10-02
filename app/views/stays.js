@@ -1,5 +1,5 @@
 // Where we're staying: address, check-in/out, confirmation, map, booking link.
-import { esc, icon, avatar, avatarStack, fmtDay, fmtTime, sheet, embedSheet, confirmSheet, busy, copy, toast, emptyState, safeUrl, siteName } from '../ui.js';
+import { esc, icon, avatar, avatarStack, fmtDay, fmtTime, sheet, embedSheet, confirmSheet, busy, copy, toast, emptyState, safeUrl, siteName, linkDates } from '../ui.js';
 import { guestsOf, namesOf, firstName } from './common.js';
 import * as store from '../store.js';
 import * as embed from '../embeds.js';
@@ -110,6 +110,7 @@ export function openAddStay(ctx, stay = null) {
     foot: `<button class="btn btn-primary btn-lg" form="stay-form">${stay ? 'Save changes' : 'Save place'}</button>`,
     onMount(dlg, close) {
       const form = dlg.querySelector('#stay-form');
+      linkDates(form, null, ['checkIn', 'checkOut']);
       form.onsubmit = async (e) => {
         e.preventDefault();
         const f = Object.fromEntries(new FormData(form));

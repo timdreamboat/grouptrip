@@ -228,8 +228,9 @@ export async function busy(btn, fn) {
 
 // Start/end date pair: picking a start moves the end to the next day (unless
 // an end after it is already set) and the end picker can't go before the start.
-export function linkDates(form, onChange) {
-  const start = form.elements.startDate, end = form.elements.endDate;
+// Works for any pair of date fields (trip start/end, hotel check-in/out).
+export function linkDates(form, onChange, [startName, endName] = ['startDate', 'endDate']) {
+  const start = form.elements[startName], end = form.elements[endName];
   if (!start || !end) return;
   const nextDay = (ymd) => {
     const [y, m, d] = ymd.split('-').map(Number);
@@ -240,6 +241,8 @@ export function linkDates(form, onChange) {
     end.min = start.value || '';
     if (start.value && (!end.value || end.value <= start.value)) { end.value = nextDay(start.value); onChange?.(end.value); }
   };
+  // Phones fire `input` while the picker wheel moves and `change` when it closes; listen to both.
+  start.addEventListener('input', sync);
   start.addEventListener('change', sync);
   if (start.value) end.min = start.value;
 }
