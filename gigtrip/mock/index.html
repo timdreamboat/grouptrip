@@ -599,19 +599,19 @@ function seed() {
     ellie: ['Merch stock (see count sheet)', 'Card readers ×2', 'Display grid + lights'],
   };
   return {
-    v: 4,
+    v: 5,
     artists: [
       { id: 'jv', name: 'Juniper Vale', genre: 'Indie folk', home: 'Toronto, ON', agent: 'Jordan Blake · Fieldhouse', hue: 48, photo: null },
       { id: 'co', name: 'The Coastlines', genre: 'Alt-rock', home: 'Vancouver, BC', agent: 'Jordan Blake · Fieldhouse', hue: 200, photo: null },
       ...extra.map(([id, name, genre, home, hue]) => ({ id, name, genre, home, agent: 'Fieldhouse Agency', hue, photo: null })),
     ],
     tours: [
-      { id: 't1', artist: 'jv', name: 'Low Tide Tour', season: 'Spring 2027' },
-      { id: 't2', artist: 'co', name: 'West Coast Run', season: 'Spring 2027' },
-      { id: 't3', artist: 'kes', name: 'Northern Lights Run', season: 'Spring 2027' },
-      { id: 't4', artist: 'saff', name: 'Warehouse Nights', season: 'Spring 2027' },
-      { id: 't5', artist: 'jv', name: 'Harvest Tour', season: 'Fall 2027' },
-      { id: 't6', artist: 'jv', name: 'Winter Residency', season: 'Winter 2027' },
+      { id: 't1', artist: 'jv', name: 'Low Tide Tour', season: 'Spring 2027', start: '2027-04-07', end: '2027-04-25' },
+      { id: 't2', artist: 'co', name: 'West Coast Run', season: 'Spring 2027', start: '2027-03-19', end: '2027-05-23' },
+      { id: 't3', artist: 'kes', name: 'Northern Lights Run', season: 'Spring 2027', start: '2027-04-12', end: '2027-04-23' },
+      { id: 't4', artist: 'saff', name: 'Warehouse Nights', season: 'Spring 2027', start: '2027-04-15', end: '2027-04-18' },
+      { id: 't5', artist: 'jv', name: 'Harvest Tour', season: 'Fall 2027', start: '2027-09-16', end: '2027-10-02' },
+      { id: 't6', artist: 'jv', name: 'Winter Residency', season: 'Winter 2027', start: '2027-02-05', end: '2027-02-26' },
     ],
     shows,
     offers: [
@@ -693,9 +693,9 @@ function blank() {
   return d;
 }
 // ---------- storage (this browser only) ----------
-const KEY = 'gigtrip.v4.db';
+const KEY = 'gigtrip.v5.db';
 const FILES = {};   // uploaded files live in memory for the mock (object URLs)
-function load() { try { const v = JSON.parse(localStorage.getItem(KEY)); return v && v.v === 4 ? v : null; } catch { return null; } }
+function load() { try { const v = JSON.parse(localStorage.getItem(KEY)); return v && v.v === 5 ? v : null; } catch { return null; } }
 function save() { try { localStorage.setItem(KEY, JSON.stringify(DB)); } catch {} }
 let DB = load() || seed();
 
@@ -731,6 +731,12 @@ const avatar = id => { const p = P(id); return `<span class="avatar" style="back
 const artist = id => DB.artists.find(a => a.id === id) || { name: '—', hue: 0 };
 const tour = id => DB.tours.find(t => t.id === id);
 const show = id => DB.shows.find(s => s.id === id);
+function tourRange(t) {
+  if (!t) return { start: '', end: '' };
+  const shows = DB.shows.filter(s => s.tour === t.id && s.status !== 'cancelled').map(s => s.date).sort();
+  return { start: t.start || shows[0] || '', end: t.end || shows[shows.length - 1] || '' };
+}
+const rangeText = t => { const r = tourRange(t); return r.start ? (r.end && r.end !== r.start ? `${short(r.start)} – ${short(r.end)}` : short(r.start)) : 'Dates to be set'; };
 const cityOf = s => s.city.split(',')[0];
 const dealText = (d, cur) => !d ? '—' : d.type === 'flat' ? `${money(d.g, false, cur)} flat` : d.type === 'fest' ? `${money(d.g, false, cur)} festival flat` : d.type === 'door' ? `${d.pct}% of net box office` : `${money(d.g, false, cur)} vs ${d.pct}% of net`;
 const showTasks = id => DB.tasks.filter(t => t.show === id);
@@ -873,6 +879,11 @@ function openForm({ title, fields, value = {}, submit = 'Save', onSave, onDelete
     onDelete(); d.close(); save(); route();
   });
   d.showModal();
+  const st = form.elements.start, en = form.elements.end;
+  if (st && en) {
+    const follow = () => { en.min = st.value || ''; if (st.value && (!en.value || en.value <= st.value)) en.value = addDays(st.value, 1); };
+    st.addEventListener('input', follow); st.addEventListener('change', follow); if (st.value) en.min = st.value;
+  }
   const first = form.querySelector('input:not([type=checkbox]):not([type=file]),select,textarea');
   if (first && !('ontouchstart' in window)) first.focus();
 }
@@ -886,7 +897,7 @@ const E = {};
 E.show = (id, preset = {}) => {
   const s = id ? show(id) : null;
   const defA = preset.artist || (cur() !== 'all' ? cur() : DB.artists[0].id);
-  const v = s ? JSON.parse(JSON.stringify(s)) : { artist: defA, tour: preset.tour ?? (DB.tours.find(t => t.artist === defA)?.id || ''), date: preset.date || '2027-06-12', city: '', venue: '', cap: 1000, status: 'hold', hold: 1, cur: 'USD', guestCap: 24, deal: { type: 'vs', g: 1000000, pct: 85, dep: 500000, depDue: '', depPaid: false }, ...preset };
+  const v = s ? JSON.parse(JSON.stringify(s)) : { artist: defA, tour: preset.tour ?? (DB.tours.find(t => t.artist === defA)?.id || ''), date: preset.date || (() => { const t = tour(preset.tour); if (!t) return '2027-06-12'; const last = DB.shows.filter(s => s.tour === t.id).map(s => s.date).sort().pop(); return last ? addDays(last, 1) : (t.start || '2027-06-12'); })(), city: '', venue: '', cap: 1000, status: 'hold', hold: 1, cur: 'USD', guestCap: 24, deal: { type: 'vs', g: 1000000, pct: 85, dep: 500000, depDue: '', depPaid: false }, ...preset };
   openForm({
     title: s ? `Edit ${cityOf(s)}` : 'Add a show', wide: true, value: v, top: coverField(s, 'Show photo (optional — the tour photo is used when there isn’t one)'),
     fields: [
@@ -963,10 +974,10 @@ function applyCoverField(o, form) {
 E.tour = (id, preset = {}) => {
   const t = id ? tour(id) : null;
   openForm({
-    title: t ? `Edit ${t.name}` : 'Add a tour', value: t || { artist: preset.artist || 'jv', season: 'Fall 2027' },
+    title: t ? `Edit ${t.name}` : 'Add a tour', value: t || { artist: preset.artist || 'jv', season: 'Fall 2027', start: '', end: '' },
     top: coverField(t, 'Tour photo'),
-    fields: [{ k: 'name', label: 'Tour name', req: true, full: true }, { k: 'artist', label: 'Artist', type: 'select', options: DB.artists.map(a => [a.id, a.name]) }, { k: 'season', label: 'Season' }],
-    onSave(o, form) { const x = t || { id: uid('t'), cover: null }; Object.assign(x, o); applyCoverField(x, form); if (!t) { DB.tours.push(x); S.tourId = x.id; } log(`${t ? 'Updated' : 'Added'} tour ${x.name}`); toast('Tour saved'); },
+    fields: [{ k: 'name', label: 'Tour name', req: true, full: true }, { k: 'artist', label: 'Artist', type: 'select', options: DB.artists.map(a => [a.id, a.name]) }, { k: 'season', label: 'Season', ph: 'e.g. Fall 2027' }, { k: 'start', label: 'Start date', type: 'date' }, { k: 'end', label: 'End date', type: 'date' }],
+    onSave(o, form) { if (o.start && o.end && o.end < o.start) { toast('The end date is before the start date'); return false; } const x = t || { id: uid('t'), cover: null }; Object.assign(x, o); applyCoverField(x, form); if (!t) { DB.tours.push(x); S.tourId = x.id; } log(`${t ? 'Updated' : 'Added'} tour ${x.name}`); toast('Tour saved'); },
     onDelete: t && (() => { DB.shows.filter(s => s.tour === t.id).forEach(s => { s.tour = ''; }); DB.tours = DB.tours.filter(x => x !== t); S.tourId = DB.tours[0]?.id; log(`Deleted tour ${t.name}`); }),
   });
   bindCoverField();
@@ -1800,7 +1811,7 @@ V.overview = () => {
       <div class="li click" data-show="${s.id}">${dateBox(s.date, s.date === NOW.date)}<div class="grow"><b>${esc(s.city)}</b> · ${esc(s.venue)}<div class="small muted">${pctDone(s.id)}% advanced${s.tour ? ' · ' + esc(tour(s.tour)?.name || '') : ''}</div></div>${statusChip(s)}</div>`).join('') || '<p class="muted">No upcoming shows.</p>'}</div></section>
     <div class="stack">
       <section class="card stack"><h2>Tours</h2>
-        ${DB.tours.filter(t => t.artist === a.id).map(t => `<div class="row between"><a href="#tour" data-act="gotour" data-id="${t.id}"><b>${esc(t.name)}</b></a><span class="small muted">${esc(t.season)} · ${DB.shows.filter(s => s.tour === t.id).length} shows</span></div>`).join('') || '<span class="small muted">No tours yet — one-off shows only.</span>'}</section>
+        ${DB.tours.filter(t => t.artist === a.id).map(t => `<div class="row between"><a href="#tour" data-act="gotour" data-id="${t.id}"><b>${esc(t.name)}</b></a><span class="small muted">${rangeText(t)} · ${DB.shows.filter(s => s.tour === t.id).length} shows</span></div>`).join('') || '<span class="small muted">No tours yet — one-off shows only.</span>'}</section>
       <section class="card stack"><h2>Team</h2><dl class="kv small"><dt>Agent</dt><dd>${esc(a.agent || '—')}</dd>
         <dt>Tour manager</dt><dd>${esc(Object.values(DB.people).filter(p => p.kind === 'tm' && (p.artists || []).includes(a.id)).map(p => p.name).join(', ') || '—')}</dd></dl>
         <button class="btn btn-secondary btn-sm" data-go="party">${icon('party')} Touring party</button></section>
@@ -1834,12 +1845,12 @@ V.myhome = () => {
   const p = P(me()), a = artist(cur());
   const mine = curShows().filter(s => s.status !== 'cancelled');
   const today = mine.find(s => s.date === NOW.date);
-  const tours = DB.tours.filter(t => t.artist === a.id).map(t => { const shows = mine.filter(s => s.tour === t.id); const next = shows.find(s => s.date >= NOW.date); return { t, shows, next, done: shows.length && !next }; })
+  const tours = DB.tours.filter(t => t.artist === a.id).map(t => { const shows = mine.filter(s => s.tour === t.id); const next = shows.find(s => s.date >= NOW.date); const r = tourRange(t); return { t, shows, next, done: !!(r.end && r.end < NOW.date) || (shows.length && !next) }; })
     .sort((x, y) => (x.done - y.done) || ((x.next?.date || '9').localeCompare(y.next?.date || '9')));
   const oneOffs = mine.filter(s => !s.tour);
   const card = ({ t, shows, next, done }) => `<button class="tcard ${done ? 'past' : ''}" data-act="gotour" data-id="${t.id}">
     ${coverBlock('tour:' + t.id, t, a, `${artistPh(a, 'ph')}<span class="tn">${esc(t.name)}</span>`)}
-    <div class="tbody"><div class="row between"><span class="small muted">${esc(t.season)}${shows.length ? ` · ${short(shows[0].date)} – ${short(shows[shows.length - 1].date)}` : ''}</span><span class="small muted">${shows.length} show${shows.length === 1 ? '' : 's'}</span></div>
+    <div class="tbody"><div class="row between"><span class="small muted">${esc(t.season)} · ${rangeText(t)}</span><span class="small muted">${shows.length} show${shows.length === 1 ? '' : 's'}</span></div>
       <div>${done ? '<span class="chip st-settled plain">Finished</span>' : next ? (next.date === NOW.date ? `<span class="chip st-pending plain">Show today · ${esc(cityOf(next))}</span>` : `<b>Next:</b> ${short(next.date)} · ${esc(cityOf(next))} <span class="muted">· ${daysUntil(next.date) === 1 ? 'tomorrow' : 'in ' + daysUntil(next.date) + ' days'}</span>`) : '<span class="muted">No dates yet</span>'}</div></div></button>`;
   return `
   <div class="head"><div><div class="eyebrow">${esc(p.name)} · ${esc(p.role)}</div><h1 class="display">${p.kind === 'artist' ? 'Your tours' : esc(a.name)}</h1>
@@ -1861,7 +1872,7 @@ V.tour = () => {
   const total = shows.filter(s => s.status !== 'cancelled').reduce((a, s) => a + showFee(s), 0);
   return `
   <div class="head"><div><div class="eyebrow">${esc(artist(t.artist).name)} · ${esc(t.season)}</div><h1 class="display">${esc(t.name)}</h1>
-    <div class="sub muted">${shows.length} shows${shows.length ? ` · ${short(shows[0].date)} – ${short(shows[shows.length - 1].date)}` : ''}</div></div>
+    <div class="sub muted">${rangeText(t)} · ${shows.length} show${shows.length === 1 ? '' : 's'}</div></div>
     <div class="addbar"><label class="viewas" for="tourpick">Tour <select id="tourpick">${tours.map(x => `<option value="${x.id}" ${x.id === t.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label>
       ${mgr ? editBtn('tour', t.id, 'Edit tour') + addBtn('newShowTour', 'Add show', t.id, 'btn-tape') : ''}</div></div>
   ${coverBlock('tour:' + t.id, t, artist(t.artist), `${artistPh(artist(t.artist), 'ph')}<span class="tn">${esc(t.name)}</span>`, 'banner')}

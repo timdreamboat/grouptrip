@@ -216,6 +216,15 @@ only the tabs their access allows (Day sheet, Contacts). The logo always goes
 to the viewer's own home (Artists for management/TMs, Home for artist/crew,
 Today for the venue).
 
+**Tour start and end dates** (owner, user testing 2026-10-01): a tour has
+its own `start`/`end` (seeded for every sample tour). Picking a start sets the
+end to the next day the moment it changes (unless a later end is already set),
+the end can't be before the start, and saving refuses a reversed pair. The
+range shows on the tour page, the Home tour cards and the artist page; a tour
+is "finished" once its end date has passed. A new show added to a tour starts
+on the tour's first day, or the day after its last show. If no dates are set,
+the range falls back to the first and last show.
+
 **Tour and show photos** (owner, user testing 2026-10-01): management sets
 a wide cover photo per tour and per show (tap the cover, or the photo
 section at the top of the tour/show form; device-cropped 16:7 at 960px). It
