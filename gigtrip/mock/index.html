@@ -1,3 +1,4 @@
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>GigTrip</title>
 <meta name="description" content="GigTrip V1 prototype — roster, tours, shows, advancing, day sheets, settlements and access control for artist managers and their teams.">
@@ -376,9 +377,12 @@ textarea.csv { font: 13px/1.5 var(--font-mono); min-height: 180px; }
   .viewas .vl, .demo .vl { display: none; }
   .top .brand b { display: none; }
   .top { gap: 8px; }
-  #role { max-width: 104px; }
+  #role { max-width: 96px; }
   .head .viewas select { max-width: 64vw; }
-  .achip { max-width: 52vw; }
+  .achip { max-width: 46vw; padding-right: 8px; }
+  .achip .arrow { display: none; }
+  #themebtn { width: 30px; height: 30px; }
+  .top .iconbtn.bell { width: 30px; }
   .head { align-items: flex-start; }
   .head > div:first-child { min-width: 0; }
 }
@@ -429,6 +433,13 @@ textarea.csv { font: 13px/1.5 var(--font-mono); min-height: 180px; }
 .st-imported { background: var(--hold-soft); color: var(--hold); }
 .chip.st-imported::before { display: none; }
 dialog.sheet .field select, dialog.sheet .field input { max-width: 100%; }
+.fgroup { border: 1px solid var(--line); border-radius: 14px; padding: 0 12px; }
+.fgroup summary { cursor: pointer; font-weight: 600; padding: 12px 0; list-style: none; display: flex; align-items: center; gap: 6px; }
+.fgroup summary::-webkit-details-marker { display: none; }
+.fgroup summary::before { content: '›'; display: inline-block; transition: transform .15s; color: var(--muted); }
+.fgroup[open] summary::before { transform: rotate(90deg); }
+.fgroup .fgrid { padding-bottom: 14px; }
+@media (max-width: 480px) { .xrow { flex-wrap: wrap; } .xrow .grow { flex: 1 1 60%; min-width: 55%; } .xrow .num { margin-left: 56px; } }
 .seg.themeseg button[aria-pressed="true"] { background: var(--tape); color: var(--tape-ink); border-color: var(--tape); }
 </style>
 
@@ -724,7 +735,8 @@ const toMin = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m;
 const ampm = t => { let [h, m] = t.split(':').map(Number); const p = h >= 12 ? 'pm' : 'am'; h = h % 12 || 12; return `${h}:${String(m).padStart(2, '0')} ${p}`; };
 const daysUntil = iso => Math.round((dt(iso) - dt(NOW.date)) / 864e5);
 const dateBox = (iso, tape) => { const d = dt(iso); return `<div class="datebox${tape ? ' tape' : ''}"><div class="m">${DAY[d.getDay()]}</div><div class="d">${d.getDate()}</div><div class="m">${MON[d.getMonth()]}</div></div>`; };
-const statusChip = s => { const st = s.status; const label = st === 'hold' ? `Hold ${s.hold || ''}`.trim() : (STATUSES.find(x => x[0] === st) || [, st])[1]; return `<span class="chip st-${st}">${label}</span>`; };
+const statusChip = s => { const st = s.status;
+  if (!isMgr() && !isVenue() && typeof me === 'function') return st === 'cancelled' ? '<span class="chip st-cancelled">Cancelled</span>' : st === 'confirmed' ? '<span class="chip st-confirmed">Confirmed</span>' : '<span class="chip st-pencil">Not confirmed yet</span>'; const label = st === 'hold' ? `Hold ${s.hold || ''}`.trim() : (STATUSES.find(x => x[0] === st) || [, st])[1]; return `<span class="chip st-${st}">${label}</span>`; };
 const initials = n => String(n).split(/\s+/).map(w => w[0]).slice(0, 2).join('');
 const P = id => DB.people[id] || { name: 'Someone', kind: 'crew', role: '', hue: 0, over: {} };
 const avatar = id => { const p = P(id); return `<span class="avatar" style="background:hsl(${p.hue} 70% var(--av-l));color:hsl(${p.hue} 60% var(--av-ink))">${esc(initials(p.name))}</span>`; };
@@ -805,7 +817,11 @@ const uploadZone = (target, id, text = 'Drop files here or tap to upload') => `<
 // sidebar groups: which heading each page sits under
 const GROUPS = [['Overview', ['home', 'myhome', 'overview', 'today', 'activity']], ['Booking', ['board', 'offers', 'tour']], ['Shows', ['show', 'settle', 'guests', 'travel']], ['Money', ['money', 'mymoney']], ['Team', ['party', 'access']], ['Setup', ['settings', 'imports', 'about']]];
 function navFor() {
-  if (isMgr()) return [['home', 'Artists'], ['board', 'Season'], ['show', 'Show'], ['money', 'Money']].concat(cur() !== 'all' ? [['overview', 'Artist page']] : []).concat([['activity', 'Activity'], ['offers', 'Offers'], ['tour', 'Tours'], ['settle', 'Settle'], ['guests', 'Guests'], ['travel', 'Travel'], ['party', 'Party'], ['access', 'Access'], ['settings', 'Settings'], ['imports', 'Imports'], ['about', 'About & help']]);
+  if (isMgr()) {
+    // On a show day the day sheet comes right after Artists, so a tour manager on the road reaches it in one tap.
+    const showDay = DB.shows.some(x => x.date === NOW.date && x.status !== 'cancelled' && inCur(x.artist));
+    return [['home', 'Artists']].concat(showDay ? [['today', 'Today']] : []).concat([['board', 'Season'], ['show', 'Show'], ['money', 'Money']]).concat(cur() !== 'all' ? [['overview', 'Artist page']] : []).concat(showDay ? [] : [['today', 'Today']]).concat([['activity', 'Activity'], ['offers', 'Offers'], ['tour', 'Tours'], ['settle', 'Settle'], ['guests', 'Guests'], ['travel', 'Travel'], ['party', 'Party'], ['access', 'Access'], ['settings', 'Settings'], ['imports', 'Imports'], ['about', 'About & help']]);
+  }
   const n = [];
   if (hasHome()) n.push(['home', 'Artists']); else if (!isVenue()) n.push(['myhome', 'Home']);
   if (can('day')) n.push(['today', 'Today']);
@@ -819,7 +835,9 @@ function navFor() {
   if (can('profit')) n.push(['money', 'Money']);
   if (canEdit('advance') && !isVenue()) n.push(['activity', 'Activity']);   // the venue gets its own show, not the tour's change log
   n.push(['party', isVenue() ? 'Tour team' : 'Party'], ['about', 'About & help']);
-  return n;
+  // Phone tab bar = the first four: order them by what this kind of person actually comes to do.
+  const first = { artist: ['myhome', 'today', 'tour', 'guests'], crew: ['myhome', 'today', 'travel', 'mymoney'], venue: ['today', 'show', 'guests', 'party'] }[P(me()).kind] || [];
+  return n.sort((a, b) => (first.indexOf(a[0]) + 1 || 99) - (first.indexOf(b[0]) + 1 || 99));
 }
 function attention() {
   const items = [];
@@ -846,12 +864,13 @@ function fieldHtml(f, v) {
   const mode = f.type === 'money' ? 'decimal' : f.type === 'number' ? 'numeric' : '';
   return `<label class="${cls}" for="${id}">${f.label}<input id="${id}" name="${f.k}" type="${type}" ${mode ? `inputmode="${mode}"` : ''} value="${esc(shown)}" placeholder="${esc(f.ph || '')}" ${f.req ? 'required' : ''} autocomplete="off"></label>`;
 }
-function openForm({ title, fields, value = {}, submit = 'Save', onSave, onDelete, extra = '', top = '', wide }) {
+function openForm({ title, fields, value = {}, submit = 'Save', onSave, onDelete, extra = '', top = '', wide, openGroups = false }) {
   const d = $('#dlg');
   d.innerHTML = `<form id="dlgform" novalidate>
     <div class="row between"><h2>${esc(title)}</h2><button type="button" class="iconbtn" data-close aria-label="Close">×</button></div>
     ${top}
-    ${fields.length ? `<div class="fgrid">${fields.map(f => fieldHtml(f, getp(value, f.k))).join('')}</div>` : ''}
+    ${fields.length ? `<div class="fgrid">${fields.filter(f => !f.group).map(f => fieldHtml(f, getp(value, f.k))).join('')}</div>` : ''}
+    ${[...new Set(fields.filter(f => f.group).map(f => f.group))].map(g => `<details class="fgroup" ${openGroups ? 'open' : ''}><summary>${esc(g)}<span class="small muted"> · optional, tap to open</span></summary><div class="fgrid">${fields.filter(f => f.group === g).map(f => fieldHtml(f, getp(value, f.k))).join('')}</div></details>`).join('')}
     ${extra}
     <div class="row between wrap">${onDelete ? '<button type="button" class="btn btn-danger btn-sm" data-del>Delete</button>' : '<span></span>'}
       <div class="row"><button type="button" class="btn btn-secondary" data-close>Cancel</button>${onSave ? `<button class="btn btn-primary" type="submit">${esc(submit)}</button>` : ''}</div></div>
@@ -907,14 +926,14 @@ E.show = (id, preset = {}) => {
       { k: 'date', label: 'Date', type: 'date', req: true }, { k: 'status', label: 'Status', type: 'select', options: STATUSES },
       { k: 'city', label: 'City', ph: 'e.g. Chicago, IL', req: true }, { k: 'venue', label: 'Venue', ph: 'e.g. The Foundry', req: true },
       { k: 'cap', label: 'Capacity', type: 'number' }, { k: 'hold', label: 'Hold number (if a hold)', type: 'number' },
-      { k: 'deal.type', label: 'Deal type', type: 'select', options: DEALS }, { k: 'cur', label: 'Currency', type: 'select', options: [['USD', 'US dollars'], ['CAD', 'Canadian dollars'], ['EUR', 'Euros'], ['GBP', 'Pounds']] },
-      { k: 'deal.g', label: 'Guarantee ($)', type: 'money' }, { k: 'deal.pct', label: 'Artist % (vs / door deals)', type: 'number' },
-      { k: 'deal.dep', label: 'Deposit ($)', type: 'money' }, { k: 'deal.depDue', label: 'Deposit due', type: 'date' },
-      { k: 'deal.depPaid', label: 'Deposit received', type: 'check', full: true },
-      { k: 'address', label: 'Venue address', full: true }, { k: 'parking', label: 'Parking / load-in notes', type: 'textarea', full: true },
-      { k: 'hospitality', label: 'Hospitality', full: true }, { k: 'wifi', label: 'Wi-Fi' }, { k: 'guestCap', label: 'Guest list spots', type: 'number' },
-      { k: 'note', label: 'Notes (e.g. festival set time)', full: true },
-    ],
+      { k: 'deal.type', label: 'Deal type', type: 'select', options: DEALS, group: 'Deal' }, { k: 'cur', label: 'Currency', type: 'select', options: [['USD', 'US dollars'], ['CAD', 'Canadian dollars'], ['EUR', 'Euros'], ['GBP', 'Pounds']], group: 'Deal' },
+      { k: 'deal.g', label: 'Guarantee ($)', type: 'money', group: 'Deal' }, { k: 'deal.pct', label: 'Artist % (vs / door deals)', type: 'number', group: 'Deal' },
+      { k: 'deal.dep', label: 'Deposit ($)', type: 'money', group: 'Deal' }, { k: 'deal.depDue', label: 'Deposit due', type: 'date', group: 'Deal' },
+      { k: 'deal.depPaid', label: 'Deposit received', type: 'check', full: true, group: 'Deal' },
+      { k: 'address', label: 'Venue address', full: true, group: 'Venue details' }, { k: 'parking', label: 'Parking / load-in notes', type: 'textarea', full: true, group: 'Venue details' },
+      { k: 'hospitality', label: 'Hospitality', full: true, group: 'Venue details' }, { k: 'wifi', label: 'Wi-Fi', group: 'Venue details' }, { k: 'guestCap', label: 'Guest list spots', type: 'number', group: 'Venue details' },
+      { k: 'note', label: 'Notes (e.g. festival set time)', full: true, group: 'Venue details' },
+    ], openGroups: !!s,
     onSave(o, form) {
       const t = s || { id: uid('sh'), settled: null, deal: {}, cover: null };
       Object.entries(o).forEach(([k, val]) => setp(t, k, val));
@@ -1244,7 +1263,7 @@ const START = [
   ['share', 'Share the day sheet', 'Everyone gets a link; they see only their part.', 'party'],
 ];
 function startCard() {
-  if (!isMgr() || store.get('start.hidden', false)) return '';
+  if (P(me()).kind !== 'manager' || store.get('start.hidden', false)) return '';
   const done = store.get('start.done', {});
   if (DB.imports.length) done.import = true;
   const n = START.filter(s => done[s[0]]).length;
@@ -1787,7 +1806,7 @@ V.home = () => {
     <button class="acard" data-act="pickArtist" data-id="${a.id}" aria-current="${cur() === a.id}">${artistPh(a)}
       <div class="grow"><div><b>${esc(a.name)}</b> <span class="small muted">${esc(a.genre || '')}</span></div>
         <div class="small">${today ? `<span class="chip st-pending plain">Show today · ${esc(cityOf(today))}</span>` : next ? `<span class="muted">Next: ${short(next.date)} · ${esc(cityOf(next))}</span>` : '<span class="muted">No upcoming shows</span>'}</div>
-        <div class="small muted">${shows.filter(s => s.status === 'confirmed').length} confirmed · ${shows.filter(s => s.status === 'hold').length} holds</div></div>
+        <div class="small muted">${shows.filter(s => s.status === 'confirmed').length} confirmed · ${shows.filter(s => s.status === 'hold').length} hold${shows.filter(s => s.status === 'hold').length === 1 ? '' : 's'}</div></div>
       ${att ? `<span class="cnt" aria-label="${att} need attention">${att}</span>` : ''}${icon('chev')}</button>`).join('') || (myArtists().length ? '<p class="muted">No artists match.</p>' : `<section class="card stack"><h2>No artists yet</h2><p class="muted" style="margin:0">Add one, or import your dates sheet — artists are created from the artist column.</p><div class="addbar">${addBtn('newArtist', 'Add artist')}<button class="btn btn-tape btn-sm" data-act="import">${icon('upload')} Import data</button></div></section>`)}</div>`;
 };
 
@@ -1924,6 +1943,8 @@ function routeMap(shows) {
 }
 
 function showTabs() {
+  // The venue runs the night, not the business: no deal, no advance checklist.
+  if (isVenue()) return [['sheet', 'Day sheet'], ['supply', 'Who brings what'], ['docs', 'Docs'], ['contacts', 'Contacts']];
   const t = [];
   if (can('costs')) t.push(['deal', 'Deal']);
   if (can('advance')) t.push(['advance', 'Advance'], ['supply', 'Who brings what'], ['docs', 'Docs']);
@@ -1962,7 +1983,7 @@ V.show = () => {
   } else if (S.showTab === 'supply') {
     body = whoBringsWhat();
   } else if (S.showTab === 'docs') {
-    const docs = DB.docs.filter(d => d.show === s.id).filter(d => can('costs') || !/Contract|Settlement/.test(d.name));
+    const docs = DB.docs.filter(d => d.show === s.id).filter(d => (can('costs') && !isVenue()) || !/Contract|Settlement/.test(d.name));
     body = `${editAdv ? uploadZone('docs', s.id) : ''}
       <div class="list">${docs.map(d => { const f = d.file && FILES[d.file]; return `
         <div class="li click" data-act="doc" data-id="${d.id}">${f && f.type.startsWith('image/') ? `<img class="thumb" src="${f.url}" alt="">` : `<span class="thumb">${icon('file')}</span>`}
@@ -1982,9 +2003,9 @@ V.show = () => {
   return `
   <div class="head"><div><div class="eyebrow">${isVenue() ? 'Your show' : `${esc(artist(s.artist).name)}${s.tour ? ' · ' + esc(tour(s.tour)?.name || '') : ' · one-off'}`}</div>
     <h1 class="display">${esc(cityOf(s))}</h1>
-    <div class="sub muted">${fmtDate(s.date)} · ${esc(s.venue)} · cap ${s.cap.toLocaleString()}${s.note ? ' · ' + esc(s.note) : ''}</div></div>
+    <div class="sub muted">${fmtDate(s.date)} · ${esc(s.venue)}${isMgr() || isVenue() ? ' · cap ' + s.cap.toLocaleString() : ''}${s.note ? ' · ' + esc(s.note) : ''}</div></div>
     <div class="row wrap">${s.settled != null ? '<span class="chip st-settled">Settled</span>' : statusChip(s)}
-      ${isVenue() ? '' : `<label class="viewas" for="pick">Show <select id="pick">${curShows().map(x => `<option value="${x.id}" ${x.id === s.id ? 'selected' : ''}>${short(x.date)} · ${esc(cityOf(x))} · ${esc(artist(x.artist).name)}</option>`).join('')}</select></label>`}
+      ${isVenue() ? '' : `<label class="viewas" for="pick">Show <select id="pick">${curShows().filter(x => hasHome() || x.id === s.id || x.date >= NOW.date).map(x => `<option value="${x.id}" ${x.id === s.id ? 'selected' : ''}>${short(x.date)} · ${esc(cityOf(x))}${hasHome() ? ' · ' + esc(artist(x.artist).name) : ''}</option>`).join('')}</select></label>`}
       ${isMgr() ? editBtn('show', s.id, 'Edit show') : ''}</div></div>
   ${coverBlock('show:' + s.id, s.cover ? s : (tour(s.tour)?.cover ? tour(s.tour) : s), artist(s.artist), `${artistPh(artist(s.artist), 'ph')}<span class="tn">${esc(s.venue)}</span>`, 'banner')}
   <section class="card stack">
@@ -2026,13 +2047,16 @@ function mySupplyCard() {
   if (!list.length) return '';
   return `<section class="card stack"><div class="row between"><h2>${isVenue() ? 'Venue provides' : "You're bringing"}</h2><span class="small muted">${list.filter(x => x.ok).length} of ${list.length} confirmed</span></div>
     <ul class="supply">${list.map(x => `<li class="${x.ok ? 'ok' : ''}"><input type="checkbox" id="sup-${x.id}" data-sup="${x.id}" ${x.ok ? 'checked' : ''}><label class="grow" for="sup-${x.id}">${esc(x.label)}</label></li>`).join('')}</ul>
-    <p class="small muted" style="margin:0">Set by management. Tick each one when it's packed or ready.</p></section>`;
+    <p class="small muted" style="margin:0">${isVenue() ? 'Confirm each item the venue is providing for this show.' : "Set by management. Tick each one when it's packed or ready."}</p></section>`;
 }
 
 V.today = () => {
   if (!DB.shows.length) return `<div class="head"><h1 class="display">No shows yet</h1></div><p class="muted">Once management adds or imports shows, today's day sheet appears here.</p>`;
-  if (cur() === 'all') return `<div class="head"><h1 class="display">Pick an artist</h1></div><p class="muted">Choose who you're with today on the <a href="#home">Artists</a> page.</p>`;
-  const s = DB.shows.find(x => x.date === NOW.date && x.status !== 'cancelled' && x.artist === cur());
+  const todays = DB.shows.filter(x => x.date === NOW.date && x.status !== 'cancelled' && inCur(x.artist));
+  if (cur() === 'all' && todays.length !== 1) return `<div class="ribbon"><span class="tapechip">${todays.length ? 'Show day' : 'No shows today'}</span><span>${fmtDate(NOW.date)}</span></div>
+    <div class="head"><div><div class="eyebrow">All artists</div><h1 class="display">${todays.length ? 'Playing today' : 'No show today'}</h1></div></div>
+    ${todays.length ? `<section class="card"><div class="list">${todays.map(x => `<div class="li click" data-act="pickArtist" data-id="${x.artist}">${artistPh(artist(x.artist), 'avatar')}<div class="grow"><b>${esc(artist(x.artist).name)}</b><div class="small muted">${esc(x.city)} · ${esc(x.venue)}</div></div>${icon('chev')}</div>`).join('')}</div></section>` : `<p class="muted">Pick an artist on the <a href="#home">Artists</a> page to see their next show.</p>`}`;
+  const s = todays.length === 1 && cur() === 'all' ? todays[0] : DB.shows.find(x => x.date === NOW.date && x.status !== 'cancelled' && x.artist === cur());
   if (!s) {
     const up = curShows().filter(x => x.date > NOW.date && x.status !== 'cancelled').slice(0, 4);
     return `<div class="ribbon"><span class="tapechip">Day off</span><span>Mock clock: ${fmtDate(NOW.date)}, ${ampm('16:05')}</span></div>
@@ -2236,10 +2260,10 @@ V.mymoney = () => {
     <div class="card stat"><span class="eyebrow">Owed back</span><b>${money(owed, true)}</b></div>
   </div>
   <section class="card"><h2 style="margin-bottom:4px">Expenses</h2><div class="list">${exps.map(x => { const f = x.file && FILES[x.file]; return `
-    <div class="li">${f && f.type.startsWith('image/') ? `<img class="thumb" src="${f.url}" alt="Receipt">` : `<span class="thumb">${icon('settle')}</span>`}
+    <div class="li xrow">${f && f.type.startsWith('image/') ? `<img class="thumb" src="${f.url}" alt="Receipt">` : `<span class="thumb">${icon('settle')}</span>`}
       <div class="grow"><b>${esc(x.label)}</b><div class="small muted">${short(x.date)}${f ? ' · receipt attached' : ''}</div></div><b class="num">${money(x.cents, true)}</b>
       <span class="chip ${x.status === 'paid' ? 'st-confirmed' : 'st-pending'}">${x.status === 'paid' ? 'Paid back' : 'Waiting'}</span>${editBtn('myexp', x.id)}</div>`; }).join('') || '<p class="muted">No expenses yet.</p>'}</div></section>
-  <p class="note">${artistView ? 'Show earnings reach you through management after each settlement. Management can also let you see costs and profit.' : 'Management decides whether you see this page at all.'}</p>`;
+  <p class="note">${artistView ? 'Show earnings reach you through management after each settlement.' : 'Only you and management can see this page.'}</p>`;
 };
 
 function personCard(k) {
@@ -2373,7 +2397,7 @@ function route() {
   $('#tabbar').innerHTML = main.length > 5 ? links(main.slice(0, 4)) + `<a href="#more" ${r === 'more' ? 'aria-current="page"' : ''}>${icon('more')}<span>More</span></a>` : links(main);
   const att = attention().length;
   const ca = cur();
-  $('#achipslot').innerHTML = hasHome() ? `<a class="achip" href="#home" aria-label="Switch artist (now ${ca === 'all' ? 'all artists' : esc(artist(ca).name)})">${ca === 'all' ? `<span class="ph aph" style="background:var(--tape)">${icon('board')}</span>` : artistPh(artist(ca))}<span class="nm">${ca === 'all' ? 'All artists' : esc(artist(ca).name)}</span>▾</a>` : '';
+  $('#achipslot').innerHTML = hasHome() ? `<a class="achip" href="#home" aria-label="Switch artist (now ${ca === 'all' ? 'all artists' : esc(artist(ca).name)})">${ca === 'all' ? `<span class="ph aph" style="background:var(--tape)">${icon('board')}</span>` : artistPh(artist(ca))}<span class="nm">${ca === 'all' ? 'All artists' : esc(artist(ca).name)}</span><span class="arrow">▾</span></a>` : '';
   $('#bellslot').innerHTML = canEdit('advance') && !isVenue() ? `<a class="iconbtn bell" href="#activity" aria-label="Activity, ${att} need attention">${icon('activity')}${att ? `<span class="badge">${att}</span>` : ''}</a>` : '';
   $('#main').innerHTML = V[r]();
   const h1 = $('#main .head h1'); if (h1 && HELP[r]) { h1.outerHTML = `<div class="titlerow">${h1.outerHTML}${helpBtn(r)}</div>`; }
@@ -2399,7 +2423,8 @@ const ACT = {
     S.artistId = id; store.set('artist', id); S.sel.clear(); S.showTab = '';
     if (id !== 'all') { S.tourId = DB.tours.find(t => t.artist === id)?.id || S.tourId; S.showId = null; }
     pickShowInCur();
-    go(id === 'all' ? (navFor().some(n => n[0] === 'board') ? 'board' : 'show') : isMgr() ? 'overview' : 'today');
+    const showDay = id !== 'all' && DB.shows.some(x => x.date === NOW.date && x.status !== 'cancelled' && x.artist === id);
+    go(id === 'all' ? (navFor().some(n => n[0] === 'board') ? 'board' : 'show') : isMgr() && !showDay ? 'overview' : 'today');
     toast(id === 'all' ? 'Showing all artists' : `Now working on ${artist(id).name}`);
   }, offer: id => E.offer(id), newOffer: () => E.offer(null),
   task: id => E.task(id), newTask: id => E.task(null, { show: id }), slot: id => E.slot(id), newSlot: id => E.slot(null, { show: id }),

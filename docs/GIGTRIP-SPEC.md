@@ -216,6 +216,18 @@ only the tabs their access allows (Day sheet, Contacts). The logo always goes
 to the viewer's own home (Artists for management/TMs, Home for artist/crew,
 Today for the venue).
 
+**First UAT pass fixes** (2026-10-01, see `gigtrip/uat/2026-10-01-uat.md`):
+`<meta charset>` in the file; Today in the management/TM menu (first after
+Artists on a show day; picking an artist on a show day lands on Today; "All
+artists" Today lists who plays tonight); venue show page = Day sheet / Who
+brings what / Docs / Contacts, no contract or settlement docs; artist and crew
+see only Confirmed / Not confirmed yet / Cancelled (no holds or pencils, no
+capacity); phone tab bars ordered per role (artist: Home, Today, Tours,
+Guests; crew: Home, Today, Travel, My money; venue: Today, Show, Guests, Tour
+team); single-artist show picker lists upcoming shows without the artist name;
+Getting started only for management; Add a show has Deal and Venue details as
+collapsed sections; expense rows wrap on phones; venue wording on its list.
+
 **Manager and tour manager have the same access** (owner, 2026-10-01): both
 can see and edit everything (deals, settlement, budgets, day sheets, people,
 who-sees-what, imports). The difference is scope and job: management = the

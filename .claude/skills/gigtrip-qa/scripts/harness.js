@@ -50,6 +50,11 @@
   S.role = 'artist'; S.showId = 'nyc'; S.showTab = '';
   check(showTabs().map(t => t[0]).join() === 'sheet,contacts', `Artist show tabs are ${showTabs().map(t => t[1]).join(', ')} (should be Day sheet, Contacts)`);
   S.role = 'crew'; check(!showTabs().some(t => t[0] === 'deal'), 'Crew can see the Deal tab');
+  S.role = 'venue'; check(!showTabs().some(t => t[0] === 'deal' || t[0] === 'advance'), 'Venue can see the Deal tab or the Advance checklist');
+  S.role = 'venue'; S.showId = 'nyc'; S.showTab = 'docs'; render('show'); check(!/Contract|Settlement sheet/.test(txt()), 'Venue can see the contract or settlement documents');
+  for (const r of ['manager', 'tm']) { S.role = r; S.artistId = 'jv'; const list = navFor().map(n => n[0]); check(list.includes('today'), `${r} has no Today page`); check(list[1] === 'today', `${r}: Today is not first after Artists on a show day`); }
+  S.role = 'artist'; S.artistId = 'jv'; render('myhome'); check(!/Hold \d|Pencil/.test(txt()), 'Artist Home shows booking jargon (Hold / Pencil)');
+  S.role = 'tm'; render('home'); check(!/Getting started/.test(txt()), 'Tour manager sees the company Getting started card');
   S.role = 'venue'; S.showId = 'tor'; render('show'); check(S.showId === 'nyc', 'Venue can open a show that is not theirs');
   S.role = 'artist'; S.artistId = 'jv'; S.tourId = 't1'; render('tour'); check(!/Show fees|Deposits received/.test(txt()), 'Artist tour page shows money');
   render('myhome'); check(!/You.re bringing/.test(txt()), "Artist Home shows 'You're bringing' without a show in view");

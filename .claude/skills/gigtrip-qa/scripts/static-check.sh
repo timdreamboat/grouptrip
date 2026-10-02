@@ -5,6 +5,8 @@ MOCK=gigtrip/mock/index.html
 TMP=$(mktemp -t gigtrip-qa).js
 node -e "const s=require('fs').readFileSync('$MOCK','utf8'); require('fs').writeFileSync('$TMP', s.slice(s.indexOf('<script>')+8, s.lastIndexOf('</script>')));"
 node --check "$TMP" && echo "syntax: ok"
+# The file must declare its encoding: without it, any host but GitHub Pages shows "Â·" for every "·".
+head -c 200 $MOCK | grep -q '<meta charset="utf-8">' && echo "charset: ok" || { echo "charset: missing <meta charset=\"utf-8\"> at the top"; exit 1; }
 # One <style>, one <script>: the Pages workflow wraps the file, so stray tags break the live page.
 [ "$(grep -c '</style>' $MOCK)" = "1" ] && echo "styles: ok" || { echo "styles: expected exactly one </style>"; exit 1; }
 [ "$(grep -c '</script>' $MOCK)" = "1" ] && echo "script: ok" || { echo "script: expected exactly one </script>"; exit 1; }
