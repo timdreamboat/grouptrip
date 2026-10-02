@@ -226,6 +226,24 @@ export async function busy(btn, fn) {
   finally { if (btn) btn.disabled = false; }
 }
 
+// Start/end date pair: picking a start moves the end to the next day (unless
+// an end after it is already set) and the end picker can't go before the start.
+export function linkDates(form, onChange) {
+  const start = form.elements.startDate, end = form.elements.endDate;
+  if (!start || !end) return;
+  const nextDay = (ymd) => {
+    const [y, m, d] = ymd.split('-').map(Number);
+    const n = new Date(y, m - 1, d + 1);
+    return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
+  };
+  const sync = () => {
+    end.min = start.value || '';
+    if (start.value && (!end.value || end.value <= start.value)) { end.value = nextDay(start.value); onChange?.(end.value); }
+  };
+  start.addEventListener('change', sync);
+  if (start.value) end.min = start.value;
+}
+
 export const emptyState = (ic, title, text, action = '') => `
   <div class="empty"><div class="empty-icon">${icon(ic)}</div><h3>${esc(title)}</h3><p>${esc(text)}</p>${action}</div>`;
 

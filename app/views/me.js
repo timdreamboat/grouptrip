@@ -1,6 +1,6 @@
 // "You" settings (name, Venmo, RSVP, username) and the
 // organizer's trip editor.
-import { esc, icon, avatar, sheet, confirmSheet, busy, toast, suggest } from '../ui.js';
+import { esc, icon, avatar, sheet, confirmSheet, busy, toast, suggest, linkDates } from '../ui.js';
 import * as store from '../store.js';
 import { memberById, KINDS, privacyPicker } from './common.js';
 import { locate, suggestDestinations } from '../places.js';
@@ -161,6 +161,7 @@ export function openEditTrip(ctx) {
         search: suggestDestinations,
         onPick: (it) => { picked = it; if (it.name !== coverFor) pick(it.name, false); },
       });
+      linkDates(form);
       form.elements.destination.addEventListener('change', () => {
         const dest = form.elements.destination.value.trim();
         if (dest && dest !== coverFor) pick(dest, false);

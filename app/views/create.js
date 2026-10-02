@@ -1,6 +1,6 @@
 // Create a trip in three quick questions: where, when, who's organizing.
 // Someone without a username picks one at the very end ("Save your trip").
-import { esc, icon, coverBg, busy, toast, suggest } from '../ui.js';
+import { esc, icon, coverBg, busy, toast, suggest, linkDates } from '../ui.js';
 import * as store from '../store.js';
 import { locate, suggestDestinations } from '../places.js';
 import { mapEmbed } from '../embeds.js';
@@ -122,6 +122,7 @@ export function render(root) {
       }
       if (step === 1) form.querySelector('.btn-primary').innerHTML = data.startDate ? `Continue ${icon('arrow')}` : 'Skip for now';
     });
+    linkDates(form, (end) => { data.endDate = end; });
     form.querySelector('[data-back]')?.addEventListener('click', () => { step--; draw(); });
     form.onsubmit = async (e) => {
       e.preventDefault();
