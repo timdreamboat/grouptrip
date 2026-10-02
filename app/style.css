@@ -633,6 +633,8 @@ dialog.viewer::backdrop { background: #000; }
 .map-pin { position: relative; width: 32px; height: 40px; cursor: pointer; }
 .center-pin { position: absolute; left: 50%; top: 50%; transform: translate(-16px, -38px); pointer-events: none; transition: opacity .2s; }
 .center-pin.gone { opacity: 0; }
+.center-pin .pin-name { position: absolute; top: 44px; left: 50%; transform: translateX(-50%); white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis;
+  padding: 4px 10px; border-radius: 99px; background: var(--surface); color: var(--text); font: 600 12px var(--font-ui); box-shadow: var(--shadow-sm); }
 .gm-style .pin-row { color: #6d6a72; }
 .gm-style .pin-notes { background: #efede8; color: #16151a; }
 .gm-style .pin-link { color: #b8330f !important; }

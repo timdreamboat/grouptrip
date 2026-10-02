@@ -1,7 +1,7 @@
 // Travel: where we're staying, then flights — boarding-pass cards sorted by
 // who lands first, a live map per flight (embedded), and "add my flight"
 // with automatic time lookup.
-import { esc, icon, avatar, fmtDay, fmtTime, sheet, embedSheet, confirmSheet, busy, toast, emptyState } from '../ui.js';
+import { esc, icon, avatar, fmtDay, fmtTime, sheet, embedSheet, confirmSheet, busy, toast, emptyState, share } from '../ui.js';
 import * as store from '../store.js';
 import * as embed from '../embeds.js';
 import { going, flightsOf, memberById, firstName } from './common.js';
@@ -61,7 +61,8 @@ export function render(el, ctx) {
           ${missing.map((m) => `
             <div class="row">${avatar(m, 36)}
               <div class="grow"><div class="title">${esc(m.id === trip.me?.id ? 'You' : m.name)}</div><div class="sub">No flight yet</div></div>
-              ${ctx.isOrg || m.id === trip.me?.id ? `<button class="btn btn-xs btn-secondary" data-add-for="${m.id}">${icon('plus')}Add</button>` : ''}
+              ${ctx.isOrg && m.id !== trip.me?.id ? `<button class="btn btn-xs btn-secondary" data-nudge-flight="${m.id}">${icon('bell')}Nudge</button>` : ''}
+              ${ctx.isOrg || m.id === trip.me?.id ? `<button class="btn btn-xs btn-secondary" data-add-for="${m.id}">${icon('plus')}${m.id === trip.me?.id ? 'Add' : 'Add for them'}</button>` : ''}
             </div>`).join('')}
         </div>
       </section>` : ''}
@@ -70,7 +71,11 @@ export function render(el, ctx) {
 
   el.onclick = async (e) => {
     if (await handleStayClick(e, ctx)) return;
-    const t = e.target.closest('[data-action],[data-add-for],[data-live],[data-del],[data-edit-flight]');
+    const t = e.target.closest('[data-action],[data-add-for],[data-live],[data-del],[data-edit-flight],[data-nudge-flight]');
+    if (t?.dataset.nudgeFlight) {
+      const m = memberById(trip, t.dataset.nudgeFlight);
+      return share({ title: trip.name, text: `Hey ${firstName(m.name)}, can you add your flight for "${trip.name}"?`, url: store.inviteLink(trip.id) });
+    }
     if (!t) return;
     if (t.dataset.editFlight) return openAddFlight(ctx, null, trip.flights.find((x) => x.id === t.dataset.editFlight));
     if (t.dataset.action === 'add') return openAddFlight(ctx);

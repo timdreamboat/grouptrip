@@ -109,14 +109,16 @@ function organizerHome(ctx) {
 
     ${waiting.length ? `
     <section>
-      <div class="section-head"><h2>Waiting on</h2><span class="sub">${waiting.length}</span></div>
+      <div class="section-head"><h2>Waiting on</h2>
+        ${waiting.length > 5 ? `<button class="btn btn-xs btn-secondary" data-nudge="all">${icon('bell')}Nudge everyone</button>` : `<span class="sub">${waiting.length}</span>`}</div>
       <div class="card card-tight rows">
-        ${waiting.map(({ m, why, kind }) => `
+        ${waiting.slice(0, 5).map(({ m, why, kind }) => `
           <div class="row">
             ${avatar(m, 40)}
             <div class="grow"><div class="title">${esc(m.name)}</div><div class="sub">${esc(why)}</div></div>
             <button class="btn btn-sm btn-secondary" data-nudge="${m.id}" data-kind="${kind}">${icon('bell')}Nudge</button>
           </div>`).join('')}
+        ${waiting.length > 5 ? `<a class="row row-link" href="#/t/${trip.id}/people" style="justify-content:center;min-height:44px"><span class="small muted">See all ${waiting.length} on People</span>${icon('chevron')}</a>` : ''}
       </div>
     </section>` : ''}
 
@@ -160,7 +162,7 @@ function extras(ctx) {
     ${photoStrip(ctx)}
 
     ${trip.stays.length ? `<section><div class="section-head"><h2>Where we're staying</h2>
-      <a class="btn btn-xs btn-ghost" href="#/t/${trip.id}/travel">All travel</a></div>
+      <a class="btn btn-xs btn-ghost" href="#/t/${trip.id}/travel">Travel</a></div>
       <div class="stack">${trip.stays.map((s) => stayCard(s, { ...ctx, isOrg: false })).join('')}</div></section>` : ''}
 
     ${trip.notes || isOrg ? `
@@ -205,13 +207,14 @@ function guestHome(ctx) {
   const toReimburse = trip.expenses.filter((e) => e.paidBy === me.id && !e.companyPaid && !e.reimbursed).reduce((t, e) => t + e.amount, 0);
   const todos = [
     { done: myFlights.length > 0, title: 'Add your flight', sub: myFlights.length ? `${myFlights[0].flightNumber} · ${fmtDay(myFlights[0].date)}` : 'So we know when you land', action: 'add-flight', hide: me.rsvp === 'declined' },
-    { done: Boolean(me.venmo), title: 'Add your Venmo', sub: me.venmo ? `@${me.venmo}` : 'So friends can pay you back in one tap', action: 'me' },
+    { done: Boolean(me.venmo), title: 'Add your Venmo', sub: me.venmo ? `@${me.venmo}` : `So ${words(trip).crew === 'crew' ? 'friends' : 'everyone'} can pay you back in one tap`, action: 'me', hide: isBusiness(trip) },
     { done: myList.length > 0 && myList.every((l) => l.done), title: 'Pack your bag', sub: myList.length ? `${myList.filter((l) => l.done).length} of ${myList.length} packed` : 'Your private packing list', href: 'lists', hide: me.rsvp === 'declined' },
     ...(toVote ? [{ done: false, title: `Vote in ${toVote} poll${toVote === 1 ? '' : 's'}`, sub: 'The group is deciding', href: 'polls' }] : []),
-    ...(unclaimed ? [{ done: false, title: 'Help cover the group list', sub: `${unclaimed} thing${unclaimed === 1 ? '' : 's'} nobody's bringing yet`, href: 'lists' }] : []),
+    ...(unclaimed && trip.privacy !== 'private' ? [{ done: false, title: 'Help cover the group list', sub: `${unclaimed} thing${unclaimed === 1 ? '' : 's'} nobody's bringing yet`, href: 'lists' }] : []),
     ...(bal < 0 && !isBusiness(trip) ? [{ done: false, title: 'Settle up', sub: `You owe ${fmt(-bal, trip.currency)}`, href: 'money' }] : []),
-  ].filter((t) => !t.hide);
+  ].filter((t) => !t.hide).sort((a, b) => Number(a.done) - Number(b.done)); // still-to-do first
   const left = todos.filter((t) => !t.done).length;
+  const done = todos.length - left;
   const over = tripOver(trip);
 
   const arrivals = over ? [] : trip.flights
@@ -236,7 +239,7 @@ function guestHome(ctx) {
     </section>
 
     <section>
-      <div class="section-head"><h2>Your to-dos</h2><span class="sub">${left ? `${left} left` : 'All set'}</span></div>
+      <div class="section-head"><h2>Your to-dos</h2><span class="sub">${left ? `${done ? `${done} done · ` : ''}${left} left` : 'All set'}</span></div>
       <div class="card card-tight rows">
         ${todos.map((t) => `
           <${t.href ? `a href="#/t/${trip.id}/${t.href}"` : `button data-action="${t.action || ''}"`} class="row row-link" style="width:100%;background:none;border:0;text-align:left;cursor:${t.done && !t.action ? 'default' : 'pointer'}">
@@ -290,6 +293,10 @@ function bind(el, ctx) {
       const rsvp = t.dataset.rsvp;
       el.querySelectorAll('[data-rsvp]').forEach((b) => b.classList.toggle('on', b === t));
       await ctx.run(() => store.updateMe(trip.id, { rsvp }), rsvp === 'going' ? "You're going!" : 'RSVP updated');
+      return;
+    }
+    if (t.dataset.nudge === 'all') {
+      share({ title: trip.name, text: `Quick one for "${trip.name}": if you haven't yet, join on GroupTripIt and add your flight —`, url: store.inviteLink(trip.id) });
       return;
     }
     if (t.dataset.nudge) {

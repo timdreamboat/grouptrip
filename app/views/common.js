@@ -5,7 +5,12 @@ import { balances } from '../money.js';
 export const going = (trip) => trip.members.filter((m) => m.rsvp === 'going');
 export const memberById = (trip, id) => trip.members.find((m) => m.id === id);
 export const nameOf = (trip, id) => memberById(trip, id)?.name ?? 'Someone';
-export const firstName = (name) => String(name || '').trim().split(/\s+/)[0];
+// "Uncle Mike" stays "Uncle Mike": a family title or honorific on its own is no name.
+const TITLES = /^(uncle|aunt|auntie|grandma|grandpa|granny|nana|papa|nan|gran|mom|dad|mum|mr|mrs|ms|dr|coach|cousin)\.?$/i;
+export const firstName = (name) => {
+  const parts = String(name || '').trim().split(/\s+/);
+  return TITLES.test(parts[0]) && parts[1] ? `${parts[0]} ${parts[1]}` : parts[0];
+};
 export const flightsOf = (trip, memberId) => trip.flights.filter((f) => f.memberId === memberId);
 export const organizer = (trip) => trip.members.find((m) => m.isOrganizer);
 

@@ -1,7 +1,7 @@
 // Calendar: one day-by-day timeline of plans, flights and check-ins, plus
 // a subscribable feed. Organizers add and remove plans; everyone can open
 // the embedded OpenTable booking and maps.
-import { esc, icon, fmtDay, fmtTime, tripDays, sheet, embedSheet, confirmSheet, busy, toast, copy, emptyState, safeUrl, siteName, suggest } from '../ui.js';
+import { esc, icon, avatar, fmtDay, fmtTime, tripDays, sheet, embedSheet, confirmSheet, busy, toast, copy, emptyState, safeUrl, siteName, suggest } from '../ui.js';
 import * as store from '../store.js';
 import * as embed from '../embeds.js';
 import { going, organizer, firstName, nameOf, words, isPrivate } from './common.js';
@@ -45,15 +45,23 @@ export function render(el, ctx) {
   const undated = byDay.get('') ?? [];
   const org = organizer(trip);
   const tripDayList = tripDays(trip);
+  // People you can switch the schedule to. Two people with the same name get a number.
+  const pickable = trip.members.filter((m) => m.id !== trip.me.id && (m.joined || m.isOrganizer));
+  const nameOfMember = (m) => {
+    const dup = trip.members.filter((x) => x.name.trim().toLowerCase() === m.name.trim().toLowerCase());
+    return dup.length > 1 ? `${m.name} (${dup.indexOf(m) + 1})` : m.name;
+  };
+  const whoLabel = (id) => (id === 'all' ? "Everyone's schedule" : id === trip.me.id ? 'My schedule' : `${nameOfMember(trip.members.find((m) => m.id === id) ?? { name: '?' })}'s schedule`);
+  const setWho = (id) => { try { sessionStorage.setItem(viewKey(trip), id); } catch { /* ignore */ } render(el, ctx); };
 
   el.innerHTML = `
     <header class="page-head">
       <div><h1 class="display">${words(trip).plan}</h1>
         <div class="sub">${entries.length ? `${trip.itinerary.length} plan${trip.itinerary.length === 1 ? '' : 's'} · ${trip.flights.length} flight${trip.flights.length === 1 ? '' : 's'}` : 'Everything, day by day'}</div></div>
       <div style="display:flex;gap:8px">
-        ${isOrg ? `<button class="btn btn-secondary btn-sm" data-action="sync">${icon('calplus')}Sync</button>
+        ${isOrg ? `<button class="btn btn-secondary btn-sm" data-action="sync">${icon('calplus')}Add to calendar</button>
           <button class="btn page-action" data-action="add">${icon('plus')}${words(trip).addPlan}</button>`
-        : `<button class="btn page-action" data-action="sync">${icon('calplus')}Add to my calendar</button>`}
+        : `<button class="btn page-action" data-action="sync">${icon('calplus')}Add to calendar</button>`}
       </div>
     </header>
 
@@ -61,13 +69,15 @@ export function render(el, ctx) {
       <a class="day-chip ${byDay.has(d) ? 'has' : ''}" href="#" data-jump="${d}">
         <small>${esc(fmtDay(d, { weekday: 'short' }))}</small><b>${new Date(`${d}T00:00`).getDate()}</b><span class="dot"></span></a>`).join('')}</nav>` : ''}
 
-    ${canPick ? `<label class="schedule-pick">${icon('users')}<span>Showing</span>
+    ${canPick ? (pickable.length > 12 ? `<div class="schedule-pick">${icon('users')}<span>Showing</span>
+      <button class="btn btn-secondary btn-sm" data-action="pick-who" style="flex:1;max-width:320px;justify-content:space-between">${esc(whoLabel(who))}${icon('chevron')}</button></div>`
+    : `<label class="schedule-pick">${icon('users')}<span>Showing</span>
       <select id="schedule-of" aria-label="Whose schedule">
         <option value="all">Everyone's schedule</option>
         <option value="${esc(trip.me.id)}" ${who === trip.me.id ? 'selected' : ''}>My schedule</option>
-        ${trip.members.filter((m) => m.id !== trip.me.id && (m.joined || m.isOrganizer)).map((m) =>
-          `<option value="${esc(m.id)}" ${who === m.id ? 'selected' : ''}>${esc(m.name)}'s schedule</option>`).join('')}
-      </select></label>` : ''}
+        ${pickable.map((m) =>
+          `<option value="${esc(m.id)}" ${who === m.id ? 'selected' : ''}>${esc(nameOfMember(m))}'s schedule</option>`).join('')}
+      </select></label>`) : ''}
 
     ${mapCard(trip)}
 
@@ -87,9 +97,22 @@ export function render(el, ctx) {
       <section class="day"><div class="day-head"><h3>Anytime</h3></div>
         <div class="tl">${undated.map((e) => entry(e, ctx)).join('')}</div></section>` : ''}`;
 
-  el.querySelector('#schedule-of')?.addEventListener('change', (e) => {
-    try { sessionStorage.setItem(viewKey(trip), e.target.value); } catch { /* ignore */ }
-    render(el, ctx);
+  el.querySelector('#schedule-of')?.addEventListener('change', (e) => setWho(e.target.value));
+  // Big groups: a searchable list instead of a 60-entry dropdown.
+  const pickWho = () => sheet({
+    title: 'Whose schedule?',
+    body: `<input class="input" id="who-filter" placeholder="Find a person" autocomplete="off" style="margin-bottom:10px">
+      <div class="rows" id="who-list">${[{ id: 'all', name: "Everyone's schedule" }, { id: trip.me.id, name: 'My schedule' }, ...pickable.map((m) => ({ id: m.id, name: nameOfMember(m), m }))]
+        .map((p) => `<button class="row row-link" data-who="${esc(p.id)}" data-name="${esc(p.name.toLowerCase())}" style="width:100%;background:none;border:0;text-align:left;cursor:pointer">
+          ${p.m ? avatar(p.m, 32) : `<span class="tl-icon">${icon('users')}</span>`}<span class="grow title">${esc(p.name)}</span>${who === p.id ? icon('check') : ''}</button>`).join('')}</div>`,
+    onMount(dlg, close) {
+      const list = dlg.querySelector('#who-list');
+      dlg.querySelector('#who-filter').addEventListener('input', (e) => {
+        const q = e.target.value.trim().toLowerCase();
+        list.querySelectorAll('[data-who]').forEach((b) => { b.hidden = Boolean(q) && !b.dataset.name.includes(q); });
+      });
+      list.addEventListener('click', (e) => { const b = e.target.closest('[data-who]'); if (b) { close(); setWho(b.dataset.who); } });
+    },
   });
 
   const mapEl = el.querySelector('#trip-map');
@@ -115,6 +138,7 @@ export function render(el, ctx) {
     }
     if (t.dataset.action === 'add') return openAddItem(ctx);
     if (t.dataset.action === 'sync') return openSync(ctx);
+    if (t.dataset.action === 'pick-who') return pickWho();
     const it = trip.itinerary.find((x) => x.id === (t.dataset.ot || t.dataset.map || t.dataset.del || t.dataset.edit || t.dataset.from));
     if (t.dataset.from) return sheet({ title: it.title, body: `<div class="pin-card">${fromHotelsHTML(it, trip)}</div>` });
     if (t.dataset.edit) return openAddItem(ctx, null, { item: it });

@@ -190,7 +190,8 @@ function mountEmbed(el, detailEl, trip, pins, stays) {
     // draw ours at the center — and hide it once they start moving the map.
     el.innerHTML = `<iframe class="gmap-embed" title="Map" referrerpolicy="no-referrer-when-downgrade"
       src="${esc(spot ? embedUrl(spot.q) : embedUrl(trip.destination, 11))}"></iframe>
-      ${spot ? `<div class="map-pin center-pin ${spot.stay ? 'stay' : ''}" aria-hidden="true"><span class="shape"></span><span class="n">${spot.label}</span></div>` : ''}`;
+      ${spot ? `<div class="map-pin center-pin ${spot.stay ? 'stay' : ''}" aria-hidden="true"><span class="shape"></span><span class="n">${spot.label}</span>
+        <span class="pin-name">${esc(spot.stay ? spot.title.split(' — ')[0] : spot.title)}</span></div>` : ''}`;
     if (!detailEl) return;
     detailEl.innerHTML = spots.length ? `
       <div class="pin-chips">${spots.map((p) => `<button class="pin-chip ${p.stay ? 'stay' : ''} ${p === spot ? 'on' : ''}" data-pin="${p.id}" title="${esc(p.title)}" aria-label="${esc(p.title)}">${p.chip ?? p.label}</button>`).join('')}</div>

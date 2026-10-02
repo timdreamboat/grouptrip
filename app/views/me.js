@@ -2,7 +2,7 @@
 // organizer's trip editor.
 import { esc, icon, avatar, sheet, confirmSheet, busy, toast, suggest, linkDates } from '../ui.js';
 import * as store from '../store.js';
-import { memberById, KINDS, privacyPicker } from './common.js';
+import { memberById, KINDS, privacyPicker, tripOver } from './common.js';
 import { locate, suggestDestinations } from '../places.js';
 import { mountCoverPicker } from './cover.js';
 import * as pwa from '../pwa.js';
@@ -25,7 +25,7 @@ export function openMe(ctx) {
         <label class="field"><span>Your name</span><input name="name" required maxlength="80" value="${esc(me.name)}"></label>
         <label class="field"><span>Venmo username</span><input name="venmo" placeholder="@your-venmo" value="${me.venmo ? `@${esc(me.venmo)}` : ''}" autocomplete="off" autocapitalize="none"></label>
         <p class="hint">With your Venmo, anyone who owes you gets a button that pays you directly.</p>
-        ${isOrg ? '' : `
+        ${isOrg || tripOver(trip) ? '' : `
         <div class="field"><span>RSVP</span><div class="segmented">
           ${[['going', 'Going'], ['maybe', 'Maybe'], ['declined', "Can't go"]].map(([v, l]) =>
             `<button type="button" data-rsvp="${v}" class="${me.rsvp === v ? 'on' : ''}">${l}</button>`).join('')}
