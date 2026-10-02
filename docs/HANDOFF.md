@@ -35,7 +35,8 @@ and what's pending**.
   day sheets, advancing, deals/settlement, tour budget). Separate site and
   brand, built on GroupTripIt later.
 - Clickable mock: `gigtrip/mock/index.html` (one file, fake data, no
-  database; not on GitHub Pages). Private preview link:
+  database). **Public link to share:** https://timdreamboat.github.io/grouptrip/gigtrip/
+  (the Pages workflow copies it in next to the app). Private preview:
   https://claude.ai/artifact/6ckEWFC9bMBHE2iFr7d1UY
 - Spec to build from: `docs/GIGTRIP-SPEC.md`. Waiting on manager feedback
   before any real build. Deal/settlement math would be a new in-app
