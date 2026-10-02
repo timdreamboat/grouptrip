@@ -15,10 +15,14 @@ to do, and what "seamless" means for them. Everything below assumes it.
 
 ## How to run a pass
 
-1. Open the mock in the preview browser (`file:///<repo>/gigtrip/mock/index.html`),
-   `resize_window` preset `mobile`, dark mode on (`setTheme('dark')`) — phones
-   in the dark are the hard case; check light mode only where something
-   looks off. Reset to `desktop` at the end.
+1. Start the local server (`preview_start` with name `gigtrip`, from
+   `.claude/launch.json`) and open `http://localhost:8082/gigtrip/mock/index.html`
+   — use this, not the `file://` preview, so taps on tabs and links navigate
+   like the real site. `resize_window` preset `mobile`, dark mode on
+   (`setTheme('dark')`) — phones in the dark are the hard case; check light
+   mode only where something looks off. Reset to `desktop` and stop the
+   server at the end. Screenshots can lag a tap by a frame: add a short
+   `wait` before each one, and trust `get_page_text` for what is on screen.
 2. Fresh sample data: in `javascript_tool`, `DB = seed(); route();`.
 3. For each persona, in this order — Juniper (artist), Nico (crew), Greg
    (venue), Dana (tour manager), Rae (management): set `S.role`, go to the
