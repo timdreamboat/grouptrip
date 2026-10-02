@@ -30,6 +30,7 @@ jobs:
           mkdir -p site/gigtrip
           cp -R app/. site/
           { printf '<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'; cat gigtrip/mock/index.html; printf '\n</html>\n'; } > site/gigtrip/index.html
+          cp -R gigtrip/demo site/gigtrip/demo
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
