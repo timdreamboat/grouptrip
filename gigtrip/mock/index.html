@@ -60,7 +60,8 @@
 }
 
 * { box-sizing: border-box; }
-html, body { background: var(--bg); }
+html, body { background: var(--bg); height: 100%; }
+body { overflow: hidden; }
 body { margin: 0; color: var(--text); font: 15px/1.5 var(--font-ui); letter-spacing: -.006em; -webkit-font-smoothing: antialiased; }
 button, input, select { font: inherit; color: inherit; }
 a { color: inherit; }
@@ -80,13 +81,14 @@ h3 { font-size: 15px; font-weight: 600; margin: 0; }
 .eyebrow { font-size: 11.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
 
 /* shell */
-.shell { display: grid; grid-template-columns: minmax(0, 1fr); min-height: 100%; }
-.shell > div { min-width: 0; }
+/* the page itself never scrolls: the sidebar and the content area each scroll on their own, so the header stays put on every phone */
+.shell { display: grid; grid-template-columns: minmax(0, 1fr); height: 100%; }
+.shell > div { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
 main > * { min-width: 0; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .side { display: none; }
 .top {
-  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  flex: none; z-index: 20; padding-top: calc(10px + env(safe-area-inset-top, 0px));
   display: flex; align-items: center; gap: 10px; padding: 10px 16px;
   background: color-mix(in srgb, var(--bg) 86%, transparent); backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--line);
@@ -97,7 +99,8 @@ main > * { min-width: 0; }
 .top .spacer { flex: 1; }
 .viewas { display: flex; align-items: center; gap: 6px; white-space: nowrap; font-size: 13px; color: var(--muted); }
 .viewas select { height: 34px; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--surface); padding: 0 10px; font-weight: 600; font-size: 13px; color: var(--text); }
-main { padding: 18px 16px 110px; max-width: 1080px; width: 100%; margin: 0 auto; display: grid; gap: 18px; align-content: start; }
+main { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding: 18px 16px 110px; display: grid; gap: 18px; align-content: start; }
+main > * { max-width: 1080px; width: 100%; margin-inline: auto; }
 .ribbon { font-size: 12.5px; color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .ribbon .tapechip { background: var(--tape); color: var(--tape-ink); font-weight: 700; padding: 2px 8px; border-radius: 4px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
 
@@ -114,7 +117,7 @@ main { padding: 18px 16px 110px; max-width: 1080px; width: 100%; margin: 0 auto;
 @media (min-width: 900px) {
   .shell { grid-template-columns: 244px minmax(0, 1fr); }
   .side {
-    display: flex; flex-direction: column; gap: 4px; position: sticky; top: 0; height: 100vh; height: 100dvh;
+    display: flex; flex-direction: column; gap: 4px; height: 100%;
     padding: 18px 14px; border-right: 1px solid var(--line); background: var(--surface);
     overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin;
   }
@@ -2305,7 +2308,7 @@ function route() {
 }
 function go(r) { if (location.hash.slice(1) === r) route(); else location.hash = r; }
 function setRole(r) { S.role = r; S.sel.clear(); store.set('role', r); go(navFor()[0][0]); }
-addEventListener('hashchange', () => { route(); scrollTo(0, 0); });
+addEventListener('hashchange', () => { route(); $('#main').scrollTop = 0; });
 $('#themebtn').addEventListener('click', () => { const t = THEME; const dark = t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches); setTheme(dark ? 'light' : 'dark'); toast(dark ? 'Light mode' : 'Dark mode'); });
 
 $('#role').addEventListener('change', e => setRole(e.target.value));
