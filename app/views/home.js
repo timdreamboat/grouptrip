@@ -54,7 +54,7 @@ export function render(root) {
         </div>`
       : `
         <section class="landing">
-          <span class="chip accent">${icon('sparkle')}Free · friends join without an account · works on any phone</span>
+          <span class="chip accent">${icon('sparkle')}Free · no account needed · works on any phone</span>
           <h1 class="display" style="margin-top:18px">Group trips, <em>minus</em> the group chat chaos.</h1>
           <p>One link for the whole crew: who's coming, when everyone lands, the plan, and who owes whom.</p>
           <a class="btn btn-accent btn-lg" href="#/new">Plan a trip ${icon('arrow')}</a>

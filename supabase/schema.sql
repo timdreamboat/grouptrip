@@ -2527,3 +2527,120 @@ end $$;
 -- _device_ok and _issue_device with the service key).
 revoke execute on function _check_pin(text), _key_hash(text), _issue_device(text, text), _device_ok(text, text),
   _username_ok(text, text, boolean) from public, anon, authenticated;
+
+
+-- ============ v14: PIN recovery by email (owner, 2026-10-01) ============
+-- "Forgot PIN" with no signed-in device and no passkey had no way back. A
+-- username can carry a recovery email, used ONLY to send a 6-digit reset code
+-- (nothing else is ever sent to it; EMAIL_ENABLED stays off for notifications).
+-- The `pin-reset` Edge Function sends the code (needs BREVO_API_KEY or
+-- RESEND_API_KEY + EMAIL_FROM as function secrets); `reset_pin_with_code`
+-- sets the new PIN and signs out every other device (the lost one included).
+-- Codes last 15 minutes, 5 tries, one request per 2 minutes per username.
+alter table usernames add column recovery_email text, add column reset_requested_at timestamptz;
+create table pin_resets (
+  username   text primary key references usernames(username) on delete cascade,
+  code_hash  text not null,
+  expires_at timestamptz not null,
+  attempts   int not null default 0
+);
+alter table pin_resets enable row level security;
+revoke all on pin_resets from anon, authenticated;
+
+create function _clean_email(e text) returns text
+language plpgsql immutable as $$
+declare v text := lower(trim(coalesce(e, '')));
+begin
+  if v = '' then return null; end if;
+  if v !~ '^[^@\s]+@[^@\s]+\.[^@\s]+$' or length(v) > 254 then raise exception 'That email address doesn''t look right'; end if;
+  return v;
+end $$;
+
+create function set_recovery_email(p_username text, p_device_key text, p_email text) returns void
+language plpgsql security definer set search_path = public as $$
+declare u text := _clean_username(p_username);
+begin
+  perform _username_ok(u, p_device_key, true);
+  update usernames set recovery_email = _clean_email(p_email) where username = u;
+end $$;
+
+create function recovery_email(p_username text, p_device_key text) returns text
+language plpgsql security definer set search_path = public as $$
+declare u text := _clean_username(p_username);
+begin
+  perform _username_ok(u, p_device_key, true);
+  return (select recovery_email from usernames where username = u);
+end $$;
+
+-- A new PIN can come with a recovery email.
+drop function create_pin(text, text);
+create function create_pin(p_username text, p_pin text, p_email text default null) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare u text := _clean_username(p_username);
+begin
+  perform _check_pin(p_pin);
+  if exists (select 1 from usernames where username = u) then
+    raise exception 'That username already has a PIN — enter it instead';
+  end if;
+  insert into usernames (username, pin_hash, recovery_email)
+  values (u, extensions.crypt(p_pin, extensions.gen_salt('bf', 8)), _clean_email(p_email));
+  return jsonb_build_object('username', u,
+    'deviceKey', _issue_device(u, case when exists (select 1 from members where username = u) then 'pin' else 'new' end));
+end $$;
+
+-- canReset: the sign-in sheet can offer "Email me a reset code".
+create or replace function username_status(p_username text) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare u text := _clean_username(p_username);
+begin
+  return jsonb_build_object(
+    'username', u,
+    'taken', exists (select 1 from usernames where username = u) or exists (select 1 from members where username = u),
+    'hasPin', exists (select 1 from usernames where username = u),
+    'hasPasskey', exists (select 1 from passkeys where username = u),
+    'canReset', exists (select 1 from usernames where username = u and recovery_email is not null));
+end $$;
+
+-- Service role only (the pin-reset Edge Function): make a code, say where to send it.
+create function _pin_reset_begin(p_username text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare u text := _clean_username(p_username); r usernames; code text;
+begin
+  select * into r from usernames where username = u;
+  if r.username is null or r.recovery_email is null then return null; end if;
+  if r.reset_requested_at > now() - interval '2 minutes' then return jsonb_build_object('wait', true); end if;
+  code := lpad(((('x' || encode(extensions.gen_random_bytes(4), 'hex'))::bit(32)::bigint) % 1000000)::text, 6, '0');
+  insert into pin_resets (username, code_hash, expires_at)
+  values (u, extensions.crypt(code, extensions.gen_salt('bf', 8)), now() + interval '15 minutes')
+  on conflict (username) do update set code_hash = excluded.code_hash, expires_at = excluded.expires_at, attempts = 0;
+  update usernames set reset_requested_at = now() where username = u;
+  return jsonb_build_object('email', r.recovery_email, 'code', code);
+end $$;
+
+-- Answers {ok:false, error} instead of raising so the try count is kept.
+create function reset_pin_with_code(p_username text, p_code text, p_pin text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare u text := _clean_username(p_username); pr pin_resets;
+begin
+  select * into pr from pin_resets where username = u for update;
+  if pr.username is null or pr.expires_at < now() then
+    return jsonb_build_object('ok', false, 'error', 'That code has expired — ask for a new one');
+  end if;
+  if pr.attempts >= 5 then
+    delete from pin_resets where username = u;
+    return jsonb_build_object('ok', false, 'error', 'Too many tries — ask for a new code');
+  end if;
+  if pr.code_hash <> extensions.crypt(coalesce(p_code, ''), pr.code_hash) then
+    update pin_resets set attempts = attempts + 1 where username = u;
+    return jsonb_build_object('ok', false, 'error', format('Wrong code — %s %s left', 4 - pr.attempts, case when 4 - pr.attempts = 1 then 'try' else 'tries' end));
+  end if;
+  perform _check_pin(p_pin);
+  update usernames set pin_hash = extensions.crypt(p_pin, extensions.gen_salt('bf', 8)),
+    failed = 0, locked_until = null, pin_changed_at = now()
+  where username = u;
+  delete from pin_resets where username = u;
+  delete from username_devices where username = u;
+  return jsonb_build_object('ok', true, 'username', u, 'deviceKey', _issue_device(u, 'reset'));
+end $$;
+
+revoke execute on function _clean_email(text), _pin_reset_begin(text) from public, anon, authenticated;

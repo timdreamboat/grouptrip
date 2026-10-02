@@ -11,12 +11,12 @@ const easyPin = (p) => /^(.)\1{5}$/.test(p) || '01234567890'.includes(p) || '098
 
 // A 6-digit PIN form in `box`: submits by itself once 6 numbers are typed.
 // onPin(pin, fail) returns false/undefined to stay; fail(msg) shows an error under the field.
-function pinForm(box, { intro, button = 'Continue', extra = '', onPin }) {
+function pinForm(box, { intro, button = 'Continue', extra = '', secret = true, onPin }) {
   box.innerHTML = `
     <form class="form" novalidate>
       <p class="hint" style="margin:0">${intro}</p>
-      <input class="input input-xl pin-input" name="pin" type="password" inputmode="numeric" pattern="[0-9]*"
-        maxlength="6" autocomplete="off" aria-label="6-digit PIN" placeholder="••••••">
+      <input class="input input-xl pin-input" name="pin" type="${secret ? 'password' : 'text'}" inputmode="numeric" pattern="[0-9]*"
+        maxlength="6" autocomplete="${secret ? 'off' : 'one-time-code'}" aria-label="${secret ? '6-digit PIN' : '6-digit code'}" placeholder="${secret ? '••••••' : '······'}">
       <p class="small" data-err role="alert" style="color:var(--bad);margin:-6px 0 0" hidden></p>
       <button class="btn btn-primary btn-lg btn-block">${button} ${icon('arrow')}</button>
       ${extra}
@@ -177,6 +177,55 @@ export function askUsername({ title = 'Your username', reason = 'Your trips are 
           };
         };
 
+        // Optional recovery email, asked once when the PIN is created.
+        const emailStep = (name, pin) => {
+          head.textContent = 'If you forget your PIN';
+          box.innerHTML = `
+            <form class="form" novalidate>
+              <p class="hint" style="margin:0">Add an email and we can send you a reset code. It's used for nothing else — no trip updates, ever.</p>
+              <input class="input input-xl" name="email" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" aria-label="Recovery email" style="font-size:18px">
+              <button class="btn btn-primary btn-lg btn-block">Save and continue ${icon('arrow')}</button>
+              <button type="button" class="btn btn-ghost btn-block" data-skip>Skip for now</button>
+            </form>`;
+          const form = box.querySelector('form');
+          setTimeout(() => form.elements.email.focus(), 50);
+          const go = async (btn, email) => {
+            const r = await busy(btn, () => store.createPin(name, pin, email));
+            if (r) await finish(r);
+          };
+          form.onsubmit = (e) => {
+            e.preventDefault();
+            const email = form.elements.email.value.trim();
+            if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { form.elements.email.focus(); return toast("That email address doesn't look right", { error: true }); }
+            go(form.querySelector('.btn-primary'), email);
+          };
+          form.querySelector('[data-skip]').onclick = (e) => go(e.currentTarget, null);
+        };
+        // "Email me a reset code": the code, then a new PIN.
+        const codeStep = (name, error = null) => {
+          head.textContent = 'Check your email';
+          const form = pinForm(box, {
+            secret: false,
+            intro: `We sent a 6-digit code to the recovery email for <b>@${esc(name)}</b>. It works for 15 minutes.`,
+            extra: `<p class="hint" style="margin:0;text-align:center">Nothing arrived? Check spam, or <button type="button" class="link-btn" data-again>send it again</button>.</p>`,
+            onPin: (code) => {
+              newPin(box, head, {
+                title: 'New PIN',
+                intro: `Pick a new 6-digit PIN for <b>@${esc(name)}</b>. Every other phone and laptop gets signed out.`,
+                onPin: async (pin) => {
+                  const r = await store.resetPinWithCode(name, code, pin);
+                  if (!r.ok) return codeStep(name, r.error);
+                  toast('PIN changed — other devices were signed out');
+                  await finish(r);
+                },
+              });
+            },
+          });
+          if (error) { const err = form.querySelector('[data-err]'); err.textContent = error; err.hidden = false; }
+          form.querySelector('[data-again]').onclick = async (e) => {
+            if (await busy(e.currentTarget, () => store.requestPinReset(name))) toast('Sent again — give it a minute');
+          };
+        };
         const wireOther = () => {
           const b = box.querySelector('[data-other]');
           if (b) b.onclick = () => { username = ''; nameStep(); };
@@ -194,9 +243,12 @@ export function askUsername({ title = 'Your username', reason = 'Your trips are 
                 <div style="display:flex;justify-content:center;gap:12px">
                   <button type="button" class="link-btn" data-forgot>Forgot PIN?</button>${other}
                 </div>
-                <p class="hint" data-forgot-text hidden style="margin:0">On a phone or laptop where you're still in GroupTripIt, tap
+                <div data-forgot-text hidden class="stack" style="gap:10px">
+                  ${s.canReset ? `<button type="button" class="btn btn-secondary btn-block" data-email-code>${icon('bell')}Email me a reset code</button>` : ''}
+                  <p class="hint" style="margin:0">${s.canReset ? 'Or, on' : 'No recovery email is set for this username. On'} a phone or laptop where you're still in GroupTripIt, tap
                   your username and choose <b>Change PIN</b>. Or use your passkey. Otherwise, ask a trip's organizer to
-                  <b>Let you back in</b> — you'll rejoin with a new username, and your RSVP, flights and expenses stay.</p>`,
+                  <b>Let you back in</b> — you'll rejoin with a new username, and your RSVP, flights and expenses stay.</p>
+                </div>`,
               onPin: async (pin, fail) => {
                 const r = await store.unlockWithPin(s.username, pin);
                 if (!r.ok) return fail(r.error);
@@ -205,13 +257,16 @@ export function askUsername({ title = 'Your username', reason = 'Your trips are 
             });
             form.querySelector('[data-passkey]')?.addEventListener('click', (e) => signInWithPasskey(e.currentTarget, s.username));
             form.querySelector('[data-forgot]').onclick = () => { form.querySelector('[data-forgot-text]').hidden = false; };
+            form.querySelector('[data-email-code]')?.addEventListener('click', async (e) => {
+              if (await busy(e.currentTarget, () => store.requestPinReset(s.username))) codeStep(s.username);
+            });
           } else {
             newPin(box, head, {
               title: s.taken ? 'Protect your username' : 'Create a PIN',
               intro: `${s.taken ? `Add a 6-digit PIN to ${who} so only you can use it.` : `Pick a 6-digit PIN for ${who}.`}
                 You'll enter it when you use GroupTripIt on a new phone or laptop.`,
               extra: `<div style="text-align:center">${other}</div>`,
-              onPin: async (pin) => finish(await store.createPin(s.username, pin)),
+              onPin: async (pin) => emailStep(s.username, pin),
               onRedraw: wireOther,
             });
           }
@@ -255,6 +310,12 @@ export function openUsername() {
         <div class="stack" style="gap:8px;margin-top:8px">
           ${pk.passkeySupported() ? `<button class="btn btn-secondary btn-block" data-add>${icon('plus')}Add a passkey</button>` : ''}
           <button class="btn btn-secondary btn-block" data-pin>${icon('lock')}Change PIN</button>
+        </div>
+        <h3 style="display:flex;align-items:center;gap:8px;margin:18px 0 6px">${icon('bell')}If you forget your PIN</h3>
+        <div class="row" style="min-height:48px;padding:6px 0">
+          <div class="grow"><div style="font-weight:600" data-email>Loading…</div>
+            <div class="small muted">Only used to send a reset code — never trip updates.</div></div>
+          <button class="btn btn-xs btn-secondary" data-set-email>Change</button>
         </div>` : `
         <button class="btn btn-primary btn-block" data-unlock>${icon('lock')}Enter your PIN</button>
         <p class="hint" style="margin:6px 0 0">This device hasn't been checked with your PIN yet.</p>`}
@@ -277,6 +338,17 @@ export function openUsername() {
         });
       };
       draw();
+      const emailEl = dlg.querySelector('[data-email]');
+      const drawEmail = async () => {
+        if (!emailEl) return;
+        try {
+          const email = await store.recoveryEmail();
+          emailEl.textContent = email || 'No recovery email yet';
+          dlg.querySelector('[data-set-email]').textContent = email ? 'Change' : 'Add';
+        } catch { emailEl.textContent = 'Couldn\'t load'; }
+      };
+      drawEmail();
+      dlg.querySelector('[data-set-email]')?.addEventListener('click', () => recoveryEmailSheet(drawEmail));
       dlg.querySelector('[data-add]')?.addEventListener('click', async (e) => { if (await addPasskey(e.currentTarget)) draw(); });
       dlg.querySelector('[data-pin]')?.addEventListener('click', () => { close(); changePin(); });
       dlg.querySelector('[data-unlock]')?.addEventListener('click', async () => { close(); if (await askUsername({ username: u })) openUsername(); });
@@ -287,6 +359,33 @@ export function openUsername() {
         store.forgetUsername();
         location.hash = '#/';
         location.reload();
+      };
+    },
+  });
+}
+
+function recoveryEmailSheet(onSaved) {
+  sheet({
+    title: 'Recovery email',
+    body: `
+      <form class="form" id="recovery-form" novalidate>
+        <p class="hint" style="margin:0">If you forget your PIN, we email a reset code here. It's used for nothing else.</p>
+        <input class="input input-xl" name="email" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" aria-label="Recovery email" style="font-size:18px">
+        <button class="btn btn-primary btn-lg btn-block">Save</button>
+        <button type="button" class="btn btn-ghost btn-block" data-remove>Remove recovery email</button>
+      </form>`,
+    onMount(dlg, close) {
+      const form = dlg.querySelector('#recovery-form');
+      store.recoveryEmail().then((e) => { if (e) form.elements.email.value = e; }).catch(() => {});
+      setTimeout(() => form.elements.email.focus(), 50);
+      form.onsubmit = async (e) => {
+        e.preventDefault();
+        const email = form.elements.email.value.trim();
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { form.elements.email.focus(); return toast("That email address doesn't look right", { error: true }); }
+        if (await busy(form.querySelector('.btn-primary'), () => store.setRecoveryEmail(email))) { close(); toast('Recovery email saved'); onSaved?.(); }
+      };
+      form.querySelector('[data-remove]').onclick = async (e) => {
+        if (await busy(e.currentTarget, () => store.setRecoveryEmail(null))) { close(); toast('Recovery email removed'); onSaved?.(); }
       };
     },
   });

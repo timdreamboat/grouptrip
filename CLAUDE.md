@@ -94,8 +94,17 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
   Usernames from before v13 with no PIN can still list trips; the app asks
   them to set one. Passkeys are optional: offered right after the PIN, then
   "Not now" re-asks every 3 days, 3 times max (`maybeOfferPasskey`). Settings
-  (tap @username): passkeys list/add/remove, Change PIN, switch. Lost PIN:
-  change it on a signed-in device, use a passkey, or organizer "Let back in".
+  (tap @username): passkeys list/add/remove, Change PIN, recovery email,
+  switch. Lost PIN (v14, owner 2026-10-01): a username may carry a
+  `recovery_email` (asked once after creating the PIN, skippable; editable
+  in settings) used ONLY for "Forgot PIN? → Email me a reset code": Edge
+  Function `pin-reset` → `_pin_reset_begin` (6-digit code, 15 min, 5 tries,
+  one request / 2 min) → `reset_pin_with_code` sets the PIN and signs out
+  every other device. Needs `BREVO_API_KEY` (or `RESEND_API_KEY`) +
+  `EMAIL_FROM` as function secrets — until then the function answers 503
+  and the app says email isn't set up. `EMAIL_ENABLED` (notifications)
+  stays off; this is a separate, narrow use the owner approved. Other ways
+  back: Change PIN on a signed-in device, a passkey, or organizer "Let back in".
   `views/username.js` has the sheets, `passkey.js` the browser side;
   `store.js` keeps `grouptrip.username` + `grouptrip.devicekey` in
   localStorage. Switching username forgets this device's trips and its key.
@@ -161,6 +170,10 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
   print dialog, "Save as PDF" downloads it; card is always shown, wording changes once the trip has ended); non-organizers only receive their own
   expenses (enforced in `get_trip`, which wraps `_get_trip_all` — change trip
   contents in `_get_trip_all`). Family trips default expense splits to shares.
+- After the trip (`tripOver()` in common.js, last day in the past): Home
+  drops RSVP, to-dos, open polls, weather and arrivals and leads with a
+  "That's a wrap" card (settle up / expense report + photos) — UAT finding,
+  2026-10-01.
 - Who can see what (v10, owner 2026-09-28): business trips have
   `trips.privacy` — 'group' (everyone sees the whole group; small conference
   teams) or 'private' (each attendee sees only their own: members = self +

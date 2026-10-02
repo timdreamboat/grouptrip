@@ -73,6 +73,9 @@ export function statusPill(m, trip) {
 
 // Days from today, for sorting "happening soon" first.
 export const soon = (iso) => (iso ? daysUntil(iso) : 9999);
+// The trip has ended (its last day is in the past): Home stops asking about
+// RSVPs, to-dos and weather and leads with settling up and photos.
+export const tripOver = (trip) => Boolean(trip.endDate || trip.startDate) && daysUntil(trip.endDate || trip.startDate) < 0;
 
 export const tripCover = (trip) => coverBg(trip.destination || trip.name, trip.cover?.url ?? trip.cover);
 

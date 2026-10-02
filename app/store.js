@@ -86,7 +86,22 @@ export const validPin = (p) => /^[0-9]{6}$/.test(String(p || ''));
 
 // { taken, hasPin, hasPasskey } for a typed username.
 export const usernameStatus = (u) => rpc('username_status', { p_username: cleanUsername(u) });
-export const createPin = (u, pin) => rpc('create_pin', { p_username: cleanUsername(u), p_pin: pin });
+export const createPin = (u, pin, email = null) => rpc('create_pin', { p_username: cleanUsername(u), p_pin: pin, p_email: email || null });
+// Recovery email: only ever used to send a PIN reset code.
+export const recoveryEmail = () => rpc('recovery_email', { p_username: username(), p_device_key: deviceKey() });
+export const setRecoveryEmail = (email) => rpc('set_recovery_email', { p_username: username(), p_device_key: deviceKey(), p_email: email || null });
+export async function requestPinReset(u) {
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/pin-reset`, {
+    method: 'POST',
+    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: cleanUsername(u) }),
+  });
+  const r = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(r?.error || "Couldn't send the code right now — please try again");
+  return r;
+}
+// Resolves { ok, username, deviceKey } or { ok: false, error }. Signs out every other device.
+export const resetPinWithCode = (u, code, pin) => rpc('reset_pin_with_code', { p_username: cleanUsername(u), p_code: code, p_pin: pin });
 // Resolves { ok, username, deviceKey } or { ok: false, error } (wrong PIN, locked).
 export const unlockWithPin = (u, pin) => rpc('unlock_username', { p_username: cleanUsername(u), p_pin: pin });
 export const changePin = (pin) => rpc('change_pin', { p_username: username(), p_device_key: deviceKey(), p_pin: pin });

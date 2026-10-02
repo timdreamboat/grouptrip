@@ -27,6 +27,17 @@ and what's pending**.
   ("Not now" asks again in 3 days, 3 times max). See CLAUDE.md for details.
   **All demo-* usernames have PIN `246810`.** @timd had no PIN when this
   shipped — the app asks Tim to set one next time My trips opens.
+- PIN recovery by email (2026-10-01, v14): optional recovery email per
+  username → "Forgot PIN? → Email me a reset code". **Owner to-do:** set
+  `BREVO_API_KEY` (from Brevo → SMTP & API → API keys) and `EMAIL_FROM`
+  (a sender verified in Brevo, e.g. your Gmail) as Edge Function secrets in
+  the Supabase dashboard (Edge Functions → Secrets). Until then the button
+  says email isn't set up. The database side was tested end to end with a
+  simulated code on 2026-10-01.
+- The owner forgot @timd's PIN on 2026-10-01; the permission checker refused
+  to clear it from here. Fix: `delete from usernames where username = 'timd'`
+  in the SQL editor (then the app asks for a new PIN), or Change PIN on a
+  still-signed-in device.
 - To test roles: use different usernames in private windows.
 - Supabase Auth settings in the dashboard are now unused (nothing to set up).
 
@@ -167,6 +178,7 @@ trips with "zz-…" usernames for tests and delete them after.
   in calendar apps) and the `grouptrip.quiet` setting.
 
 ## Pending on the owner
+0. **Email secrets for PIN recovery** — see "PIN recovery by email" above.
 - **Claim the name** — grouptripit.com (and grouptripit.app) were
   unregistered on 2026-09-28, and @grouptripit looked free on Instagram,
   TikTok, X, Facebook, YouTube, Pinterest, Bluesky and GitHub. Once the

@@ -1,9 +1,9 @@
 // Trip home. Organizers get a planning dashboard (invite, readiness, who
 // we're waiting on). Guests get "your trip": RSVP, to-dos, balance, next up.
 import { esc, icon, avatar, avatarStack, fmtDay, fmtTime, share, copy } from '../ui.js';
-import { fmt } from '../money.js';
+import { fmt, balances, settleUp } from '../money.js';
 import * as store from '../store.js';
-import { heroHTML, going, flightsOf, organizer, firstName, myBalance, nextUp, memberById, words, isBusiness } from './common.js';
+import { heroHTML, going, flightsOf, organizer, firstName, myBalance, nextUp, memberById, words, isBusiness, tripOver } from './common.js';
 import { openAddFlight } from './flights.js';
 import { openEditTrip, openMe, openNotes } from './me.js';
 import { stayCard, handleStayClick } from './stays.js';
@@ -55,6 +55,22 @@ function organizerHome(ctx) {
     ...g.filter((m) => m.joined && !flightsOf(trip, m.id).length && m.id !== trip.me.id).map((m) => ({ m, why: 'No flight yet', kind: 'flight' })),
   ];
   const spent = trip.expenses.reduce((s, e) => s + e.amount, 0);
+
+  if (tripOver(trip)) {
+    const owed = settleUp(balances(trip)).length;
+    return `
+  <div class="stack-lg">
+    ${heroHTML(trip, { top: `
+      <span class="chip glass">${icon('crown')}You organized this</span>
+      <button class="btn btn-icon btn-sm chip glass" style="width:36px;height:36px;padding:0" data-action="edit-trip" aria-label="Edit trip">${icon('pencil')}</button>` })}
+    ${wrapUpCard(ctx, isBusiness(trip)
+      ? { title: `${fmt(spent, trip.currency)} in expenses`, sub: 'Export or print the report when everyone has added theirs', href: 'money', cta: 'Expense report' }
+      : owed
+        ? { title: `${owed} payment${owed === 1 ? '' : 's'} still to settle`, sub: `${fmt(spent, trip.currency)} spent by the group`, href: 'money', cta: 'Settle up' }
+        : { title: 'All settled up', sub: `${fmt(spent, trip.currency)} spent by the group`, href: 'money', cta: 'Money' })}
+    ${extras(ctx)}
+  </div>`;
+  }
 
   return `
   <div class="stack-lg">
@@ -115,11 +131,26 @@ function organizerHome(ctx) {
   </div>`;
 }
 
+// After the trip: one card that says what's left (money) and invites photos.
+function wrapUpCard({ trip }, { title, sub, href, cta }) {
+  return `
+    <section class="card stack" style="gap:12px">
+      <div><div class="eyebrow">That's a wrap</div>
+        <h2 style="margin-top:2px">${esc(title)}</h2>
+        <p class="hint" style="margin-top:4px">${esc(sub)}</p></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a class="btn btn-primary" href="#/t/${trip.id}/${href}">${icon('wallet')}${esc(cta)}</a>
+        <a class="btn btn-secondary" href="#/t/${trip.id}/photos">${icon('sparkle')}${trip.photos.length ? 'Add your photos' : 'Start the album'}</a>
+      </div>
+    </section>`;
+}
+
 // Shared by both homes: stay, good-to-know, weather, who's going.
 function extras(ctx) {
   const { trip, isOrg } = ctx;
   const g = going(trip);
-  const open = openPolls(trip);
+  const over = tripOver(trip);
+  const open = over ? [] : openPolls(trip);
   return `
     ${appCard()}
     ${open.length ? `<section><div class="section-head"><h2>Open polls</h2>
@@ -144,7 +175,7 @@ function extras(ctx) {
       </div>
     </section>` : ''}
 
-    ${trip.lat != null ? `
+    ${trip.lat != null && !over ? `
     <section>
       <div class="section-head"><h2>Weather</h2><span class="sub">${esc(trip.destination || '')} · by Windy</span></div>
       <div class="card" style="padding:0;overflow:hidden">
@@ -181,8 +212,9 @@ function guestHome(ctx) {
     ...(bal < 0 && !isBusiness(trip) ? [{ done: false, title: 'Settle up', sub: `You owe ${fmt(-bal, trip.currency)}`, href: 'money' }] : []),
   ].filter((t) => !t.hide);
   const left = todos.filter((t) => !t.done).length;
+  const over = tripOver(trip);
 
-  const arrivals = trip.flights
+  const arrivals = over ? [] : trip.flights
     .map((f) => ({ f, key: `${f.arrDate || f.date}T${f.arrTime || '99:99'}` }))
     .sort((a, b) => a.key.localeCompare(b.key)).slice(0, 4);
 
@@ -190,7 +222,11 @@ function guestHome(ctx) {
   <div class="stack-lg">
     ${heroHTML(trip, { top: org ? `<span class="chip glass">${avatar(org, 20)}Organized by ${esc(firstName(org.name))}</span>` : '' })}
     ${todayCard(ctx)}
-
+    ${over ? wrapUpCard(ctx, isBusiness(trip)
+      ? { title: toReimburse ? `${fmt(toReimburse, trip.currency)} to be reimbursed` : 'Your expenses are in', sub: 'Check your receipts and export your report', href: 'money', cta: 'My expenses' }
+      : bal < 0 ? { title: `You owe ${fmt(-bal, trip.currency)}`, sub: 'Pay with Venmo, then mark it paid', href: 'money', cta: 'Settle up' }
+      : bal > 0 ? { title: `You're owed ${fmt(bal, trip.currency)}`, sub: 'Friends can pay you from the Money tab', href: 'money', cta: 'Money' }
+      : { title: 'All square', sub: 'Nothing left to settle — thanks for coming', href: 'money', cta: 'Money' }) : `
     <section class="card stack">
       <div><h2>Are you going?</h2></div>
       <div class="segmented" role="group" aria-label="RSVP">
@@ -209,7 +245,7 @@ function guestHome(ctx) {
             ${t.done && !t.action ? '' : icon('chevron')}
           </${t.href ? 'a' : 'button'}>`).join('')}
       </div>
-    </section>
+    </section>`}
 
     <section class="stack">
       ${nextUpCard(ctx)}
