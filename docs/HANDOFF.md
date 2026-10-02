@@ -38,6 +38,11 @@ and what's pending**.
   database). **Public link to share:** https://timdreamboat.github.io/grouptrip/gigtrip/
   (the Pages workflow copies it in next to the app). Private preview:
   https://claude.ai/artifact/6ckEWFC9bMBHE2iFr7d1UY
+- **Two project skills** (in `.claude/skills/`, GigTrip only): `gigtrip-qa`
+  — run after any change to the mock (static check + an in-browser harness
+  that exercises every role, page, form, import/undo, settlement math and
+  light/dark contrast); `gigtrip-uat` — walk the app as each persona and list
+  what to adjust (reports go in `gigtrip/uat/`).
 - Spec to build from: `docs/GIGTRIP-SPEC.md`. Waiting on manager feedback
   before any real build. Deal/settlement math would be a new in-app
   processing exception — needs owner approval.

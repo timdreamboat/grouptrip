@@ -817,7 +817,7 @@ function navFor() {
   if (can('mymoney')) n.push(['mymoney', 'My money']);
   if (can('season')) n.push(['board', 'Season']);
   if (can('profit')) n.push(['money', 'Money']);
-  if (canEdit('advance')) n.push(['activity', 'Activity']);
+  if (canEdit('advance') && !isVenue()) n.push(['activity', 'Activity']);   // the venue gets its own show, not the tour's change log
   n.push(['party', isVenue() ? 'Tour team' : 'Party'], ['about', 'About & help']);
   return n;
 }
@@ -2374,7 +2374,7 @@ function route() {
   const att = attention().length;
   const ca = cur();
   $('#achipslot').innerHTML = hasHome() ? `<a class="achip" href="#home" aria-label="Switch artist (now ${ca === 'all' ? 'all artists' : esc(artist(ca).name)})">${ca === 'all' ? `<span class="ph aph" style="background:var(--tape)">${icon('board')}</span>` : artistPh(artist(ca))}<span class="nm">${ca === 'all' ? 'All artists' : esc(artist(ca).name)}</span>▾</a>` : '';
-  $('#bellslot').innerHTML = canEdit('advance') ? `<a class="iconbtn bell" href="#activity" aria-label="Activity, ${att} need attention">${icon('activity')}${att ? `<span class="badge">${att}</span>` : ''}</a>` : '';
+  $('#bellslot').innerHTML = canEdit('advance') && !isVenue() ? `<a class="iconbtn bell" href="#activity" aria-label="Activity, ${att} need attention">${icon('activity')}${att ? `<span class="badge">${att}</span>` : ''}</a>` : '';
   $('#main').innerHTML = V[r]();
   const h1 = $('#main .head h1'); if (h1 && HELP[r]) { h1.outerHTML = `<div class="titlerow">${h1.outerHTML}${helpBtn(r)}</div>`; }
   S.page = r;
