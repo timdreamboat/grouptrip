@@ -1787,7 +1787,6 @@ V.myhome = () => {
   <div class="head"><div><div class="eyebrow">${esc(p.name)} · ${esc(p.role)}</div><h1 class="display">${p.kind === 'artist' ? 'Your tours' : esc(a.name)}</h1>
     <div class="sub muted">${tours.length} tour${tours.length === 1 ? '' : 's'}${oneOffs.length ? ` · ${oneOffs.length} one-off show${oneOffs.length === 1 ? '' : 's'}` : ''}${today ? ` · show today in ${esc(cityOf(today))}` : ''}</div></div>
     ${today ? `<button class="btn btn-tape" data-go="today">${icon('today')} Today's day sheet</button>` : ''}</div>
-  ${mySupplyCard()}
   <div class="hgrid">${tours.map(card).join('')}</div>
   ${oneOffs.length ? `<section class="card"><h2 style="margin-bottom:4px">One-off shows</h2><div class="list">${oneOffs.map(s => `<div class="li click" data-show="${s.id}">${dateBox(s.date, s.date === NOW.date)}<div class="grow"><b>${esc(s.city)}</b> · ${esc(s.venue)}<div class="small muted">${fmtDate(s.date)}${s.note ? ' · ' + esc(s.note) : ''}</div></div>${statusChip(s)}</div>`).join('')}</div></section>` : ''}
   ${!tours.length && !oneOffs.length ? '<p class="muted">Nothing booked yet. Management adds shows; they appear here.</p>' : ''}`;
@@ -1906,6 +1905,7 @@ V.show = () => {
   } else {
     const has = DB.slots.some(x => x.show === s.id);
     body = `${has ? daySheet(s.id, editDay) : '<p class="muted">No day sheet yet. Start from your template, then adjust times.</p>'}
+      ${!isMgr() ? mySupplyCard().replace('<section class="card stack">', '<section class="card stack" style="margin-top:14px;background:var(--surface-2);border:0">') : ''}
       ${editDay ? `<div class="addbar" style="margin-top:12px">${addBtn('newSlot', 'Add time', s.id)}${has ? '' : addBtn('applySlots', 'Use day-sheet template', s.id, 'btn-tape')}</div>` : ''}`;
   }
   return `
