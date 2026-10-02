@@ -1044,7 +1044,8 @@ E.slot = (id, preset = {}) => {
   const t = id ? DB.slots.find(x => x.id === id) : null;
   openForm({
     title: t ? 'Edit time' : 'Add to the day sheet', value: t || { show: preset.show || S.showId, time: '17:00' },
-    fields: [{ k: 'time', label: 'Time', type: 'time', req: true }, { k: 'label', label: 'What', req: true }, { k: 'who', label: 'Who / where', full: true }, { k: 'key', label: 'Highlight for everyone', type: 'check', full: true }],
+    fields: [{ k: 'time', label: 'Time', type: 'time', req: true }, { k: 'label', label: 'What', req: true }, { k: 'who', label: 'Who / where', full: true }, { k: 'key', label: 'Highlight for everyone', type: 'check', full: true },
+      { k: 'venue', label: 'Does the venue see this line?', type: 'select', options: [['auto', 'Decide for me (tour calls, hotel and money stay private)'], ['yes', 'Yes'], ['no', 'No — tour only']], full: true }],
     onSave(o) { const x = t || { id: uid('s'), show: preset.show || S.showId }; Object.assign(x, o); if (!t) DB.slots.push(x); log(`${t ? 'Changed' : 'Added'} ${x.label} at ${ampm(x.time)} (${cityOf(show(x.show))})`); toast('Day sheet updated — everyone sees it now'); },
     onDelete: t && (() => { DB.slots = DB.slots.filter(x => x !== t); log(`Removed ${t.label} from the day sheet`); }),
   });
@@ -1246,6 +1247,8 @@ const HELP = {
   myhome: { what: 'Your tours and one-off shows, each on its own card, with what is next.', do: ['Tap a tour to see every date and the routing', 'Tap a show to see its day sheet and contacts', 'Today takes you straight to the current day sheet'], who: 'Artists and crew. Management and tour managers get the Artists page instead.' },
   today: { what: 'The day sheet for today, plus the venue, your hotel and who to call.', do: ['Tick off what you are bringing', 'Add the day to your calendar'], who: 'Everyone on the road.' },
 };
+// Notes about what the real build will do are for the owner and management, never for talent or venues.
+const proto = text => isMgr() ? text : '';
 const helpBtn = page => HELP[page] ? `<button class="helpbtn" type="button" data-act="help" data-id="${page}" aria-label="What is this page?">?</button>` : '';
 function openHelp(page) {
   const h = HELP[page]; if (!h) return;
@@ -1897,7 +1900,7 @@ V.tour = () => {
       ${mgr ? editBtn('tour', t.id, 'Edit tour') + addBtn('newShowTour', 'Add show', t.id, 'btn-tape') : ''}</div></div>
   ${coverBlock('tour:' + t.id, t, artist(t.artist), `${artistPh(artist(t.artist), 'ph')}<span class="tn">${esc(t.name)}</span>`, 'banner')}
   <div class="grid2 wide-left">
-    <section class="card map"><div class="row between" style="margin-bottom:8px"><h2>Routing</h2><span class="small muted">Real build: Google map embed</span></div>${routeMap(shows)}</section>
+    <section class="card map"><div class="row between" style="margin-bottom:8px"><h2>Routing</h2>${proto('<span class="small muted">Real build: Google map embed</span>')}</div>${routeMap(shows)}</section>
     ${costs ? `<section class="card stack"><h2>Money</h2>
       <dl class="kv"><dt>Show fees (settled + expected)</dt><dd>${money(total)}</dd>
       <dt>Deposits received</dt><dd>${money(shows.filter(s => s.deal.depPaid).reduce((a, s) => a + s.deal.dep, 0))}</dd>
@@ -1911,7 +1914,7 @@ V.tour = () => {
       <div class="li click" data-show="${s.id}">
         ${dateBox(s.date, s.date === NOW.date)}
         <div class="grow"><div><b>${esc(s.city)}</b> · ${esc(s.venue)}${s.date === NOW.date ? ' <span class="chip st-pending plain">Today</span>' : ''}</div>
-          <div class="small muted">${costs ? esc(dealText(s.deal, s.cur)) : fmtDate(s.date)}${s.note ? ' · ' + esc(s.note) : ''}</div>
+          <div class="small muted">${costs ? esc(dealText(s.deal, s.cur)) : (stageTime(s) ? 'On stage ' + ampm(stageTime(s)) : 'Times to come')}${s.note ? ' · ' + esc(s.note) : ''}</div>
           ${mgr ? `<div class="row small wrap" style="gap:10px;margin-top:6px"><div class="bar ${pctDone(s.id) === 100 ? 'good' : ''}" style="width:120px"><i style="width:${pctDone(s.id)}%"></i></div>
             <span class="muted">${pctDone(s.id)}% advanced</span>
             <span class="${taskDone(s.id, 'Contract') ? '' : 'muted'}">${taskDone(s.id, 'Contract') ? '✓' : '○'} contract</span>
@@ -2031,14 +2034,19 @@ function whoBringsWhat() {
     <p class="note">Each person confirms their own items on their Today screen.</p>`;
 }
 
+// the artist's own set time on a show's day sheet, if it's there yet
+const stageTime = s => { const sl = DB.slots.filter(x => x.show === s.id); const hit = sl.find(x => x.key && norm(x.label) === norm(artist(s.artist).name)) || sl.find(x => norm(x.label) === norm(artist(s.artist).name)) || sl.find(x => /\bset\b|on stage/i.test(x.label)); return hit ? hit.time : ''; };
+// lines the venue doesn't need: the tour's own calls, hotel, money. Management can override per line.
+const TOUR_ONLY = /lobby call|bus call|van |hotel|settlement|per diem|bus |lobby/i;
+const venueSees = x => x.venue === 'yes' ? true : x.venue === 'no' ? false : !TOUR_ONLY.test(x.label + ' ' + (x.who || ''));
 function daySheet(showId, edit) {
-  const slots = DB.slots.filter(x => x.show === showId).sort((a, b) => a.time.localeCompare(b.time));
+  const slots = DB.slots.filter(x => x.show === showId && (!isVenue() || venueSees(x))).sort((a, b) => a.time.localeCompare(b.time));
   const today = show(showId).date === NOW.date;
   const next = slots.findIndex(x => toMin(x.time) > NOW.min);
   const nowIdx = today ? (next === -1 ? slots.length - 1 : next - 1) : -2;
   return `<div class="sheet">${slots.map((x, i) => `
     <div class="slot ${i < nowIdx ? 'past' : ''} ${i === nowIdx ? 'now' : ''} ${x.key ? 'key' : ''}">
-      <span class="t">${x.time}</span><div class="row between" style="align-items:flex-start"><div><div class="what">${esc(x.label)}${i === nowIdx ? ' <span class="chip st-pending plain">Now</span>' : ''}</div><div class="small muted">${esc(x.who || '')}</div></div>${edit ? editBtn('slot', x.id, `Edit ${x.label}`) : ''}</div>
+      <span class="t">${x.time}</span><div class="row between" style="align-items:flex-start"><div><div class="what">${esc(x.label)}${i === nowIdx ? ' <span class="chip st-pending plain">Now</span>' : ''}</div><div class="small muted">${esc(x.who || '')}${edit && isMgr() && !venueSees(x) ? ' · <span title="The venue does not see this line">tour only</span>' : ''}</div></div>${edit ? editBtn('slot', x.id, `Edit ${x.label}`) : ''}</div>
     </div>`).join('')}</div>`;
 }
 
@@ -2059,7 +2067,7 @@ V.today = () => {
   const s = todays.length === 1 && cur() === 'all' ? todays[0] : DB.shows.find(x => x.date === NOW.date && x.status !== 'cancelled' && x.artist === cur());
   if (!s) {
     const up = curShows().filter(x => x.date > NOW.date && x.status !== 'cancelled').slice(0, 4);
-    return `<div class="ribbon"><span class="tapechip">Day off</span><span>Mock clock: ${fmtDate(NOW.date)}, ${ampm('16:05')}</span></div>
+    return `<div class="ribbon"><span class="tapechip">Day off</span><span>${fmtDate(NOW.date)}${proto(` · mock clock ${ampm('16:05')}`)}</span></div>
       <div class="head"><div><div class="eyebrow">${esc(artist(cur()).name)}</div><h1 class="display">No show today</h1></div></div>
       <section class="card"><h2 style="margin-bottom:4px">Coming up</h2><div class="list">${up.map(x => `<div class="li click" data-show="${x.id}">${dateBox(x.date)}<div class="grow"><b>${esc(x.city)}</b> · ${esc(x.venue)}<div class="small muted">${daysUntil(x.date) === 1 ? 'Tomorrow' : 'In ' + daysUntil(x.date) + ' days'} · ${pctDone(x.id)}% advanced</div></div>${statusChip(x)}</div>`).join('') || '<p class="muted">Nothing booked yet.</p>'}</div></section>`;
   }
@@ -2070,7 +2078,7 @@ V.today = () => {
   const hotel = DB.travel.find(x => x.type === 'hotel' && x.date <= NOW.date && seesTravel(x, me()));
   const contacts = DB.contacts.filter(c => c.show === s.id);
   return `
-  <div class="ribbon"><span class="tapechip">Show day</span><span>Mock clock: ${fmtDate(NOW.date)}, ${ampm('16:05')}</span></div>
+  <div class="ribbon"><span class="tapechip">Show day</span><span>${fmtDate(NOW.date)}${proto(` · mock clock ${ampm('16:05')}`)}</span></div>
   <section class="laminate">
     <div class="band"><span>${venue ? 'Venue · production' : 'All access'}</span><span>${esc(tour(s.tour)?.name || artist(s.artist).name)}</span></div>
     <div class="body">
@@ -2236,12 +2244,12 @@ V.travel = () => {
   const p = P(me()), mgr = isMgr(), edit = canEdit('travel');
   const items = DB.travel.filter(x => inCur(x.artist || 'jv') && (edit || seesTravel(x, me()))).sort((a, b) => a.date.localeCompare(b.date));
   const group = (type, title) => { const l = items.filter(x => x.type === type || (type === 'other' && !['flight', 'van', 'hotel'].includes(x.type))); return l.length ? `<section class="card"><h2 style="margin-bottom:4px">${title}</h2><div class="list">${l.map(x => `
-    <div class="li">${type === 'flight' ? `<div class="datebox"><div class="m">${MON[dt(x.date).getMonth()]}</div><div class="d">${dt(x.date).getDate()}</div></div>` : ''}<div class="grow ${x.date < NOW.date ? 'muted' : ''}"><b>${esc(x.label)}</b><div class="small muted">${fmtDate(x.date)}${x.time ? ' · ' + x.time : ''}${x.detail ? ' · ' + esc(x.detail) : ''}${edit ? ' · ' + esc(whoLabel(x.who)) : ''}</div></div>
-      ${x.date < NOW.date ? '<span class="chip st-settled">Done</span>' : ''}${edit ? editBtn('travel', x.id) : ''}</div>`).join('')}</div></section>` : ''; };
+    <div class="li">${type === 'flight' ? `<div class="datebox"><div class="m">${MON[dt(x.date).getMonth()]}</div><div class="d">${dt(x.date).getDate()}</div></div>` : ''}<div class="grow ${x.date < NOW.date ? 'muted' : ''}"><b>${esc(x.label)}</b><div class="small muted">${type === 'hotel' && /^[A-Z][a-z]{2} \d/.test(x.detail || '') ? '' : fmtDate(x.date) + (x.time ? ' · ' + x.time : '') + (x.detail ? ' · ' : '')}${x.detail ? esc(x.detail) : ''}${edit ? ' · ' + esc(whoLabel(x.who)) : ''}</div></div>
+      ${x.date < NOW.date ? `<span class="chip st-settled">${type === 'hotel' ? 'Checked out' : 'Done'}</span>` : ''}${edit ? editBtn('travel', x.id) : ''}</div>`).join('')}</div></section>` : ''; };
   return `
   <div class="head"><div><div class="eyebrow">${mgr || edit ? 'Everyone\'s travel' : esc(p.name) + ' · ' + esc(p.role)}</div><h1 class="display">${mgr || edit ? 'Travel' : 'My travel'}</h1>
     <div class="sub muted">${edit ? 'Each item shows only for the people it applies to.' : 'Only yours.'}</div></div>${edit ? addBtn('newTravel', 'Add travel', '', 'btn-tape') : ''}</div>
-  <div class="grid2"><div class="stack">${group('flight', 'Flights')}<p class="note">Real build: flight times fill in from the flight number, as in GroupTripIt.</p></div>
+  <div class="grid2"><div class="stack">${group('flight', 'Flights')}${proto('<p class="note">Real build: flight times fill in from the flight number.</p>')}</div>
     <div class="stack">${group('van', 'Van')}${group('hotel', 'Hotels')}${group('other', 'Other')}
       ${!edit && p.room ? `<p class="note">Your room tonight: ${esc(p.room)}</p>` : ''}</div></div>`;
 };

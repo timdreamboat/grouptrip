@@ -228,6 +228,12 @@ team); single-artist show picker lists upcoming shows without the artist name;
 Getting started only for management; Add a show has Deal and Venue details as
 collapsed sections; expense rows wrap on phones; venue wording on its list.
 
+**UAT polish** (2026-10-01): prototype notes (`proto()`) show only to
+management; tour rows show "On stage 9:00 pm" for talent instead of the
+date twice; hotels show one date range and "Checked out"; the venue's day
+sheet hides tour-only lines (lobby/bus calls, hotel, settlement) by a
+per-line `venue` setting — auto / yes / no — in the day-sheet form.
+
 **Manager and tour manager have the same access** (owner, 2026-10-01): both
 can see and edit everything (deals, settlement, budgets, day sheets, people,
 who-sees-what, imports). The difference is scope and job: management = the
