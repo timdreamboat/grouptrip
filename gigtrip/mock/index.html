@@ -114,9 +114,11 @@ main { padding: 18px 16px 110px; max-width: 1080px; width: 100%; margin: 0 auto;
 @media (min-width: 900px) {
   .shell { grid-template-columns: 244px minmax(0, 1fr); }
   .side {
-    display: flex; flex-direction: column; gap: 4px; position: sticky; top: 0; height: 100vh;
+    display: flex; flex-direction: column; gap: 4px; position: sticky; top: 0; height: 100vh; height: 100dvh;
     padding: 18px 14px; border-right: 1px solid var(--line); background: var(--surface);
+    overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin;
   }
+  .side .foot { flex: none; padding-top: 16px; }
   .side .brand { padding: 4px 8px 18px; }
   .side nav { display: grid; gap: 2px; }
   .side nav a { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 12px; text-decoration: none; color: var(--muted); font-weight: 500; }
@@ -420,7 +422,7 @@ dialog.sheet .field select, dialog.sheet .field input { max-width: 100%; }
     <a class="brand" href="#home" data-act="goHome" aria-label="GigTrip home"><span class="logo">G</span><b>GigTrip</b></a>
     <nav id="sidenav"></nav>
     <div class="foot">
-      <span>Prototype · sample data</span><button class="btn btn-outline btn-sm" data-act="help" data-id="__page" style="justify-content:flex-start">? What is this page</button>
+      <span id="footimport"></span><span>Prototype · sample data</span><button class="btn btn-outline btn-sm" data-act="help" data-id="__page" style="justify-content:flex-start">? What is this page</button>
       <a href="https://timdreamboat.github.io/grouptrip/" target="_blank" rel="noopener">Made by GroupTripIt ↗</a>
     </div>
   </aside>
@@ -1700,7 +1702,7 @@ V.home = () => {
   return `
   <div class="head"><div><div class="eyebrow">${isMgr() ? 'Northlight Mgmt' : esc(p.name) + ' · ' + esc(KINDS[p.kind])}</div><h1 class="display">Your artists</h1>
     <div class="sub muted">${myArtists().length} artists · ${today.length ? `${today.length} show${today.length > 1 ? 's' : ''} today · ` : ''}pick one to work on</div></div>
-    ${isMgr() ? addBtn('newArtist', 'Add artist', '', 'btn-tape') : ''}</div>
+    ${isMgr() ? `<div class="addbar">${addBtn('newArtist', 'Add artist', '', 'btn-tape')}<button class="btn btn-secondary btn-sm" data-act="import">${icon('upload')} Import data</button></div>` : ''}</div>
   <div class="row wrap between">
     <label class="field" for="hq" style="flex:1;min-width:200px;max-width:360px"><span class="sr">Search artists</span><input id="hq" type="search" placeholder="Search ${myArtists().length} artists" value="${esc(S.hq)}" style="height:38px"></label>
     <div class="seg" data-filter="hsort"><button aria-pressed="${S.hsort === 'next'}" data-v="next">Next show</button><button aria-pressed="${S.hsort === 'att'}" data-v="att">Needs attention</button><button aria-pressed="${S.hsort === 'az'}" data-v="az">A–Z</button></div>
@@ -2297,6 +2299,7 @@ function route() {
   $('#main').innerHTML = V[r]();
   const h1 = $('#main .head h1'); if (h1 && HELP[r]) { h1.outerHTML = `<div class="titlerow">${h1.outerHTML}${helpBtn(r)}</div>`; }
   S.page = r;
+  $('#footimport').innerHTML = isMgr() ? `<button class="btn btn-tape btn-sm" data-act="import" style="justify-content:flex-start">${icon('upload')} Import data</button>` : '';
   $('#role').value = S.role;
   applyTheme();
 }
