@@ -338,6 +338,12 @@ commissions, budget (needs owner approval as exception #6), CSV import/export,
 activity feed. Screens port 1:1 from the mock's views.
 
 ## 8. Where it lives (real build)
+Full target architecture (front end, API gateway, services, tenancy and
+roles, security, connector framework, data model, scaling, ops, costs, and an
+AWS-native mapping for the 7Wood Systems platform):
+https://claude.ai/code/artifact/904eb89b-5918-49c2-b451-f259a1eabb80
+(2026-10-08). The notes below are the short form.
+
 - Same repo, new folder `gigtrip/` that imports shared modules from `app/`
   (`store.js`, `ui.js`, `money.js`, `style.css` tokens) and adds GigTrip
   views + its own theme (gaffer-yellow accent, condensed display type).
