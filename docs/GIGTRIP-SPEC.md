@@ -342,7 +342,10 @@ Full target architecture (front end, API gateway, services, tenancy and
 roles, security, connector framework, data model, scaling, ops, costs, and an
 AWS-native mapping for the 7Wood Systems platform):
 https://claude.ai/code/artifact/904eb89b-5918-49c2-b451-f259a1eabb80
-(2026-10-08). The notes below are the short form.
+(2026-10-08, current path: Supabase/Kong/Vercel/Cloudflare). The all-AWS
+version for the 7Wood Systems platform (Aurora, API Gateway, Lambda, Cognito,
+S3, SQS/EventBridge, CDK): https://claude.ai/code/artifact/188693cf-7a9b-4ddd-bcec-348f6bc2d8a3
+The notes below are the short form.
 
 - Same repo, new folder `gigtrip/` that imports shared modules from `app/`
   (`store.js`, `ui.js`, `money.js`, `style.css` tokens) and adds GigTrip
