@@ -96,6 +96,16 @@
   if (open(() => E.person(null), 'Add person')) { set('name', 'QA Person'); await submit(); check(Object.keys(DB.people).length === n0.people + 1, 'Add person did not save'); }
   if (open(() => E.guest(null, { show: 'nyc' }), 'Add guest')) { set('name', 'QA Guest'); await submit(); check(DB.guests.length === n0.guests + 1, 'Add guest did not save'); }
   if (open(() => E.travel(null), 'Add travel')) { set('label', 'QA → QA'); await submit(); check(DB.travel.length === n0.travel + 1, 'Add travel did not save'); }
+  // Flights, hotels and OpenTable (2026-10-08): boarding passes, hotel cards with rooms, "Find my flight", linked dates, Reserve embed.
+  if (open(() => E.flight(null), 'Add flight')) { set('flight', 'AC 8783'); d.querySelector('[data-lookup]').click(); check(d.querySelector('[name=from]').value === 'DCA' && d.querySelector('[name=arr]').value === '12:15', 'Find my flight did not fill the times'); await submit(); check(DB.travel.some(x => x.flight === 'AC 8783' && x.label === 'DCA → YYZ' && x.date === NOW.date), 'Add flight did not save with a route'); }
+  if (open(() => E.hotel(null), 'Add hotel')) { set('name', 'QA Inn'); set('start', '2027-12-01'); d.querySelector('[name=start]').dispatchEvent(new Event('input', { bubbles: true })); check(d.querySelector('[name=end]').value === '2027-12-02', 'Hotel check-out did not follow check-in'); await submit(); const h = DB.travel.find(x => x.name === 'QA Inn'); check(h && h.checkIn === '2027-12-01' && h.checkOut === '2027-12-02' && h.type === 'hotel', 'Add hotel did not save check-in/out'); }
+  if (open(() => E.slot(null, { show: 'nyc' }), 'Add dinner with OpenTable')) { set('time', '17:45'); set('label', 'QA dinner'); set('ot', 'https://www.opentable.com/restref/client/?rid=1779'); await submit(); const sl = DB.slots.find(x => x.label === 'QA dinner'); check(sl && sl.ot === '1779', 'OpenTable link did not become a restaurant ID'); if (sl) { ACT.reserve(sl.id); check(d.open && /opentable\.com\/restref/.test(d.querySelector('iframe')?.src || ''), 'Reserve did not open the OpenTable embed'); d.close(); } }
+  S.role = 'manager'; render('travel'); check(main.querySelectorAll('.pass').length >= 4 && main.querySelectorAll('.hotel').length >= 2, 'Travel page is missing boarding passes or hotel cards');
+  check(/Room 612 · Theo, Sam/.test(txt()), 'Hotel card does not show who shares a room');
+  S.role = 'crew'; render('travel'); check(main.querySelectorAll('.pass').length >= 1 && !main.querySelector('[data-act="flight"],[data-act="hotel"]'), 'Crew travel has no flights or shows edit buttons');
+  render('today'); check(/Hotel[\s\S]*Your room 616/.test(txt()), 'Crew Today is missing the hotel with their room');
+  S.role = 'tm'; S.showId = 'nyc'; S.showTab = 'sheet'; render('show'); check(/Reserve on OpenTable/.test(txt()), 'Day sheet is missing the OpenTable button on the dinner line');
+  S.role = 'manager';
   if (open(() => E.supply(null, { person: 'nico' }), 'Add item to bring')) { set('label', 'QA cable'); await submit(); check(DB.supply.length === n0.supply + 1, 'Add item to bring did not save'); }
   if (open(() => E.budget(null, { tour: 't1' }), 'Add budget line')) { set('cat', 'QA line'); set('budget', '100'); await submit(); check(DB.budget.length === n0.budget + 1, 'Add budget line did not save'); }
   if (open(() => E.offer(null), 'Log offer')) { set('city', 'QA Town'); set('venue', 'QA Club'); await submit(); check(DB.offers.length === n0.offers + 1, 'Log offer did not save'); }
@@ -105,7 +115,7 @@
 
   // 6. Non-management cannot reach management forms through the UI.
   S.role = 'crew'; S.artistId = 'jv'; render('party'); check(!main.querySelector('[data-act="person"]'), 'Crew can edit people');
-  render('travel'); check(!main.querySelector('[data-act="newTravel"]'), 'Crew can add travel for everyone');
+  render('travel'); check(!main.querySelector('[data-act="newTravel"],[data-act="newFlight"],[data-act="newHotel"]'), 'Crew can add travel for everyone');
   S.role = 'artist'; S.tourId = 't1'; render('tour'); check(!main.querySelector('[data-act="tour"],[data-act="newShowTour"],.coveredit'), 'Artist can edit the tour or its photo');
 
   // 7. Import from a spreadsheet, then undo it, leaves no trace.
@@ -123,6 +133,16 @@
     render('board'); check(main.querySelectorAll('.st-imported').length >= 2, 'Imported shows are not tagged on the Season board');
     undoImport(DB.imports[0].id);
     check(DB.shows.length === before.shows && DB.tasks.length === before.tasks && DB.artists.length === before.artists && DB.imports.length === 0, 'Undo import left data behind');
+    // Travel rows from a spreadsheet get the fields the boarding pass needs.
+    openImportWizard(); W.source = 'excel'; W.step = 1; renderWizard();
+    const tcsv = 'Type,Date,Route,Time,Details,Who\nflight,4/20/27,YYZ → LAX,09:10,"AC 791 · arrives 11:35 · conf ZZ12AB",road\nhotel,4/20/27,Sunset Tower LA,,Apr 20 – 22,road';
+    await takeFile(new File([tcsv], 'travel.csv', { type: 'text/csv' })); prepSheet();
+    check(W.kind === 'travel', `Travel import detected "${W.kind}"`);
+    W.result = buildImport(false); d.close();
+    const imp = DB.travel.find(x => x.label === 'YYZ → LAX');
+    check(imp && imp.from === 'YYZ' && imp.to === 'LAX' && imp.flight === 'AC 791' && imp.arr === '11:35' && imp.conf === 'ZZ12AB', 'Imported flight is missing its route, number, arrival or confirmation');
+    S.role = 'manager'; S.artistId = 'jv'; render('travel'); check(fits(), 'Travel page with imported rows is wider than the screen');
+    undoImport(DB.imports[0].id);
   } catch (e) { failed.push(`Import: crashed — ${e.message}`); if (d.open) d.close(); }
 
   // 8. Export has every show for the current artist context, as spreadsheet rows.
@@ -137,7 +157,7 @@
   const contrast = el => { const L1 = lum(getComputedStyle(el).color), L2 = lum(bgOf(el)); if (L1 == null || L2 == null) return 21; const [a, b] = L1 > L2 ? [L1, L2] : [L2, L1]; return (a + .05) / (b + .05); };
   for (const theme of ['light', 'dark']) {
     setTheme(theme); await wait(50);
-    for (const [role, page] of [['manager', 'home'], ['manager', 'board'], ['artist', 'myhome'], ['tm', 'today'], ['manager', 'access']]) {
+    for (const [role, page] of [['manager', 'home'], ['manager', 'board'], ['artist', 'myhome'], ['tm', 'today'], ['manager', 'access'], ['manager', 'travel'], ['crew', 'travel'], ['crew', 'today']]) {
       S.role = role; S.artistId = 'jv'; render(page);
       const els = [...main.querySelectorAll('h1,h2,b,.muted,.small,.chip,.eyebrow,.btn,.note,td,th,label')].filter(e => e.offsetParent && e.textContent.trim());
       let low = 0; for (const e of els.slice(0, 160)) if (contrast(e) < 3) low++;

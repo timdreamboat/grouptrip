@@ -54,6 +54,20 @@ and what's pending**.
   that exercises every role, page, form, import/undo, settlement math and
   light/dark contrast); `gigtrip-uat` — walk the app as each persona and list
   what to adjust (reports go in `gigtrip/uat/`).
+- Travel in the mock (2026-10-08, owner: "similar functionality as GroupTrip
+  for flights, hotels and OpenTable"): flights are boarding passes (number,
+  date, FROM time → TO time, confirmation, Live map / FlightAware, "Find my
+  flight" fills times from a small mock timetable — real build: AeroDataBox);
+  hotels are cards with check-in/out, nights, who is in which room (rooms
+  from each person's card in Party), confirmation, Directions, booking site;
+  van legs unchanged. Day-sheet lines take an OpenTable link/ID → "Reserve on
+  OpenTable" opens OpenTable's own booking screen in a dialog (party size =
+  people on the road, time from the line) + "Book on <site>" for other links.
+  Today shows the hotel with your room and your flight if you fly that day.
+  Imported travel rows get the structured fields (`enrichTravel`). The QA
+  harness (`.claude/skills/gigtrip-qa`) checks all of it. Pushed to `main`
+  (live at /gigtrip/ on Pages); the Artifact preview link was NOT republished
+  from this session — republish it from the GigTrip session.
 - Spec to build from: `docs/GIGTRIP-SPEC.md`. Waiting on manager feedback
   before any real build. Deal/settlement math would be a new in-app
   processing exception — needs owner approval.

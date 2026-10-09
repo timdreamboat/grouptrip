@@ -26,7 +26,7 @@
   --hold: #2f5bd3; --hold-soft: #e2e9fb;
   --offer: #7a3fc4; --offer-soft: #efe4fb;
   --warn: #a86a12; --warn-soft: #fbefd5;
-  --bad: #d4383e; --bad-soft: #fde2e1;
+  --bad: #d4383e; --bad-soft: #fde2e1; --ot: #da3743;
   --ring: rgba(255, 204, 26, .55);
   --shadow: 0 1px 2px rgba(20, 16, 10, .04), 0 6px 20px rgba(20, 16, 10, .06);
   --font-ui: 'Geist', ui-sans-serif, system-ui, -apple-system, sans-serif;
@@ -43,7 +43,7 @@
     --tape: #ffd23a; --tape-ink: #141414; --accent-ink: #ffd23a;
     --good: #3ccf91; --good-soft: #10291f; --hold: #86a6ff; --hold-soft: #172042;
     --offer: #c29bff; --offer-soft: #271b3b; --warn: #f0b44c; --warn-soft: #2e2413;
-    --bad: #ff6b6f; --bad-soft: #341617; --ring: rgba(255, 210, 58, .5);
+    --bad: #ff6b6f; --bad-soft: #341617; --ring: rgba(255, 210, 58, .5); --ot: #da3743;
     --shadow: 0 1px 2px rgba(0, 0, 0, .4); --av-l: 30%; --av-ink: 86%;
     color-scheme: dark;
   }
@@ -55,7 +55,7 @@
   --tape: #ffd23a; --tape-ink: #141414; --accent-ink: #ffd23a;
   --good: #3ccf91; --good-soft: #10291f; --hold: #86a6ff; --hold-soft: #172042;
   --offer: #c29bff; --offer-soft: #271b3b; --warn: #f0b44c; --warn-soft: #2e2413;
-  --bad: #ff6b6f; --bad-soft: #341617; --ring: rgba(255, 210, 58, .5);
+  --bad: #ff6b6f; --bad-soft: #341617; --ring: rgba(255, 210, 58, .5); --ot: #da3743;
   --shadow: 0 1px 2px rgba(0, 0, 0, .4); --av-l: 30%; --av-ink: 86%;
   color-scheme: dark;
 }
@@ -446,6 +446,36 @@ dialog.sheet .field select, dialog.sheet .field input { max-width: 100%; }
 .fgroup .fgrid { padding-bottom: 14px; }
 @media (max-width: 480px) { .xrow { flex-wrap: wrap; } .xrow .grow { flex: 1 1 60%; min-width: 55%; } .xrow .num { margin-left: 56px; } }
 .seg.themeseg button[aria-pressed="true"] { background: var(--tape); color: var(--tape-ink); border-color: var(--tape); }
+/* ---------- travel: boarding passes, hotels, embeds (same patterns as GroupTripIt) ---------- */
+.pass { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; }
+.pass.mine { border-color: var(--tape); }
+.pass.past { opacity: .72; }
+.pass-top { display: flex; align-items: center; gap: 10px; padding: 14px 16px 0; }
+.pass-top .grow { flex: 1; min-width: 0; }
+.pass-route { display: grid; grid-template-columns: 1fr minmax(40px, 1fr) 1fr; align-items: center; gap: 8px; padding: 12px 16px 14px; }
+.pass-route .end { text-align: right; }
+.pass .code { font: 800 clamp(28px, 7vw, 40px)/1 var(--font-display); letter-spacing: .01em; }
+.pass .when { font-size: 13px; color: var(--muted); margin-top: 4px; font-variant-numeric: tabular-nums; }
+.pass .when b { color: var(--text); }
+.pass-line { position: relative; height: 20px; display: grid; place-items: center; color: var(--muted); }
+.pass-line::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; border-top: 1.5px dashed var(--line-strong); }
+.pass-line svg.i { position: relative; background: var(--surface); padding: 0 6px; width: 30px; height: 20px; transform: rotate(45deg); }
+.pass-foot { position: relative; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; padding: 10px 12px; border-top: 1.5px dashed var(--line-strong); }
+.pass-foot::before, .pass-foot::after { content: ''; position: absolute; top: -9px; width: 16px; height: 16px; border-radius: 50%; background: var(--bg); border: 1px solid var(--line); }
+.pass-foot::before { left: -9px; } .pass-foot::after { right: -9px; }
+.pass-foot .spacer { flex: 1; }
+.hotel { display: grid; gap: 10px; }
+.hotel .inout { display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: center; background: var(--surface-2); border-radius: var(--r-sm); padding: 10px 12px; }
+.hotel .inout .end { text-align: right; }
+.hotel .inout b { display: block; font-size: 15px; }
+.hotel .inout .nights { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.rooms { display: flex; flex-wrap: wrap; gap: 6px; }
+.rooms .chip { height: 26px; font-size: 12px; }
+.btn-ot { background: var(--ot); color: #fff; }
+.embed-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 16px; }
+.embed-frame { width: 100%; height: min(70vh, 640px); border: 0; display: block; background: var(--surface-2); }
+.slot .booking { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; margin-top: -4px; }
+.row.wrap { flex-wrap: wrap; }
 </style>
 
 <div class="shell">
@@ -598,7 +628,7 @@ function seed() {
   merchTask.comments.push({ who: 'dana', at: 'Apr 11', text: '@Ellie venue wants 20% on soft goods. Can we get it to 15%?' }, { who: 'ellie', at: 'Apr 11', text: 'Asked Nina, waiting on her reply.' });
   const nycSlots = [
     ['12:00', 'Lobby call — van to venue', 'Everyone', true], ['13:00', 'Load-in', 'Crew · dock on Lispenard St'], ['15:30', 'Line check + video check', 'Luis, Mo, Nico'],
-    ['16:30', 'Soundcheck — Juniper Vale', 'Band', true], ['17:30', 'Soundcheck — Hollow Pines', 'Support'], ['18:00', 'Dinner', 'Green room (buyout)'],
+    ['16:30', 'Soundcheck — Juniper Vale', 'Band', true], ['17:30', 'Soundcheck — Hollow Pines', 'Support'], ['18:00', 'Dinner', 'Green room (buyout) · band table booked at Lucali, 6 people', false, '1779'],
     ['19:00', 'Doors', 'Venue'], ['20:00', 'Hollow Pines', '40 min'], ['21:00', 'Juniper Vale', '90 min', true],
     ['22:30', 'Curfew', 'Hard — $1,000 per 15 min over'], ['23:00', 'Settlement', 'Dana + Nina · production office'], ['23:30', 'Load-out', 'Crew'],
   ];
@@ -635,7 +665,7 @@ function seed() {
       { id: 'o2', artist: 'jv', date: '2027-05-16', city: 'Nashville, TN', venue: 'Brightwater Hall', cap: 900, promoter: 'Cumberland Presents', deal: '$8,000 flat + hotel buyout', g: 800000, radius: '45 days, 100 mi', expires: '2027-04-19', status: 'offer' },
       { id: 'o3', artist: 'co', date: '2027-06-19', city: 'Halifax, NS', venue: 'Harbor Lights Fest', cap: 12000, promoter: 'Harbor Lights', deal: '$18,000 flat (festival)', g: 1800000, radius: 'No Atlantic Canada shows 90 days before', expires: '2027-04-22', status: 'offer' },
     ],
-    slots: nycSlots.map(([time, label, who, key]) => ({ id: uid('s'), show: 'nyc', time, label, who, key: !!key })),
+    slots: nycSlots.map(([time, label, who, key, ot]) => ({ id: uid('s'), show: 'nyc', time, label, who, key: !!key, ot: ot || '' })),
     tasks,
     docs: [
       ...[['Hospitality rider', 'v3 · sent Mar 2'], ['Tech rider + input list', 'v5 · sent Mar 2'], ['Stage plot', 'v5 · PDF'], ['Contract', 'Signed Feb 18'], ['Certificate of insurance', 'Requested by venue']]
@@ -659,10 +689,13 @@ function seed() {
       { id: uid('v'), type: 'van', date: '2027-04-11', label: 'Boston → New York', time: '11:00', detail: '3h 45m · 346 km', who: 'road', artist: 'jv' },
       { id: uid('v'), type: 'van', date: '2027-04-13', label: 'New York → Philadelphia', time: '09:00', detail: '1h 50m · 153 km', who: 'road', artist: 'jv' },
       { id: uid('v'), type: 'van', date: '2027-04-14', label: 'Philadelphia → Washington (day off)', time: '12:00', detail: '2h 45m · 224 km', who: 'road', artist: 'jv' },
-      { id: uid('v'), type: 'hotel', date: '2027-04-11', label: 'The Mercer Row Hotel, New York', time: '', detail: 'Apr 11 – 13 · 88 Grand St', who: 'road', artist: 'jv' },
-      { id: uid('v'), type: 'hotel', date: '2027-04-13', label: 'Hotel Tinsley, Philadelphia', time: '', detail: 'Apr 13 – 15', who: 'road', artist: 'jv' },
-      { id: uid('v'), type: 'flight', date: '2027-04-16', label: 'DCA → YYZ', time: '10:40', detail: 'AC 8783 · arrives 12:15 · conf Q7RT2M', who: 'road', artist: 'jv' },
-      { id: uid('v'), type: 'flight', date: '2027-04-23', label: 'YYZ → CLT → AVL', time: '08:05', detail: 'AA 1739 + AA 5210 · arrives 12:30 · conf W4KD9P', who: 'road', artist: 'jv' },
+      // Hotels and flights carry structured fields (like GroupTripIt's stays and boarding passes); label/time/detail stay for imports and old rows.
+      { id: uid('v'), type: 'hotel', date: '2027-04-11', name: 'The Mercer Row Hotel', address: '88 Grand St, New York, NY 10013', checkIn: '2027-04-11', checkOut: '2027-04-13', inTime: '15:00', outTime: '11:00', conf: 'MRH-55821', url: 'https://www.hotels.com', notes: 'Van parking in the Grand St garage — validate at the desk. Breakfast 6:30–10.', label: 'The Mercer Row Hotel, New York', time: '', detail: 'Apr 11 – 13 · 88 Grand St', who: 'road', artist: 'jv' },
+      { id: uid('v'), type: 'hotel', date: '2027-04-13', name: 'Hotel Tinsley', address: '1200 Walnut St, Philadelphia, PA 19107', checkIn: '2027-04-13', checkOut: '2027-04-15', inTime: '16:00', outTime: '12:00', conf: 'TNS-20417', label: 'Hotel Tinsley, Philadelphia', time: '', detail: 'Apr 13 – 15', who: 'road', artist: 'jv' },
+      { id: uid('v'), type: 'flight', date: '2027-04-16', flight: 'AC 8783', from: 'DCA', to: 'YYZ', dep: '10:40', arr: '12:15', conf: 'Q7RT2M', label: 'DCA → YYZ', time: '10:40', detail: 'AC 8783 · arrives 12:15 · conf Q7RT2M', who: 'road', artist: 'jv' },
+      { id: uid('v'), type: 'flight', date: '2027-04-16', flight: 'UA 512', from: 'EWR', to: 'YYZ', dep: '07:15', arr: '08:50', conf: 'H8MZ2L', notes: 'Flying from home — meets the van at YYZ', label: 'EWR → YYZ', time: '07:15', detail: 'UA 512 · arrives 08:50 · conf H8MZ2L', who: 'nico', artist: 'jv' },
+      { id: uid('v'), type: 'flight', date: '2027-04-23', flight: 'AA 1739', from: 'YYZ', to: 'CLT', dep: '08:05', arr: '10:20', conf: 'W4KD9P', label: 'YYZ → CLT', time: '08:05', detail: 'AA 1739 · arrives 10:20 · conf W4KD9P', who: 'road', artist: 'jv' },
+      { id: uid('v'), type: 'flight', date: '2027-04-23', flight: 'AA 5210', from: 'CLT', to: 'AVL', dep: '11:30', arr: '12:30', conf: 'W4KD9P', notes: 'Connection · 70 min in CLT', label: 'CLT → AVL', time: '11:30', detail: 'AA 5210 · arrives 12:30 · conf W4KD9P', who: 'road', artist: 'jv' },
     ],
     budget: [
       ['t1', 'Crew pay', 2880000, 1645000], ['t1', 'Travel — van, fuel, flights', 1420000, 988000], ['t1', 'Hotels', 1260000, 734000],
@@ -812,6 +845,8 @@ const ICONS = {
   more: 'M5 12h.01 M12 12h.01 M19 12h.01', myhome: 'M3 11l9-8 9 8 M5 10v10h5v-6h4v6h5V10', overview: 'M12 3a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z M6 11a6 6 0 0 0 12 0 M12 17v4 M9 21h6', about: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z M12 11v5 M12 8v.01',
   chev: 'M9 6l6 6-6 6', sun: 'M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10z M12 2v2 M12 20v2 M4.9 4.9l1.4 1.4 M17.7 17.7l1.4 1.4 M2 12h2 M20 12h2 M4.9 19.1l1.4-1.4 M17.7 6.3l1.4-1.4', moon: 'M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z', imports: 'M12 16V4 M7 9l5-5 5 5 M4 16v4h16v-4', home: 'M4 5h7v7H4z M13 5h7v7h-7z M4 14h7v6H4z M13 14h7v6h-7z', edit: 'M4 20h4L19 9l-4-4L4 16z M14 6l4 4', plus: 'M12 5v14 M5 12h14', file: 'M6 3h9l4 4v14H6z M14 3v5h5',
   upload: 'M12 16V4 M7 9l5-5 5 5 M4 16v4h16v-4', comment: 'M4 5h16v11H8l-4 4z',
+  plane: 'M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z', bed: 'M3 18v-7h18v7 M3 11V6 M7 11V8h10v3 M3 16h18',
+  fork: 'M7 3v8a2 2 0 0 0 4 0V3 M9 11v10 M17 3c-2 0-3 3-3 6v3h3v9', ext: 'M14 4h6v6 M20 4l-9 9 M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5',
 };
 const icon = (n, cls = '') => `<svg class="i ${cls}" viewBox="0 0 24 24" aria-hidden="true"><path d="${ICONS[n]}"/></svg>`;
 const editBtn = (act, id, label = 'Edit') => `<button class="iconbtn" type="button" data-act="${act}" data-id="${esc(id)}" aria-label="${esc(label)}">${icon('edit')}</button>`;
@@ -915,6 +950,72 @@ function openForm({ title, fields, value = {}, submit = 'Save', onSave, onDelete
 const peopleOpts = (filter = () => true) => Object.entries(DB.people).filter(([k, p]) => filter(p, k)).map(([k, p]) => [k, `${p.name} — ${p.role}`]);
 const whoOpts = () => [['road', 'Everyone on the road'], ['all', 'Everyone'], ...peopleOpts(p => p.group === 'road')];
 const whoLabel = w => w === 'road' ? 'Everyone on the road' : w === 'all' ? 'Everyone' : P(w).name;
+
+// ---------- travel: flights, hotels, OpenTable (the same patterns as GroupTripIt, embed-first) ----------
+const AIRLINES = { AA: 'AAL', UA: 'UAL', DL: 'DAL', WN: 'SWA', AS: 'ASA', B6: 'JBU', NK: 'NKS', F9: 'FFT', AC: 'ACA', WS: 'WJA', PD: 'POE', BA: 'BAW', VS: 'VIR', AF: 'AFR', KL: 'KLM', LH: 'DLH', EK: 'UAE', QF: 'QFA' };
+// "AC 8783" / "ac8783" → { iata, pretty, callsign } — callsign is what flight trackers use.
+const parseFlight = text => { const m = String(text || '').toUpperCase().replace(/\s+/g, '').match(/^([A-Z0-9]{2,3}?)(\d{1,4}[A-Z]?)$/); if (!m) return null; const [, code, num] = m; return { iata: code + num, pretty: `${code} ${num}`, callsign: (code.length === 3 ? code : (AIRLINES[code] || code)) + num }; };
+// Mock stand-in for the flight-number lookup (real build: AeroDataBox through an Edge Function).
+const MOCK_FLIGHTS = { AC8783: ['DCA', 'YYZ', '10:40', '12:15'], AA1739: ['YYZ', 'CLT', '08:05', '10:20'], AA5210: ['CLT', 'AVL', '11:30', '12:30'], UA512: ['EWR', 'YYZ', '07:15', '08:50'], WN1874: ['RNO', 'LAX', '14:30', '16:05'], DL1200: ['ATL', 'JFK', '09:00', '11:20'], AC100: ['YYZ', 'YVR', '08:00', '10:05'] };
+const flightLookup = n => { const p = parseFlight(n); const f = p && MOCK_FLIGHTS[p.iata]; return f ? { from: f[0], to: f[1], dep: f[2], arr: f[3] } : null; };
+const liveMap = cs => `https://globe.adsb.fi/?callsign=${encodeURIComponent(cs)}`;
+const flightAware = cs => `https://www.flightaware.com/live/flight/${encodeURIComponent(cs)}`;
+const mapsSearch = q => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
+// OpenTable's own booking screen (embeds), pre-filled with party size and time.
+const otEmbed = (rid, covers, day, time) => { const p = new URLSearchParams({ rid, restref: rid, lang: 'en-US' }); if (covers) p.set('covers', covers); if (day) p.set('datetime', `${day}T${time || '19:00'}`); return `https://www.opentable.com/restref/client/?${p}`; };
+const otRid = text => { const t = String(text || '').trim(); if (/^\d+$/.test(t)) return t; const m = t.match(/[?&]rid=(\d+)/) || t.match(/opentable\.[a-z.]+\/restaurant\/profile\/(\d+)/); return m ? m[1] : ''; };
+const safeUrl = u => /^https?:\/\//i.test(String(u || '').trim()) ? String(u).trim() : '';
+const siteName = url => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return 'site'; } };
+const whoOf = x => x.who === 'road' ? Object.entries(DB.people).filter(([, p]) => p.group === 'road').map(([k]) => k) : x.who === 'all' ? Object.keys(DB.people) : [x.who];
+const roadCount = () => Object.values(DB.people).filter(p => p.group === 'road').length;
+const nightsBetween = (a, b) => a && b ? Math.max(1, Math.round((dt(b) - dt(a)) / 864e5)) : 0;
+// Imported rows (or old ones) get the structured fields the cards use.
+function enrichTravel(v) {
+  if (v.type === 'flight') {
+    const m = String(v.label || '').match(/^\s*([A-Z]{3})\s*(?:→|->|-|to)\s*([A-Z]{3})/i); if (m) { v.from = v.from || m[1].toUpperCase(); v.to = v.to || m[2].toUpperCase(); }
+    const fl = String(v.detail || '').match(/\b([A-Z0-9]{2}\s?\d{1,4})\b/); if (fl && !v.flight) v.flight = parseFlight(fl[1])?.pretty || fl[1];
+    if (!v.dep && v.time) v.dep = v.time;
+    const arr = String(v.detail || '').match(/arriv\w*\s+(\d{1,2}:\d{2})/i); if (arr && !v.arr) v.arr = arr[1];
+    const conf = String(v.detail || '').match(/conf\w*\s+([A-Z0-9]{5,8})/i); if (conf && !v.conf) v.conf = conf[1];
+  }
+  if (v.type === 'hotel') { v.name = v.name || v.label; v.checkIn = v.checkIn || v.date; }
+  return v;
+}
+
+// A flight as a boarding pass: who, date, FROM time → TO time, confirmation, live map.
+function passHTML(x, { edit = false, compact = false } = {}) {
+  const p = parseFlight(x.flight || '');
+  const mine = x.who === me(), past = x.date < NOW.date;
+  return `<article class="pass ${mine ? 'mine' : ''} ${past ? 'past' : ''}">
+    <div class="pass-top">${dateBox(x.date)}<div class="grow"><b>${esc(mine ? 'You' : whoLabel(x.who))}</b><div class="small muted">${fmtDate(x.date)}${x.conf ? ` · conf <span class="mono" style="user-select:all">${esc(x.conf)}</span>` : ''}</div></div><span class="chip plain mono">${esc(p ? p.pretty : x.flight || x.label)}</span></div>
+    <div class="pass-route"><div><div class="code">${esc(x.from || '—')}</div><div class="when"><b>${x.dep ? ampm(x.dep) : ''}</b></div></div><div class="pass-line">${icon('plane')}</div><div class="end"><div class="code">${esc(x.to || '—')}</div><div class="when"><b>${x.arr ? ampm(x.arr) : ''}</b></div></div></div>
+    ${compact ? '' : `<div class="pass-foot">${past ? '<span class="chip st-settled plain">Landed</span>' : p ? `<button class="btn btn-secondary btn-sm" type="button" data-act="flightMap" data-id="${x.id}">${icon('travel')} Live map</button><a class="btn btn-outline btn-sm" href="${flightAware(p.callsign)}" target="_blank" rel="noopener noreferrer">FlightAware ${icon('ext')}</a>` : ''}<span class="spacer"></span>${x.notes ? `<span class="small muted">${esc(x.notes)}</span>` : ''}${edit ? editBtn('flight', x.id, 'Edit flight') : ''}</div>`}
+  </article>`;
+}
+// A hotel: check-in/out, who is in which room (from each person's card), confirmation, directions, booking site.
+function hotelHTML(x, { edit = false, compact = false } = {}) {
+  const past = (x.checkOut || x.date) < NOW.date;
+  const guests = whoOf(x).filter(k => DB.people[k]);
+  const rooms = {}; guests.forEach(k => { const r = P(k).room || '—'; (rooms[r] = rooms[r] || []).push(P(k).name.split(' ')[0]); });
+  const url = safeUrl(x.url), nights = nightsBetween(x.checkIn, x.checkOut), myRoom = P(me()).room;
+  return `<section class="card hotel">
+    ${compact ? '<div class="eyebrow">Hotel</div>' : ''}
+    <div class="row between" style="align-items:flex-start"><div><b style="font-size:16px">${esc(x.name || x.label)}</b>${x.address ? `<div class="small muted" style="user-select:all">${esc(x.address)}</div>` : ''}</div>${past ? '<span class="chip st-settled plain">Checked out</span>' : edit ? editBtn('hotel', x.id, 'Edit hotel') : ''}</div>
+    ${x.checkIn ? `<div class="inout"><div><div class="eyebrow">Check in</div><b>${short(x.checkIn)}</b><span class="small muted">${x.inTime ? ampm(x.inTime) : ''}</span></div><span class="nights">${nights ? `${nights} night${nights === 1 ? '' : 's'}` : ''}</span><div class="end"><div class="eyebrow">Check out</div><b>${x.checkOut ? short(x.checkOut) : '—'}</b><span class="small muted">${x.outTime ? ampm(x.outTime) : ''}</span></div></div>` : ''}
+    ${compact ? (myRoom && guests.includes(me()) ? `<div class="rooms"><span class="chip plain">Your room ${esc(myRoom)}</span></div>` : '') : guests.length ? `<div><div class="eyebrow" style="margin-bottom:6px">Who's where</div><div class="rooms">${Object.entries(rooms).sort().map(([r, names]) => `<span class="chip plain ${r !== '—' && r === myRoom ? 'st-pending' : ''}">${r === '—' ? 'No room yet' : 'Room ' + esc(r)} · ${esc(names.join(', '))}</span>`).join('')}</div></div>` : ''}
+    ${x.notes && !compact ? `<div class="note">${esc(x.notes)}</div>` : ''}
+    <div class="row wrap" style="gap:8px">${x.conf ? `<span class="chip plain mono" style="user-select:all" title="Confirmation">${esc(x.conf)}</span>` : ''}<a class="btn btn-outline btn-sm" href="${mapsSearch(x.address || x.name || x.label)}" target="_blank" rel="noopener noreferrer">Directions ${icon('ext')}</a>${url ? `<a class="btn btn-outline btn-sm" href="${esc(url)}" target="_blank" rel="noopener noreferrer">Open on ${esc(siteName(url))} ${icon('ext')}</a>` : ''}</div>
+  </section>`;
+}
+// A partner's own page inside GigTrip (OpenTable booking, live flight map) — embed, don't rebuild.
+function openEmbed(title, src, note = '') {
+  const d = $('#dlg');
+  d.innerHTML = `<div class="embed-head"><h2>${esc(title)}</h2><button type="button" class="iconbtn" data-close aria-label="Close">×</button></div>
+    <iframe class="embed-frame" src="${esc(src)}" title="${esc(title)}" referrerpolicy="no-referrer-when-downgrade"></iframe>${note ? `<p class="small muted" style="padding:10px 16px;margin:0">${note}</p>` : ''}`;
+  d.style.width = 'min(760px, calc(100% - 24px))';
+  d.querySelector('[data-close]').addEventListener('click', () => d.close());
+  d.showModal();
+}
 const seesTravel = (item, pid) => item.who === 'all' || (item.who === 'road' && P(pid).group === 'road') || item.who === pid;
 
 // ---------- entity editors ----------
@@ -1050,8 +1151,13 @@ E.slot = (id, preset = {}) => {
   openForm({
     title: t ? 'Edit time' : 'Add to the day sheet', value: t || { show: preset.show || S.showId, time: '17:00' },
     fields: [{ k: 'time', label: 'Time', type: 'time', req: true }, { k: 'label', label: 'What', req: true }, { k: 'who', label: 'Who / where', full: true }, { k: 'key', label: 'Highlight for everyone', type: 'check', full: true },
-      { k: 'venue', label: 'Does the venue see this line?', type: 'select', options: [['auto', 'Decide for me (tour calls, hotel and money stay private)'], ['yes', 'Yes'], ['no', 'No — tour only']], full: true }],
-    onSave(o) { const x = t || { id: uid('s'), show: preset.show || S.showId }; Object.assign(x, o); if (!t) DB.slots.push(x); log(`${t ? 'Changed' : 'Added'} ${x.label} at ${ampm(x.time)} (${cityOf(show(x.show))})`); toast('Day sheet updated — everyone sees it now'); },
+      { k: 'venue', label: 'Does the venue see this line?', type: 'select', options: [['auto', 'Decide for me (tour calls, hotel and money stay private)'], ['yes', 'Yes'], ['no', 'No — tour only']], full: true },
+      { k: 'ot', label: 'OpenTable link or restaurant ID', ph: 'https://www.opentable.com/restref/client/?rid=1779', group: 'Booking (dinner, tickets)', full: true },
+      { k: 'url', label: 'Other booking link', ph: 'Resy, tickets, a tour…', group: 'Booking (dinner, tickets)', full: true }],
+    onSave(o) {
+      if (o.url && !safeUrl(o.url)) { toast('Booking links need to start with https://'); return false; }
+      if (o.ot && !otRid(o.ot) && !/^https?:/.test(o.ot)) { toast("That doesn't look like an OpenTable link or ID"); return false; }
+      const x = t || { id: uid('s'), show: preset.show || S.showId }; Object.assign(x, o, { ot: otRid(o.ot), url: o.url || (o.ot && !otRid(o.ot) ? o.ot : '') }); if (!t) DB.slots.push(x); log(`${t ? 'Changed' : 'Added'} ${x.label} at ${ampm(x.time)} (${cityOf(show(x.show))})`); toast('Day sheet updated — everyone sees it now'); },
     onDelete: t && (() => { DB.slots = DB.slots.filter(x => x !== t); log(`Removed ${t.label} from the day sheet`); }),
   });
 };
@@ -1095,12 +1201,64 @@ E.guest = (id, preset = {}) => {
     onSave(o) { const x = g || { id: uid('g'), show: preset.show || S.showId }; Object.assign(x, o); if (!g) DB.guests.push(x); toast('Guest list updated'); },
     onDelete: g && (() => { DB.guests = DB.guests.filter(x => x !== g); }) });
 };
+E.flight = (id, preset = {}) => {
+  const t = id ? DB.travel.find(x => x.id === id) : null;
+  openForm({
+    title: t ? 'Edit flight' : 'Add a flight', value: t || { date: preset.date || NOW.date, who: preset.who || 'road' },
+    fields: [{ k: 'flight', label: 'Flight number', req: true, ph: 'AC 8783' }, { k: 'date', label: 'Date', type: 'date', req: true },
+      { k: 'who', label: 'Who is flying', type: 'select', options: whoOpts(), full: true },
+      { k: 'from', label: 'From', ph: 'YYZ', group: 'Times' }, { k: 'dep', label: 'Departs', type: 'time', group: 'Times' }, { k: 'to', label: 'To', ph: 'LAX', group: 'Times' }, { k: 'arr', label: 'Lands', type: 'time', group: 'Times' },
+      { k: 'conf', label: 'Confirmation', ph: 'Q7RT2M', group: 'Details' }, { k: 'notes', label: 'Notes', ph: 'Seats, bags, who picks up', group: 'Details', full: true }],
+    extra: `<div class="row wrap" style="gap:8px;margin-top:-4px"><button type="button" class="btn btn-secondary btn-sm" data-lookup>${icon('travel')} Find my flight</button><span class="small muted" data-found>Times fill in from the flight number${isMgr() ? ' (mock: a few sample flights)' : ''}.</span></div>`,
+    openGroups: !!t,
+    onSave(o) {
+      const p = parseFlight(o.flight); if (!p) { toast('Enter a flight number like "AC 8783"'); return false; }
+      const x = t || { id: uid('v'), type: 'flight', artist: cur() !== 'all' ? cur() : 'jv' };
+      const from = o.from.toUpperCase(), to = o.to.toUpperCase();
+      Object.assign(x, o, { flight: p.pretty, from, to, label: `${from || '?'} → ${to || '?'}`, time: o.dep, detail: [p.pretty, o.arr && `arrives ${ampm(o.arr)}`, o.conf && `conf ${o.conf}`].filter(Boolean).join(' · ') });
+      if (!t) DB.travel.push(x); log(`${t ? 'Updated' : 'Added'} flight ${p.pretty} (${short(x.date)})`); toast('Flight saved — it shows for the people on it');
+    },
+    onDelete: t && (() => { DB.travel = DB.travel.filter(x => x !== t); }),
+  });
+  const form = $('#dlg').querySelector('form');
+  form.querySelector('[data-lookup]').addEventListener('click', () => {
+    const r = flightLookup(form.elements.flight.value), msg = form.querySelector('[data-found]');
+    form.querySelector('details.fgroup').open = true;
+    if (!r) { msg.textContent = 'Not in the timetable — type the times in under Times.'; form.elements.from.focus(); return; }
+    for (const k of ['from', 'to', 'dep', 'arr']) form.elements[k].value = r[k];
+    msg.textContent = `Found it: ${r.from} ${ampm(r.dep)} → ${r.to} ${ampm(r.arr)}. Scheduled times, local to each airport.`;
+  });
+};
+E.hotel = (id, preset = {}) => {
+  const t = id ? DB.travel.find(x => x.id === id) : null;
+  const value = t ? { ...t, start: t.checkIn || t.date, end: t.checkOut || '' } : { start: preset.date || NOW.date, end: addDays(preset.date || NOW.date, 1), inTime: '15:00', outTime: '11:00', who: 'road' };
+  openForm({
+    title: t ? 'Edit hotel' : 'Add a hotel', value,
+    fields: [{ k: 'name', label: 'Hotel', req: true, ph: 'The Mercer Row Hotel', full: true }, { k: 'address', label: 'Address', ph: 'Street, city', full: true },
+      { k: 'start', label: 'Check in', type: 'date', req: true }, { k: 'inTime', label: 'Check-in time', type: 'time' }, { k: 'end', label: 'Check out', type: 'date' }, { k: 'outTime', label: 'Check-out time', type: 'time' },
+      { k: 'who', label: 'Who is staying', type: 'select', options: whoOpts(), full: true },
+      { k: 'conf', label: 'Confirmation', group: 'Details' }, { k: 'url', label: 'Booking link', ph: 'https://…', group: 'Details' }, { k: 'notes', label: 'Notes', ph: 'Parking, breakfast, late check-out…', group: 'Details', full: true }],
+    openGroups: !!t,
+    onSave(o) {
+      if (o.url && !safeUrl(o.url)) { toast('Booking links need to start with https://'); return false; }
+      if (o.end && o.end < o.start) { toast('Check-out is before check-in'); return false; }
+      const x = t || { id: uid('v'), type: 'hotel', artist: cur() !== 'all' ? cur() : 'jv' };
+      const { start, end, ...rest } = o;
+      Object.assign(x, rest, { checkIn: start, checkOut: end, date: start, label: o.name, time: '', detail: [end ? `${short(start)} – ${short(end)}` : short(start), o.address].filter(Boolean).join(' · ') });
+      if (!t) DB.travel.push(x); log(`${t ? 'Updated' : 'Added'} hotel ${o.name} (${short(start)})`); toast("Hotel saved — rooms come from each person's card in Party");
+    },
+    onDelete: t && (() => { DB.travel = DB.travel.filter(x => x !== t); }),
+  });
+};
+// Van legs and anything else (flights and hotels have their own forms above).
 E.travel = id => {
   const t = id ? DB.travel.find(x => x.id === id) : null;
-  openForm({ title: t ? 'Edit travel' : 'Add travel', value: t || { type: 'flight', date: NOW.date, who: 'road', artist: 'jv' },
-    fields: [{ k: 'type', label: 'Type', type: 'select', options: [['flight', 'Flight'], ['van', 'Van / bus'], ['hotel', 'Hotel'], ['other', 'Other']] }, { k: 'date', label: 'Date', type: 'date', req: true },
-      { k: 'label', label: 'Route or hotel', req: true, ph: 'e.g. YYZ → LAX' }, { k: 'time', label: 'Time', type: 'time' },
-      { k: 'detail', label: 'Details (flight number, confirmation, drive time)', full: true }, { k: 'who', label: 'Who', type: 'select', options: whoOpts(), full: true }],
+  if (t?.type === 'flight') return E.flight(id);
+  if (t?.type === 'hotel') return E.hotel(id);
+  openForm({ title: t ? 'Edit travel' : 'Add a van leg', value: t || { type: 'van', date: NOW.date, who: 'road', artist: 'jv' },
+    fields: [{ k: 'type', label: 'Type', type: 'select', options: [['van', 'Van / bus'], ['other', 'Other']] }, { k: 'date', label: 'Date', type: 'date', req: true },
+      { k: 'label', label: 'Route', req: true, ph: 'e.g. Boston → New York' }, { k: 'time', label: 'Leaves at', type: 'time' },
+      { k: 'detail', label: 'Details (drive time, stops, who drives)', full: true }, { k: 'who', label: 'Who', type: 'select', options: whoOpts(), full: true }],
     onSave(o) { const x = t || { id: uid('v'), artist: cur() !== 'all' ? cur() : 'jv' }; Object.assign(x, o); if (!t) DB.travel.push(x); log(`${t ? 'Updated' : 'Added'} travel: ${x.label} (${short(x.date)})`); toast('Travel saved — it shows for the people it applies to'); },
     onDelete: t && (() => { DB.travel = DB.travel.filter(x => x !== t); }) });
 };
@@ -1242,7 +1400,7 @@ const HELP = {
   settle: { what: 'The night-of settlement. Type the real box-office numbers and the sheet recalculates.', do: ['Add the promoter’s agreed expenses', 'Enter withholding tax if any', 'Mark as settled — it flows into commissions and the budget'], who: 'Management and the tour manager. The venue can view it. Never crew or artist unless you allow it.' },
   money: { what: 'Money across the roster: deposits due, commission statements and tour budgets.', do: ['Mark deposits received', 'Pick an artist for their commission statement', 'Edit budget lines per tour'], who: 'Management only, unless you give someone the Profit area.' },
   guests: { what: 'The guest list for one show.', do: ['Approve or decline requests', 'Add someone yourself', 'The venue sees only the approved list'], who: 'Everyone can request; management and the tour manager approve.' },
-  travel: { what: 'Flights, van legs and hotels.', do: ['Each item shows only to the people it applies to', 'Add travel for one person or everyone on the road'], who: 'Crew see only their own. Management and the tour manager see everyone’s.' },
+  travel: { what: 'Flights as boarding passes, hotels with check-in/out and who is in which room, van legs with drive times.', do: ['Add a flight by its number — the times fill in', 'Live map follows a flight in the air; FlightAware has the status', 'Hotel cards take rooms from each person’s card in Party, with directions and the booking site'], who: 'Crew see only their own flights and rooms. Management and the tour manager see everyone’s.' },
   mymoney: { what: 'Your own pay, per diems and expenses. Nobody else’s.', do: ['Add an expense with a receipt photo', 'See what is still owed back to you'], who: 'Only you and management.' },
   party: { what: 'Everyone on this artist’s team and the venue crew for tonight.', do: ['Tap a person to open their card', 'Management: set what they bring and what they can see', 'Each person ticks off their own items'], who: 'Everyone. Phone numbers hide from the venue except the tour manager’s.' },
   access: { what: 'Who sees what. Management and tour managers have the same full access to everything; the defaults here are for everyone else, and any one person can be changed on their card in Party.', do: ['Hidden / View / Edit for every area, per role', 'Money is three separate areas so costs and profit can be hidden separately', '"See it as…" to check the result'], who: 'Management and tour managers. Manager = the office: the whole roster, offers, holds and the money across the year. Tour manager = the road: assigned to specific artists, running day sheets, advancing, travel, guest lists and the night-of settlement. Same powers, different scope.' },
@@ -1250,7 +1408,7 @@ const HELP = {
   settings: { what: 'Templates, rates, appearance and your imports.', do: ['Edit the advance and day-sheet templates once; every new show uses them', 'Import data or see what an earlier import created', 'Light or dark mode'], who: 'Management.' },
   imports: { what: 'Every import you have done, what it created and where it went.', do: ['Open the shows, tasks or contacts an import created', 'Undo an import if it came in wrong', 'Import another file'], who: 'Management.' },
   myhome: { what: 'Your tours and one-off shows, each on its own card, with what is next.', do: ['Tap a tour to see every date and the routing', 'Tap a show to see its day sheet and contacts', 'Today takes you straight to the current day sheet'], who: 'Artists and crew. Management and tour managers get the Artists page instead.' },
-  today: { what: 'The day sheet for today, plus the venue, your hotel and who to call.', do: ['Tick off what you are bringing', 'Add the day to your calendar'], who: 'Everyone on the road.' },
+  today: { what: 'The day sheet for today, plus the venue, your hotel and room, your flight if you fly today, and who to call.', do: ['Tick off what you are bringing', 'Reserve a table straight from a dinner line — OpenTable opens inside GigTrip', 'Add the day to your calendar'], who: 'Everyone on the road.' },
 };
 // Notes about what the real build will do are for the owner and management, never for talent or venues.
 const proto = text => isMgr() ? text : '';
@@ -1626,7 +1784,7 @@ function buildImport(dry) {
       const whoName = g(r, 'who'); const who = whoName ? (/all|everyone|band|crew|party/.test(norm(whoName)) ? 'road' : findPerson(whoName) || 'road') : 'road';
       preview.push([date, type, label, parseTime(g(r, 'time')), whoLabel(who)]);
       counts.travel++; if (dry) return;
-      const v = tag({ id: uid('v'), type, date, label, time: parseTime(g(r, 'time')), detail: g(r, 'detail'), who, artist: cur() !== 'all' ? cur() : 'jv' }); DB.travel.push(v); ids.travel.push(v.id);
+      const v = enrichTravel(tag({ id: uid('v'), type, date, label, time: parseTime(g(r, 'time')), detail: g(r, 'detail'), who, artist: cur() !== 'all' ? cur() : 'jv' })); DB.travel.push(v); ids.travel.push(v.id);
     });
   } else if (K === 'guests') {
     preview.push(['Guest', '+', 'For', 'Show', 'Status']);
@@ -2055,6 +2213,7 @@ function daySheet(showId, edit) {
   return `<div class="sheet">${slots.map((x, i) => `
     <div class="slot ${i < nowIdx ? 'past' : ''} ${i === nowIdx ? 'now' : ''} ${x.key ? 'key' : ''}">
       <span class="t">${x.time}</span><div class="row between" style="align-items:flex-start"><div><div class="what">${esc(x.label)}${i === nowIdx ? ' <span class="chip st-pending plain">Now</span>' : ''}</div><div class="small muted">${esc(x.who || '')}${edit && isMgr() && !venueSees(x) ? ' · <span title="The venue does not see this line">tour only</span>' : ''}</div></div>${edit ? editBtn('slot', x.id, `Edit ${x.label}`) : ''}</div>
+      ${x.ot || safeUrl(x.url) ? `<div class="booking">${x.ot ? `<button class="btn btn-ot btn-sm" type="button" data-act="reserve" data-id="${x.id}">${icon('fork')} Reserve on OpenTable</button>` : ''}${safeUrl(x.url) ? `<a class="btn btn-outline btn-sm" href="${esc(safeUrl(x.url))}" target="_blank" rel="noopener noreferrer">Book on ${esc(siteName(x.url))} ${icon('ext')}</a>` : ''}</div>` : ''}
     </div>`).join('')}</div>`;
 }
 
@@ -2083,7 +2242,8 @@ V.today = () => {
   const next = slots.find(x => toMin(x.time) > NOW.min);
   const p = P(me());
   const venue = isVenue();
-  const hotel = DB.travel.find(x => x.type === 'hotel' && x.date <= NOW.date && seesTravel(x, me()));
+  const hotel = DB.travel.find(x => x.type === 'hotel' && (x.checkIn || x.date) <= NOW.date && (x.checkOut || x.date) >= NOW.date && seesTravel(x, me()));
+  const myFlight = DB.travel.find(x => x.type === 'flight' && x.date === NOW.date && seesTravel(x, me()));
   const contacts = DB.contacts.filter(c => c.show === s.id);
   return `
   <div class="ribbon"><span class="tapechip">Show day</span><span>${fmtDate(NOW.date)}${proto(` · mock clock ${ampm('16:05')}`)}</span></div>
@@ -2105,7 +2265,8 @@ V.today = () => {
         <dl class="kv small">${s.wifi ? `<dt>Wi-Fi</dt><dd style="user-select:all">${esc(s.wifi)}</dd>` : ''}${s.hospitality ? `<dt>Hospitality</dt><dd>${esc(s.hospitality)}</dd>` : ''}</dl>
         ${s.parking ? `<div class="note">${esc(s.parking)}</div>` : ''}
         <a class="btn btn-outline btn-sm" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.address || s.venue + ' ' + s.city)}" target="_blank" rel="noopener">Directions ↗</a></section>`}
-      ${!venue && hotel && can('travel') ? `<section class="card stack"><h2>Hotel</h2><div><b>${esc(hotel.label)}</b><div class="small muted">${esc(hotel.detail)}</div></div>${p.room ? `<div class="row"><span class="chip plain">Your room ${esc(p.room)}</span></div>` : ''}</section>` : ''}
+      ${!venue && myFlight && can('travel') ? passHTML(myFlight, { compact: true }) : ''}
+      ${!venue && hotel && can('travel') ? hotelHTML(hotel, { compact: true }) : ''}
       <section class="card"><h2 style="margin-bottom:4px">Day-of contacts</h2><div class="list">${(venue ? contacts.filter(c => /Tour manager/.test(c.role)) : contacts.slice(0, 2)).map(c => `<div class="li"><div class="grow"><b>${esc(c.name)}</b><div class="small muted">${esc(c.role)}</div></div><span class="mono small" style="user-select:all">${esc(c.ph)}</span></div>`).join('')}</div></section>
     </div>
   </div>`;
@@ -2253,16 +2414,29 @@ V.guests = () => {
 
 V.travel = () => {
   const p = P(me()), mgr = isMgr(), edit = canEdit('travel');
-  const items = DB.travel.filter(x => inCur(x.artist || 'jv') && (edit || seesTravel(x, me()))).sort((a, b) => a.date.localeCompare(b.date));
-  const group = (type, title) => { const l = items.filter(x => x.type === type || (type === 'other' && !['flight', 'van', 'hotel'].includes(x.type))); return l.length ? `<section class="card"><h2 style="margin-bottom:4px">${title}</h2><div class="list">${l.map(x => `
-    <div class="li">${type === 'flight' ? `<div class="datebox"><div class="m">${MON[dt(x.date).getMonth()]}</div><div class="d">${dt(x.date).getDate()}</div></div>` : ''}<div class="grow ${x.date < NOW.date ? 'muted' : ''}"><b>${esc(x.label)}</b><div class="small muted">${type === 'hotel' && /^[A-Z][a-z]{2} \d/.test(x.detail || '') ? '' : fmtDate(x.date) + (x.time ? ' · ' + x.time : '') + (x.detail ? ' · ' : '')}${x.detail ? esc(x.detail) : ''}${edit ? ' · ' + esc(whoLabel(x.who)) : ''}</div></div>
-      ${x.date < NOW.date ? `<span class="chip st-settled">${type === 'hotel' ? 'Checked out' : 'Done'}</span>` : ''}${edit ? editBtn('travel', x.id) : ''}</div>`).join('')}</div></section>` : ''; };
+  const items = DB.travel.filter(x => inCur(x.artist || 'jv') && (edit || seesTravel(x, me()))).map(enrichTravel);
+  const byTime = (a, b) => (a.date + (a.dep || a.time || '')).localeCompare(b.date + (b.dep || b.time || ''));
+  const flights = items.filter(x => x.type === 'flight').sort(byTime);
+  const hotels = items.filter(x => x.type === 'hotel').sort((a, b) => (a.checkIn || a.date).localeCompare(b.checkIn || b.date));
+  const ground = items.filter(x => !['flight', 'hotel'].includes(x.type)).sort(byTime);
+  const upcoming = flights.filter(x => x.date >= NOW.date), flown = flights.filter(x => x.date < NOW.date);
+  const legs = list => `<section class="card"><h2 style="margin-bottom:4px">Van</h2><div class="list">${list.map(x => `
+    <div class="li">${dateBox(x.date)}<div class="grow ${x.date < NOW.date ? 'muted' : ''}"><b>${esc(x.label)}</b><div class="small muted">${x.time ? ampm(x.time) + ' · ' : ''}${esc(x.detail || '')}${edit ? ' · ' + esc(whoLabel(x.who)) : ''}</div></div>${x.date < NOW.date ? '<span class="chip st-settled plain">Done</span>' : ''}${edit ? editBtn('travel', x.id) : ''}</div>`).join('')}</div></section>`;
   return `
-  <div class="head"><div><div class="eyebrow">${mgr || edit ? 'Everyone\'s travel' : esc(p.name) + ' · ' + esc(p.role)}</div><h1 class="display">${mgr || edit ? 'Travel' : 'My travel'}</h1>
-    <div class="sub muted">${edit ? 'Each item shows only for the people it applies to.' : 'Only yours.'}</div></div>${edit ? addBtn('newTravel', 'Add travel', '', 'btn-tape') : ''}</div>
-  <div class="grid2"><div class="stack">${group('flight', 'Flights')}${proto('<p class="note">Real build: flight times fill in from the flight number.</p>')}</div>
-    <div class="stack">${group('van', 'Van')}${group('hotel', 'Hotels')}${group('other', 'Other')}
-      ${!edit && p.room ? `<p class="note">Your room tonight: ${esc(p.room)}</p>` : ''}</div></div>`;
+  <div class="head"><div><div class="eyebrow">${mgr || edit ? "Everyone's travel" : esc(p.name) + ' · ' + esc(p.role)}</div><h1 class="display">${mgr || edit ? 'Travel' : 'My travel'}</h1>
+    <div class="sub muted">${edit ? "Each item shows only for the people it applies to. Rooms come from each person's card in Party." : 'Your flights, the van and your room.'}</div></div>
+    ${edit ? `<div class="row wrap" style="gap:8px">${addBtn('newFlight', 'Add flight', '', 'btn-tape')}${addBtn('newHotel', 'Add hotel')}${addBtn('newTravel', 'Add van leg')}</div>` : ''}</div>
+  <div class="grid2">
+    <div class="stack"><h2>Flights</h2>
+      ${flights.length ? `${upcoming.map(x => passHTML(x, { edit })).join('')}${flown.length ? `<details><summary class="small muted" style="cursor:pointer">${flown.length} past flight${flown.length === 1 ? '' : 's'}</summary><div class="stack" style="margin-top:10px">${flown.map(x => passHTML(x, { edit })).join('')}</div></details>` : ''}` : `<p class="muted">No flights yet.${edit ? ' Add one by its flight number — the times fill in.' : ''}</p>`}
+      ${proto('<p class="note">Real build: times fill in from the flight number (AeroDataBox) and Live map shows the plane while it is in the air.</p>')}
+    </div>
+    <div class="stack">
+      ${ground.length ? legs(ground) : ''}
+      <h2>Hotels</h2>
+      ${hotels.length ? hotels.map(x => hotelHTML(x, { edit })).join('') : '<p class="muted">No hotels yet.</p>'}
+    </div>
+  </div>`;
 };
 
 V.mymoney = () => {
@@ -2454,6 +2628,9 @@ const ACT = {
   task: id => E.task(id), newTask: id => E.task(null, { show: id }), slot: id => E.slot(id), newSlot: id => E.slot(null, { show: id }),
   doc: id => E.doc(id), contact: id => E.contact(id), newContact: id => E.contact(null, { show: id }), person: id => E.person(id), newPerson: () => E.person(null),
   guest: id => E.guest(id), travel: id => E.travel(id), newTravel: () => E.travel(null), supply: id => E.supply(id), newSupply: () => E.supply(null),
+  flight: id => E.flight(id), newFlight: () => E.flight(null), hotel: id => E.hotel(id), newHotel: () => E.hotel(null),
+  flightMap: id => { const x = DB.travel.find(v => v.id === id), p = parseFlight(x?.flight || ''); if (p) openEmbed(`${p.pretty} · live map`, liveMap(p.callsign), 'Shows the plane while it is in the air (adsb.fi). Scheduled times come from the airline.'); },
+  reserve: id => { const x = DB.slots.find(v => v.id === id); if (!x?.ot) return; const sh = show(x.show); openEmbed(`Reserve · ${x.label}`, otEmbed(x.ot, roadCount(), sh?.date, x.time), "OpenTable's own booking screen — you confirm there. GigTrip never sees your OpenTable account."); },
   budget: id => E.budget(id), newBudget: id => E.budget(null, { tour: id }), showExp: id => E.showExp(id), newExp: id => E.showExp(null, { show: id }),
   myexp: id => E.myexp(id), newMyExp: () => E.myexp(null), tmplAdv: id => E.tmpl(id, 'advance'), newTmplAdv: () => E.tmpl(null, 'advance'), tmplSlot: id => E.tmpl(id, 'slots'), newTmplSlot: () => E.tmpl(null, 'slots'),
   import: () => openImportWizard(), importFrom: id => openImportWizard({ source: id }), export: () => openExport('shows'),
