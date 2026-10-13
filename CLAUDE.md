@@ -233,6 +233,9 @@ different: organizer home = planning dashboard (invite, readiness, waiting
 on); guest home = RSVP, personal to-dos, balance, next up.
 
 ## Standing conventions
+- GigTrip (`gigtrip/`, a separate app): after every major change run
+  `gigtrip-qa` (works), then `gigtrip-ui-qa` (looks right at phone, tablet,
+  desktop and wide widths), then review the diff, then publish.
 - After any change to `app/` or `supabase/`, run the `/qa` skill
   (`.claude/skills/qa`) before reporting — the owner should never have to
   ask whether it was tested. `/uat` (`.claude/skills/uat`) is the full

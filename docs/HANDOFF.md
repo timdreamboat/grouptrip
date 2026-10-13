@@ -49,11 +49,16 @@ and what's pending**.
   database). **Public link to share:** https://timdreamboat.github.io/grouptrip/gigtrip/
   (the Pages workflow copies it in next to the app). Private preview:
   https://claude.ai/artifact/6ckEWFC9bMBHE2iFr7d1UY
-- **Two project skills** (in `.claude/skills/`, GigTrip only): `gigtrip-qa`
+- **Three project skills** (in `.claude/skills/`, GigTrip only): `gigtrip-qa`
   — run after any change to the mock (static check + an in-browser harness
   that exercises every role, page, form, import/undo, settlement math and
   light/dark contrast); `gigtrip-uat` — walk the app as each persona and list
   what to adjust (reports go in `gigtrip/uat/`).
+  `gigtrip-ui-qa` (added 2026-10-13) — layout harness at four widths (phone,
+  tablet, desktop, wide) for empty gaps, orphaned controls, overlaps, clipped
+  text, small tap targets, broken pictures, plus an eye-test checklist. Order
+  for every major GigTrip change: gigtrip-qa → gigtrip-ui-qa → code review →
+  publish.
 - Travel in the mock (2026-10-08, owner: "similar functionality as GroupTrip
   for flights, hotels and OpenTable"): flights are boarding passes (number,
   date, FROM time → TO time, confirmation, Live map / FlightAware, "Find my
