@@ -142,7 +142,7 @@ main > * { max-width: 1080px; width: 100%; margin-inline: auto; }
 .row { display: flex; align-items: center; gap: 12px; }
 .wrap { flex-wrap: wrap; }
 .between { justify-content: space-between; }
-.grid2 { display: grid; gap: 18px; }
+.grid2 { display: grid; gap: 18px; align-items: start; }   /* start: a short column must not stretch to the tall one, or its rows spread out into gaps */
 @media (min-width: 760px) { .grid2 { grid-template-columns: 1fr 1fr; } .grid2.wide-left { grid-template-columns: 1.4fr 1fr; } }
 .head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .head .sub { margin-top: 6px; }
@@ -286,7 +286,7 @@ tfoot td { font-weight: 700; border-bottom: 0; }
 .lvl.custom { box-shadow: inset 0 0 0 2px var(--tape); }
 .accgrid { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; align-items: center; font-size: 13.5px; }
 .minihead { font-size: 11.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
-.cols2 { display: grid; gap: 18px; }
+.cols2 { display: grid; gap: 18px; align-items: start; }
 @media (min-width: 760px) { .cols2 { grid-template-columns: 1fr 1fr; } }
 
 /* ---- V1: editing, dialogs, uploads, tables ---- */
@@ -2208,7 +2208,7 @@ function whoBringsWhat() {
   const ids = Object.keys(DB.people).filter(k => DB.supply.some(x => x.person === k));
   const block = list => list.map(k => `<div class="stack" style="gap:4px"><div class="row" style="gap:10px">${avatar(k)}<div><b>${esc(P(k).name)}</b><div class="small muted">${esc(P(k).role)}</div></div></div>
     <ul class="supply" style="padding-left:46px">${DB.supply.filter(x => x.person === k).map(x => `<li class="${x.ok ? 'ok' : ''}"><span class="grow">${esc(x.label)}</span>${x.ok ? '<span class="chip st-confirmed plain">Confirmed</span>' : '<span class="chip st-pending plain">Not yet</span>'}${isMgr() ? editBtn('supply', x.id) : ''}</li>`).join('')}</ul></div>`).join('');
-  return `<div class="cols2"><div class="stack"><div class="minihead">Venue provides</div>${block(ids.filter(k => P(k).kind === 'venue'))}</div>
+  return `<div class="stack" style="gap:18px"><div class="stack"><div class="minihead">Venue provides</div>${block(ids.filter(k => P(k).kind === 'venue'))}</div>
     <div class="stack"><div class="minihead">Tour brings</div>${block(ids.filter(k => P(k).kind !== 'venue'))}</div></div>
     ${isMgr() ? `<div class="addbar">${addBtn('newSupply', 'Add an item for someone')}</div>` : ''}
     <p class="note">Each person confirms their own items on their Today screen.</p>`;
@@ -2541,7 +2541,7 @@ V.access = () => {
     <section class="card stack"><h2>Money has three levels</h2>
       <dl class="kv small"><dt>My money</dt><dd>own pay, per diems, expenses</dd><dt>Show costs</dt><dd>deals, venue expenses, settlement</dd><dt>Profit</dt><dd>budget, commissions, net</dd></dl>
       <p class="note">Crew see their own pay and nothing else; the venue sees its own show's settlement and nothing about the tour.</p></section>
-    <section class="card"><h2 style="margin-bottom:4px">People with their own access</h2>
+    <section class="card" style="grid-column:1 / -1"><h2 style="margin-bottom:4px">People with their own access</h2>
       ${custom.length ? `<div class="list">${custom.map(k => `<div class="li click" data-act="openPerson" data-id="${k}">${avatar(k)}<div class="grow"><b>${esc(P(k).name)}</b><div class="small muted">${Object.entries(P(k).over).map(([a, v]) => `${AREAS.find(x => x[0] === a)[1].split(' (')[0]}: ${v === 'off' ? 'hidden' : v}`).join(' · ')}</div></div></div>`).join('')}</div>`
         : '<p class="muted" style="margin:0">Nobody yet — everyone follows their role.</p>'}</section>
   </div>`;

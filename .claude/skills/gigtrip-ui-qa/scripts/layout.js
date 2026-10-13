@@ -26,7 +26,8 @@
     // 2. Empty vertical gaps between neighbours (not a deliberate section break).
     const walk = el => {
       const kids = [...el.children].filter(c => vis(c) && getComputedStyle(c).position !== 'absolute' && getComputedStyle(c).position !== 'fixed');
-      for (let i = 1; i < kids.length; i++) { const g = rect(kids[i]).top - rect(kids[i - 1]).bottom; if (g > 56) add(`${Math.round(g)}px empty gap between "${name(kids[i - 1])}" and "${name(kids[i])}"`); }
+      // The gap above an element is measured from the nearest earlier sibling that shares its columns (grids place siblings side by side).
+      for (let i = 1; i < kids.length; i++) { const r = rect(kids[i]); let above = null, bottom = -Infinity; for (let j = 0; j < i; j++) { const o = rect(kids[j]); if (o.right > r.left + 4 && o.left < r.right - 4 && o.bottom <= r.top + 4 && o.bottom > bottom) { bottom = o.bottom; above = kids[j]; } } if (above) { const g = r.top - bottom; if (g > 56) add(`${Math.round(g)}px empty gap between "${name(above)}" and "${name(kids[i])}"`); } }
       kids.forEach(walk);
     };
     walk(main);
@@ -62,7 +63,17 @@
     // 8. Pictures that didn't load.
     for (const i of main.querySelectorAll('img')) if (i.complete && i.naturalWidth === 0 && i.src) add(`picture did not load: ${i.getAttribute('src').slice(0, 60)}`);
     // 9. Two columns where one is much taller than the other (leaves a block of empty space on desktop).
-    if (!phone) for (const g of main.querySelectorAll('.grid2')) { const [l, r] = [...g.children].map(c => c && rect(c).height); if (l && r && Math.max(l, r) > 600 && Math.max(l, r) > 1.8 * Math.min(l, r)) add(`columns unbalanced (${Math.round(l)}px vs ${Math.round(r)}px) — a block of empty space under the short one`); }
+    // A long feed or list beside a short card is expected (Activity); two cards of prose or forms are not.
+    if (!phone) for (const g of main.querySelectorAll('.grid2, .cols2')) { const kids = [...g.children].filter(vis); if (kids.length !== 2) continue; const [l, r] = kids.map(c => rect(c).height); const tall = kids[l > r ? 0 : 1]; if (tall.querySelectorAll('.li, .task, .pass, .slot').length >= 6) continue; if (Math.max(l, r) > 600 && Math.max(l, r) > 1.8 * Math.min(l, r)) add(`columns unbalanced (${Math.round(l)}px vs ${Math.round(r)}px) — a block of empty space under the short one`); }
+    // 11. Content spread out to fill a taller neighbour (a grid/flex column stretched by its parent, rows pulled apart).
+    // Measured by briefly pinning the box to its natural height: if it shrinks a lot, something was stretching it.
+    for (const box of main.querySelectorAll('div, section, article, form, ul')) {
+      const cs = getComputedStyle(box); if (!vis(box) || (cs.display !== 'grid' && !(cs.display === 'flex' && cs.flexDirection === 'column'))) continue;
+      const h0 = rect(box).height; if (h0 < 160) continue;
+      const prev = box.style.cssText; box.style.alignSelf = 'start'; box.style.alignContent = 'start'; box.style.height = 'auto'; box.style.flex = 'none';
+      const h1 = rect(box).height; box.style.cssText = prev;
+      if (h0 - h1 > 48) add(`"${(box.className || box.tagName).toString().slice(0, 30)}" is stretched ${Math.round(h0 - h1)}px taller than its content — rows spread out into gaps`);
+    }
     // 10. Something sits under the phone tab bar at the end of the page.
     if (phone) { main.scrollTop = main.scrollHeight; const bar = document.querySelector('.tabbar'); const last = [...main.children].filter(vis).pop(); if (bar && last && rect(last).bottom > rect(bar).top + 2) add('last element hides under the tab bar'); main.scrollTop = 0; }
     checked++;

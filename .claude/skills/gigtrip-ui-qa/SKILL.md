@@ -50,6 +50,8 @@ What it measures, so a pass means something:
 - on phone, every button, checkbox (with its label) and summary at least
   28 px each way
 - no picture that failed to load
+- no grid or flex column stretched more than 48px past its own content (rows
+  pulled apart into gaps because a neighbour is taller)
 - on desktop, no two-column grid where one column is 1.8× taller than the
   other (a block of empty space under the short one)
 - on phone, nothing hidden under the tab bar at the end of the page
