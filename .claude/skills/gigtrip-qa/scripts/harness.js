@@ -69,6 +69,11 @@
   render('myhome'); check(!/You.re bringing/.test(txt()), "Artist Home shows 'You're bringing' without a show in view");
   render('today'); check(/You.re bringing/.test(txt()), "Artist Today is missing 'You're bringing'");
   S.role = 'manager'; S.artistId = 'jv'; S.showId = 'nyc'; S.showTab = 'deal'; render('show'); check(/Guarantee/.test(txt()), 'Manager show page is missing the deal');
+  // Demo pictures (2026-10-13): every seeded artist and tour has a sample photo that actually loads from demo/img/.
+  S.role = 'manager'; S.artistId = null; render('home');
+  check(DB.artists.every(a => photoUrl(a)) && DB.tours.every(t => t.cover), 'A seeded artist or tour has no sample picture');
+  { const imgs = [...main.querySelectorAll('img.aph')]; await Promise.all(imgs.map(i => i.complete ? null : new Promise(r => { i.onload = i.onerror = r; }))); check(imgs.length >= 12 && imgs.every(i => i.naturalWidth > 0), 'An artist picture on the Artists page did not load (wrong demo/img path?)'); }
+  { const ok = await new Promise(r => { const i = new Image(); i.onload = () => r(true); i.onerror = () => r(false); i.src = DB.tours[0].cover; }); check(ok, `Tour cover did not load: ${DB.tours[0].cover}`); }
 
   // 3. The logo goes to each role's own home; every page has help.
   for (const r of roles) { S.role = r; S.artistId = 'jv'; const home = navFor()[0][0]; check(['home', 'myhome', 'today'].includes(home), `${r}: logo home is ${home}`); for (const [k] of navFor()) if (k !== 'more') check(!!HELP[k] || k === 'about', `${r}: no help text for ${k}`); }

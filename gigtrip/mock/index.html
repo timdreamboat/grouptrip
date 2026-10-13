@@ -641,19 +641,19 @@ function seed() {
     ellie: ['Merch stock (see count sheet)', 'Card readers ×2', 'Display grid + lights'],
   };
   return {
-    v: 5,
+    v: 5, demoImg: true,
     artists: [
-      { id: 'jv', name: 'Juniper Vale', genre: 'Indie folk', home: 'Toronto, ON', agent: 'Jordan Blake · Fieldhouse', hue: 48, photo: null },
-      { id: 'co', name: 'The Coastlines', genre: 'Alt-rock', home: 'Vancouver, BC', agent: 'Jordan Blake · Fieldhouse', hue: 200, photo: null },
-      ...extra.map(([id, name, genre, home, hue]) => ({ id, name, genre, home, agent: 'Fieldhouse Agency', hue, photo: null })),
+      { id: 'jv', name: 'Juniper Vale', genre: 'Indie folk', home: 'Toronto, ON', agent: 'Jordan Blake · Fieldhouse', hue: 48, photo: demoPhoto('jv') },
+      { id: 'co', name: 'The Coastlines', genre: 'Alt-rock', home: 'Vancouver, BC', agent: 'Jordan Blake · Fieldhouse', hue: 200, photo: demoPhoto('co') },
+      ...extra.map(([id, name, genre, home, hue]) => ({ id, name, genre, home, agent: 'Fieldhouse Agency', hue, photo: demoPhoto(id) })),
     ],
     tours: [
-      { id: 't1', artist: 'jv', name: 'Low Tide Tour', season: 'Spring 2027', start: '2027-04-07', end: '2027-04-25' },
-      { id: 't2', artist: 'co', name: 'West Coast Run', season: 'Spring 2027', start: '2027-03-19', end: '2027-05-23' },
-      { id: 't3', artist: 'kes', name: 'Northern Lights Run', season: 'Spring 2027', start: '2027-04-12', end: '2027-04-23' },
-      { id: 't4', artist: 'saff', name: 'Warehouse Nights', season: 'Spring 2027', start: '2027-04-15', end: '2027-04-18' },
-      { id: 't5', artist: 'jv', name: 'Harvest Tour', season: 'Fall 2027', start: '2027-09-16', end: '2027-10-02' },
-      { id: 't6', artist: 'jv', name: 'Winter Residency', season: 'Winter 2027', start: '2027-02-05', end: '2027-02-26' },
+      { id: 't1', artist: 'jv', name: 'Low Tide Tour', season: 'Spring 2027', start: '2027-04-07', end: '2027-04-25', cover: demoCover('t1') },
+      { id: 't2', artist: 'co', name: 'West Coast Run', season: 'Spring 2027', start: '2027-03-19', end: '2027-05-23', cover: demoCover('t2') },
+      { id: 't3', artist: 'kes', name: 'Northern Lights Run', season: 'Spring 2027', start: '2027-04-12', end: '2027-04-23', cover: demoCover('t3') },
+      { id: 't4', artist: 'saff', name: 'Warehouse Nights', season: 'Spring 2027', start: '2027-04-15', end: '2027-04-18', cover: demoCover('t4') },
+      { id: 't5', artist: 'jv', name: 'Harvest Tour', season: 'Fall 2027', start: '2027-09-16', end: '2027-10-02', cover: demoCover('t5') },
+      { id: 't6', artist: 'jv', name: 'Winter Residency', season: 'Winter 2027', start: '2027-02-05', end: '2027-02-26', cover: demoCover('t6') },
     ],
     shows,
     offers: [
@@ -739,8 +739,21 @@ function blank() {
 }
 // ---------- storage (this browser only) ----------
 const KEY = 'gigtrip.v5.db';
+// Sample pictures for the demo (openly licensed concert photos, credits in demo/img/CREDITS.md). The mock is served from
+// /gigtrip/mock/ locally and from /gigtrip/ on the live site, so the path to demo/ depends on where we are.
+const IMG_BASE = location.pathname.includes('/mock/') ? '../demo/img/' : 'demo/img/';
+const DEMO_IMG = { artists: ['jv', 'co', 'kes', 'oona', 'mari', 'velv', 'saff', 'lant', 'ruben', 'glass', 'tams', 'nine'], tours: ['t1', 't2', 't3', 't4', 't5', 't6'] };
+const demoPhoto = id => DEMO_IMG.artists.includes(id) ? IMG_BASE + 'artist-' + id + '.jpg' : null;
+const demoCover = id => DEMO_IMG.tours.includes(id) ? IMG_BASE + 'tour-' + id + '.jpg' : null;
+// Data saved before the sample pictures existed gets them filled in once (only where nothing was set).
+function addDemoImages(d) {
+  if (d.demoImg) return d;
+  (d.artists || []).forEach(a => { if (!a.photo) a.photo = demoPhoto(a.id); });
+  (d.tours || []).forEach(t => { if (!t.cover) t.cover = demoCover(t.id); });
+  d.demoImg = true; return d;
+}
 const FILES = {};   // uploaded files live in memory for the mock (object URLs)
-function load() { try { const v = JSON.parse(localStorage.getItem(KEY)); return v && v.v === 5 ? v : null; } catch { return null; } }
+function load() { try { const v = JSON.parse(localStorage.getItem(KEY)); return v && v.v === 5 ? addDemoImages(v) : null; } catch { return null; } }
 function save() { try { localStorage.setItem(KEY, JSON.stringify(DB)); } catch {} }
 let DB = load() || seed();
 
@@ -809,7 +822,7 @@ const hasHome = () => isMgr() || myArtists().length > 1;
 function cur() { const list = myArtists(); if (!hasHome()) return list[0]?.id || 'jv'; return list.some(a => a.id === S.artistId) ? S.artistId : 'all'; }
 const inCur = id => cur() === 'all' ? myArtists().some(a => a.id === id) : id === cur();
 const curShows = () => DB.shows.filter(s => inCur(s.artist)).sort((a, b) => a.date.localeCompare(b.date));
-const photoUrl = a => !a.photo ? null : String(a.photo).startsWith('data:') ? a.photo : FILES[a.photo]?.url || null;
+const photoUrl = a => !a.photo ? null : /^(data:|https?:)|\//.test(String(a.photo)) ? a.photo : FILES[a.photo]?.url || null;
 const artistPh = (a, cls = 'ph') => { const u = photoUrl(a); return u ? `<img class="${cls} aph" src="${u}" alt="">` : `<span class="${cls} aph" style="background:linear-gradient(135deg,hsl(${a.hue} 85% 62%),hsl(${(a.hue + 40) % 360} 80% 52%))">${esc(initials(a.name))}</span>`; };
 
 // ---------- money ----------
