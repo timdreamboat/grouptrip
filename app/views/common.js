@@ -40,7 +40,7 @@ export const privacyPicker = (trip) => `
 // The next plan that hasn't happened yet (or the first one before the trip).
 // A stay the group shares (an Airbnb, a cabin): everyone's base, so its
 // check-in is the first thing on the day it starts — before flights and plans.
-export const isSharedStay = (s) => Boolean(s.checkIn) && (!s.guests?.length || s.guests.length > 1);
+export const isSharedStay = (s) => Boolean(s.checkIn) && (s.everyone || !s.guests?.length || s.guests.length > 1);
 export const sharedCheckIns = (trip) => trip.stays.filter(isSharedStay)
   .map((s) => ({ kind: 'checkin', id: `in-${s.id}`, title: `Check in · ${s.name}`, day: s.checkIn, time: s.checkInTime || '', stay: s }));
 

@@ -33,7 +33,8 @@ export function stayCard(s, ctx) {
     </div>` : ''}
     ${trip ? `
     <div class="stay-guests">
-      ${guests.length ? `${avatarStack(guests, 5, 26)}<span class="small"><b>${esc(namesOf(guests, trip.me?.id))}</b> ${guests.length === 1 && !imHere ? 'is' : 'are'} staying here</span>`
+      ${s.everyone ? `${avatarStack(guests, 5, 26)}<span class="small"><b>Everyone's staying here</b>${trip.me && !imHere ? ' — except you' : ''}</span>`
+        : guests.length ? `${avatarStack(guests, 5, 26)}<span class="small"><b>${esc(namesOf(guests, trip.me?.id))}</b> ${guests.length === 1 && !imHere ? 'is' : 'are'} staying here</span>`
         : '<span class="small muted">Nobody added yet</span>'}
       ${trip.me ? `<button class="btn btn-xs ${imHere ? 'btn-ghost' : 'btn-secondary'}" data-stay-me="${s.id}" data-on="${!imHere}">${imHere ? 'Not me' : "I'm staying here"}</button>` : ''}
     </div>` : ''}
@@ -89,6 +90,7 @@ export function openAddStay(ctx, stay = null) {
   const people = trip.members.filter((m) => m.rsvp !== 'declined' || (stay?.guests || []).includes(m.id));
   // New place: everyone going if it's the first one, otherwise nobody yet.
   const guestDefault = (m) => (stay ? (stay.guests || []).includes(m.id) : !trip.stays.length && m.rsvp === 'going');
+  const everyone = stay ? Boolean(stay.everyone) : !trip.stays.length;
   sheet({
     title: stay ? 'Edit place' : 'Where are you staying?',
     body: `
@@ -101,7 +103,9 @@ export function openAddStay(ctx, stay = null) {
           <label class="field"><span>Check out</span><input type="date" name="checkOut" value="${v('checkOut', trip.endDate || '')}"></label>
           <label class="field"><span>Time</span><input type="time" name="checkOutTime" value="${v('checkOutTime', '11:00')}"></label>
         </div>
-        <div class="field"><span>Who's staying here?</span><div class="picks">
+        <label class="switch"><input type="checkbox" name="everyone" ${everyone ? 'checked' : ''}><span></span>Everyone's staying here</label>
+        <p class="hint" style="margin:-6px 0 0">The whole group, including people who join later. Nobody has to add it themselves; anyone staying elsewhere can tap "Not me".</p>
+        <div class="field" data-guest-picks ${everyone ? 'hidden' : ''}><span>Who's staying here?</span><div class="picks">
           ${people.map((m) => `<label><input type="checkbox" name="guest" value="${m.id}" ${guestDefault(m) ? 'checked' : ''}>
             <span class="pick">${avatar(m, 30)}${esc(m.id === trip.me.id ? 'Me' : firstName(m.name))}</span></label>`).join('')}</div></div>
         <label class="field"><span>Confirmation number</span><input name="confirmation" autocomplete="off" value="${v('confirmation')}"></label>
@@ -112,6 +116,7 @@ export function openAddStay(ctx, stay = null) {
     onMount(dlg, close) {
       const form = dlg.querySelector('#stay-form');
       linkDates(form, null, ['checkIn', 'checkOut']);
+      form.elements.everyone.addEventListener('change', () => { form.querySelector('[data-guest-picks]').hidden = form.elements.everyone.checked; });
       // Hotel names and addresses suggest as they type (nearest the destination
       // first); a pick fills the address and pins the place without a Google key.
       let picked = null; // { name, address, lat, lon }
@@ -136,7 +141,8 @@ export function openAddStay(ctx, stay = null) {
           const fromPick = picked && (picked.name === f.name.trim() || picked.address === f.address.trim());
           if (!same && fromPick) at = { lat: picked.lat, lon: picked.lon };
           else if (!same && hasGoogleKey) at = await googleFindPlace(stayQuery({ name: f.name.trim(), address: f.address.trim() }, trip), trip).catch(() => null);
-          const data = { ...f, lat: at?.lat ?? '', lon: at?.lon ?? '', guests: [...form.querySelectorAll('[name=guest]:checked')].map((c) => c.value) };
+          const data = { ...f, lat: at?.lat ?? '', lon: at?.lon ?? '', everyone: form.elements.everyone.checked,
+            guests: form.elements.everyone.checked ? [] : [...form.querySelectorAll('[name=guest]:checked')].map((c) => c.value) };
           delete data.guest;
           return stay ? store.updateStay(trip.id, stay.id, data) : store.addStay(trip.id, data);
         });

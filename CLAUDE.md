@@ -201,6 +201,11 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
   Everyone's base", above flights and earlier plans), Home's "Next up" shows
   it until it has happened (`nextUp()` includes `sharedCheckIns()`), and the
   map opens on it before check-in. A one-person hotel keeps its time slot.
+  `stays.everyone` (v15, owner 2026-10-26: guests shouldn't each have to
+  enter the shared place): the organizer's "Everyone's staying here" switch
+  (on by default for a trip's first place) makes every joined member a guest
+  of that stay and a trigger (`_everyone_stays`) adds people who join later;
+  "Not me" opts one person out. Guest picks only show when it's off.
 - Hotels: `stay_guests` says who stays where (a person can be at more than
   one, e.g. moving hotels). Map/plan cards show "From each hotel" (distance
   needs coordinates → Google key; Route opens Google Maps directions, since

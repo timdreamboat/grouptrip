@@ -2644,3 +2644,76 @@ begin
 end $$;
 
 revoke execute on function _clean_email(text), _pin_reset_begin(text) from public, anon, authenticated;
+
+
+-- ============ v15: "Everyone's staying here" (owner, 2026-10-26) ============
+-- The organizer marks a stay as the whole group's (an Airbnb, a cabin) so
+-- guests don't each have to say where they're staying: everyone who has
+-- joined is a guest of it, and people who join later are added by trigger.
+-- "Not me" still lets one person opt out. Individual hotels keep guest lists.
+alter table stays add column everyone boolean not null default false;
+
+create function _set_everyone_guests(p_trip uuid, p_stay uuid) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  delete from stay_guests where stay_id = p_stay;
+  insert into stay_guests (stay_id, member_id)
+  select p_stay, m.id from members m where m.trip_id = p_trip and m.joined_at is not null
+  on conflict do nothing;
+end $$;
+revoke execute on function _set_everyone_guests(uuid, uuid) from public, anon, authenticated;
+
+create or replace function add_stay(p_code text, p_token text, p_stay jsonb) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare o members := _organizer(p_code, p_token); new_id uuid; all_in boolean := coalesce((p_stay->>'everyone')::boolean, false);
+begin
+  insert into stays (trip_id, name, address, check_in, check_in_time, check_out, check_out_time, booking_url, confirmation, notes, lat, lon, everyone)
+  values (o.trip_id, trim(p_stay->>'name'), nullif(trim(p_stay->>'address'), ''),
+          nullif(p_stay->>'checkIn', '')::date, nullif(p_stay->>'checkInTime', ''),
+          nullif(p_stay->>'checkOut', '')::date, nullif(p_stay->>'checkOutTime', ''),
+          nullif(trim(p_stay->>'bookingUrl'), ''), nullif(trim(p_stay->>'confirmation'), ''), nullif(trim(p_stay->>'notes'), ''),
+          nullif(p_stay->>'lat', '')::double precision, nullif(p_stay->>'lon', '')::double precision, all_in)
+  returning id into new_id;
+  if all_in then perform _set_everyone_guests(o.trip_id, new_id); else perform _set_stay_guests(o.trip_id, new_id, p_stay->'guests'); end if;
+  return new_id;
+end $$;
+
+create or replace function update_stay(p_code text, p_token text, p_id uuid, p_stay jsonb) returns void
+language plpgsql security definer set search_path = public as $$
+declare o members := _organizer(p_code, p_token); all_in boolean := coalesce((p_stay->>'everyone')::boolean, false);
+begin
+  update stays set
+    name = trim(p_stay->>'name'), address = nullif(trim(p_stay->>'address'), ''),
+    check_in = nullif(p_stay->>'checkIn', '')::date, check_in_time = nullif(p_stay->>'checkInTime', ''),
+    check_out = nullif(p_stay->>'checkOut', '')::date, check_out_time = nullif(p_stay->>'checkOutTime', ''),
+    booking_url = nullif(trim(p_stay->>'bookingUrl'), ''), confirmation = nullif(trim(p_stay->>'confirmation'), ''),
+    notes = nullif(trim(p_stay->>'notes'), ''),
+    lat = nullif(p_stay->>'lat', '')::double precision, lon = nullif(p_stay->>'lon', '')::double precision,
+    everyone = all_in
+  where id = p_id and trip_id = o.trip_id;
+  if not found then raise exception 'Place not found'; end if;
+  if all_in then perform _set_everyone_guests(o.trip_id, p_id); else perform _set_stay_guests(o.trip_id, p_id, p_stay->'guests'); end if;
+end $$;
+
+-- Whoever joins (or rejoins after "Let back in") lands in every everyone-stay.
+create function _everyone_stays() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.joined_at is not null and (tg_op = 'INSERT' or old.joined_at is null) then
+    insert into stay_guests (stay_id, member_id)
+    select s.id, new.id from stays s where s.trip_id = new.trip_id and s.everyone
+    on conflict do nothing;
+  end if;
+  return new;
+end $$;
+create trigger members_everyone_stays after insert or update of joined_at on members
+for each row execute function _everyone_stays();
+
+-- Trip contents carry the flag.
+do $$
+declare def text := pg_get_functiondef('public._get_trip_all(text,text)'::regprocedure);
+begin
+  def := replace(def, '''lat'', s.lat, ''lon'', s.lon,', '''lat'', s.lat, ''lon'', s.lon, ''everyone'', s.everyone,');
+  if def not like '%''everyone'', s.everyone%' then raise exception '_get_trip_all patch did not apply'; end if;
+  execute def;
+end $$;
