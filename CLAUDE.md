@@ -33,6 +33,11 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
    the choice and its credit are stored on the trip. Wikimedia only serves
    standard widths (500, 960, 1280…) — other sizes return 400.
    Nominatim allows 1 request/second; `places.js` queues requests.
+   Every photo/geocode fetch has a timeout (`fetchT`, 5–8s) and the picker
+   shows the place's own photos (Wikidata + Wikipedia) as soon as they're
+   in, extras after — Openverse stopped answering browsers on 2026-10-26
+   and had stalled the whole grid. Wikimedia Commons search
+   (`commonsPhotos`) is the second source of extras, one photo per series.
    Destination type-ahead (create page + trip editor) uses Photon
    (photon.komoot.io, free/keyless OSM search built for as-you-type; Nominatim
    forbids autocomplete). Picking a suggestion saves its lat/lon and shows

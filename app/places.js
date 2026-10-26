@@ -9,14 +9,23 @@
 //    Plain keyword search picked Alcatraz, an 1800s engraving ("Orlando and
 //    the Wrestler") and old Austin cars — going by the place avoids that.
 
+// A fetch that gives up after `ms`, so one slow partner never stalls a screen
+// (Openverse stopped answering browser requests on 2026-10-26 and the cover
+// picker waited on it forever).
+function fetchT(url, opts = {}, ms = 6000) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms);
+  return fetch(url, { ...opts, signal: ctrl.signal }).finally(() => clearTimeout(timer));
+}
+
 // Nominatim asks for at most one request per second — queue them.
 let nextSlot = 0;
 async function nominatim(params) {
   const wait = Math.max(0, nextSlot - Date.now());
   nextSlot = Date.now() + wait + 1100;
   if (wait) await new Promise((r) => setTimeout(r, wait));
-  const res = await fetch(`https://nominatim.openstreetmap.org/search?${new URLSearchParams({ format: 'jsonv2', limit: '1', ...params })}`,
-    { headers: { 'Accept-Language': 'en' } });
+  const res = await fetchT(`https://nominatim.openstreetmap.org/search?${new URLSearchParams({ format: 'jsonv2', limit: '1', ...params })}`,
+    { headers: { 'Accept-Language': 'en' } }, 8000);
   const [hit] = res.ok ? await res.json() : [];
   return hit ?? null;
 }
@@ -43,7 +52,7 @@ const commonsFile = (file, width) => `https://commons.wikimedia.org/wiki/Special
 async function wikidataPhoto(qid) {
   if (!/^Q\d+$/.test(qid || '')) return null;
   try {
-    const res = await fetch(`https://www.wikidata.org/w/api.php?${new URLSearchParams({ action: 'wbgetclaims', entity: qid, property: 'P18', format: 'json', origin: '*' })}`);
+    const res = await fetchT(`https://www.wikidata.org/w/api.php?${new URLSearchParams({ action: 'wbgetclaims', entity: qid, property: 'P18', format: 'json', origin: '*' })}`);
     if (!res.ok) return null;
     const file = (await res.json()).claims?.P18?.[0]?.mainsnak?.datavalue?.value;
     if (!file || /\.svg$/i.test(file) || NOT_A_PHOTO.test(file)) return null;
@@ -54,7 +63,7 @@ async function wikidataPhoto(qid) {
 
 async function wikipediaPhoto(title) {
   try {
-    const res = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title.trim().replace(/\s+/g, '_'))}?redirect=true`);
+    const res = await fetchT(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title.trim().replace(/\s+/g, '_'))}?redirect=true`);
     if (!res.ok) return null;
     const d = await res.json();
     const src = d.originalimage?.source;
@@ -70,7 +79,7 @@ async function openversePhotos(query) {
       q: query, source: 'flickr', aspect_ratio: 'wide',
       license: 'cc0,pdm,by,by-sa', mature: 'false', page_size: '20',
     });
-    const res = await fetch(`https://api.openverse.org/v1/images/?${q}`);
+    const res = await fetchT(`https://api.openverse.org/v1/images/?${q}`, {}, 5000);
     if (!res.ok) return [];
     const { results = [] } = await res.json();
     const titles = new Set();
@@ -87,8 +96,36 @@ async function openversePhotos(query) {
   } catch { return []; }
 }
 
+// Wikimedia Commons search: extra photos of the place when Openverse is slow
+// or down (it stopped answering browsers on 2026-10-26). Keyless, CORS-friendly.
+async function commonsPhotos(query) {
+  try {
+    const q = new URLSearchParams({
+      action: 'query', generator: 'search', gsrnamespace: '6', gsrlimit: '14',
+      gsrsearch: `filetype:bitmap "${query}" skyline OR downtown OR beach OR lake OR park OR street OR view`,
+      prop: 'imageinfo', iiprop: 'url|size|extmetadata', iiurlwidth: '500', format: 'json', origin: '*',
+    });
+    const res = await fetchT(`https://commons.wikimedia.org/w/api.php?${q}`);
+    if (!res.ok) return [];
+    const pages = Object.values((await res.json()).query?.pages ?? {});
+    const series = new Set(); // "Lake Eola Park 01/02/05" → one of them
+    return pages
+      .map((p) => ({ title: p.title.replace(/^File:/, ''), i: p.imageinfo?.[0] }))
+      .filter(({ title, i }) => i && !NOT_A_PHOTO.test(title) && (i.width ?? 0) >= 900 && i.width / (i.height || 1) <= 2.2 && i.width / (i.height || 1) >= 0.9)
+      .filter(({ title }) => { const t = title.replace(/\.[a-z]+$/i, '').replace(/[\d_-]+/g, ' ').trim().toLowerCase(); return !series.has(t) && series.add(t); })
+      .map(({ title, i }) => ({
+        url: commonsFile(title, 1280), thumb: i.thumburl || commonsFile(title, 500),
+        credit: `Photo: ${(i.extmetadata?.Artist?.value || 'Wikimedia Commons').replace(/<[^>]+>/g, '').trim().slice(0, 40)} · ${i.extmetadata?.LicenseShortName?.value || 'Wikimedia Commons'}`,
+        link: i.descriptionurl,
+      }));
+  } catch { return []; }
+}
+
 // Best first — the first one is what gets picked automatically.
-export async function coverOptions(destination) {
+// `onFirst(photos)` fires as soon as the place's own photos (Wikidata +
+// Wikipedia) are in, so the picker shows something right away; the resolved
+// list adds the Openverse extras, if that site answers in time.
+export async function coverOptions(destination, onFirst = null) {
   if (!destination?.trim()) return [];
   const hit = await place(destination);
   const tags = hit?.extratags ?? {};
@@ -96,14 +133,14 @@ export async function coverOptions(destination) {
   // "Orlando" → "Orlando Florida": the region keeps extra photos on the right place.
   const region = hit?.address?.state || hit?.address?.country || '';
   const name = hit?.name || destination;
-  const [data, wiki, open] = await Promise.all([
-    wikidataPhoto(tags.wikidata),
-    wikipediaPhoto(article),
-    openversePhotos(region && !name.includes(region) ? `${name} ${region}` : name),
-  ]);
   const seen = new Set();
   const key = (p) => decodeURIComponent(p.url).replace(/^.*\//, '').replace(/^\d+px-/, '').replace(/\?.*$/, '').replace(/_/g, ' ').toLowerCase();
-  return [data, wiki, ...open].filter((p) => p && !seen.has(key(p)) && seen.add(key(p))).slice(0, 9);
+  const dedupe = (list) => list.filter((p) => p && !seen.has(key(p)) && seen.add(key(p)));
+  const query = region && !name.includes(region) ? `${name} ${region}` : name;
+  const extras = Promise.all([openversePhotos(query), commonsPhotos(query)]).then(([a, b]) => [...a, ...b]);
+  const own = dedupe(await Promise.all([wikidataPhoto(tags.wikidata), wikipediaPhoto(article)]));
+  if (own.length) onFirst?.(own);
+  return [...own, ...dedupe(await extras)].slice(0, 9);
 }
 
 // Windy's own forecast, embedded: a map plus a day-by-day forecast for the spot.

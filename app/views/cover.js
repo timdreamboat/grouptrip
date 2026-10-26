@@ -7,29 +7,38 @@ import { coverOptions } from '../places.js';
 export async function mountCoverPicker(el, destination, { selected = null, autoPick = false, onPick }) {
   const ticket = (el.dataset.ticket = String(Math.random()));
   el.innerHTML = `<div class="cover-grid">${'<button type="button" class="skeleton" disabled></button>'.repeat(6)}</div>`;
-  const photos = await coverOptions(destination);
-  if (el.dataset.ticket !== ticket) return; // a newer search replaced this one
-  if (!photos.length) {
-    el.innerHTML = '<p class="hint">No photos found for that place — we\'ll use a color cover instead.</p>';
-    onPick?.(null);
-    return;
-  }
-  let current = selected ?? (autoPick ? photos[0].url : null);
-  const draw = () => {
+  let photos = [], current = selected ?? null, picked = false;
+  const draw = (loading = false) => {
     el.innerHTML = `<div class="cover-grid">
       ${photos.map((p, i) => `<button type="button" data-i="${i}" ${p.bad ? 'hidden' : ''} class="${p.url === current ? 'on' : ''}"
           style="background-image:url('${esc(p.thumb.replace(/'/g, '%27'))}')" aria-label="Choose photo ${i + 1}"></button>`).join('')}
+      ${loading ? '<button type="button" class="skeleton" disabled></button>' : ''}
       <button type="button" class="none ${current ? '' : 'on'}" data-none>Colors only</button>
     </div>`;
   };
-  draw();
-  if (autoPick && !selected) onPick?.(photos[0]);
   // Drop photos whose image won't load (moved or removed at the source).
-  photos.forEach((p) => {
+  const verify = (list) => list.forEach((p) => {
     const img = new Image();
     img.onerror = () => { p.bad = true; el.querySelector(`[data-i="${photos.indexOf(p)}"]`)?.setAttribute('hidden', ''); };
     img.src = p.thumb;
   });
+  // The place's own photos show as soon as they're in; extras fill in after.
+  const show = (list, loading) => {
+    if (el.dataset.ticket !== ticket) return;
+    const fresh = list.filter((p) => !photos.includes(p));
+    photos = list;
+    if (autoPick && !selected && !picked && photos.length) { current = photos[0].url; picked = true; onPick?.(photos[0]); }
+    draw(loading);
+    verify(fresh);
+  };
+  const all = await coverOptions(destination, (own) => show(own, true));
+  if (el.dataset.ticket !== ticket) return; // a newer search replaced this one
+  if (!all.length) {
+    el.innerHTML = '<p class="hint">No photos found for that place — we\'ll use a color cover instead.</p>';
+    onPick?.(null);
+    return;
+  }
+  show(all, false);
   el.onclick = (e) => {
     const b = e.target.closest('button');
     if (!b) return;
