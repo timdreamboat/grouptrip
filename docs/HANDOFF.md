@@ -59,6 +59,18 @@ and what's pending**.
   text, small tap targets, broken pictures, plus an eye-test checklist. Order
   for every major GigTrip change: gigtrip-qa → gigtrip-ui-qa → code review →
   publish.
+- Times (2026-10-26, owner: "based on the setting the user has on their
+  device, or local to where the user is and where the show is"): times and
+  dates format through `Intl` with the device's locale (12/24-hour, language).
+  Every show has a zone from its city's state/province (`TZ_REGION`, `showTz`),
+  flights from the airport (`TZ_AIRPORT`), hotels from the address; stored
+  times stay venue-local "HH:MM". When the device is in another zone, the day
+  sheet says "Times are New York local (EDT) · 2 hours ahead of you" and each
+  line adds "10:00 AM your time"; boarding passes show the zone next to each
+  time. The clock is live: `NOW.min` is the device's real time (`nowIn(tz)`
+  for the venue), so "Now" and "in N min" move during a demo. The sample show
+  day stays Apr 12, 2027 so the demo always lands on a show. The old
+  "mock clock 4:05 pm" note is gone.
 - Travel in the mock (2026-10-08, owner: "similar functionality as GroupTrip
   for flights, hotels and OpenTable"): flights are boarding passes (number,
   date, FROM time → TO time, confirmation, Live map / FlightAware, "Find my

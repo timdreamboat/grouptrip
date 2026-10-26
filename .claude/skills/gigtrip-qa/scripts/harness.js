@@ -69,6 +69,13 @@
   render('myhome'); check(!/You.re bringing/.test(txt()), "Artist Home shows 'You're bringing' without a show in view");
   render('today'); check(/You.re bringing/.test(txt()), "Artist Today is missing 'You're bringing'");
   S.role = 'manager'; S.artistId = 'jv'; S.showId = 'nyc'; S.showTab = 'deal'; render('show'); check(/Guarantee/.test(txt()), 'Manager show page is missing the deal');
+  // Times (2026-10-26): the device decides the format; shows and airports carry a zone; the clock is live in the venue's zone.
+  check(fmtTime('18:00') === new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(new Date(2000, 0, 1, 18, 0)).replace(/\u202f/g, ' '), 'Time format does not follow the device');
+  check(showTz(show('nyc')) === 'America/New_York' && tzFor('Vancouver, BC') === 'America/Vancouver' && airportTz('YYZ') === 'America/Toronto', 'Show or airport time zone lookup is wrong');
+  check(fromWall('2027-04-12', '18:00', 'America/New_York').toISOString() === '2027-04-12T22:00:00.000Z', 'Venue-local time does not convert to the right instant');
+  check(/your time/.test(clockText('Pacific/Kiritimati')), 'Today clock does not show the device time when the venue is in another zone');
+  check(!/your time/.test(clockText(DEVICE_TZ)), 'Today clock shows "your time" when the venue is in the device zone');
+  S.role = 'tm'; S.artistId = 'jv'; render('today'); check(!/mock clock/i.test(txt()) && /show day/i.test(txt()), 'Today still shows a mock clock');
   // Demo pictures (2026-10-13): every seeded artist and tour has a sample photo that actually loads from demo/img/.
   S.role = 'manager'; S.artistId = null; render('home');
   check(DB.artists.every(a => photoUrl(a)) && DB.tours.every(t => t.cover), 'A seeded artist or tour has no sample picture');

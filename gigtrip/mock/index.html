@@ -236,9 +236,9 @@ tfoot td { font-weight: 700; border-bottom: 0; }
 
 /* day sheet */
 .sheet { display: grid; }
-.slot { display: grid; grid-template-columns: 72px 1fr; gap: 14px; padding: 11px 0; border-top: 1px solid var(--line); align-items: baseline; }
+.slot { display: grid; grid-template-columns: minmax(72px, max-content) 1fr; gap: 14px; padding: 11px 0; border-top: 1px solid var(--line); align-items: baseline; }
 .slot:first-child { border-top: 0; }
-.slot .t { font: 600 16px/1.2 var(--font-mono); }
+.slot .t { font: 600 16px/1.2 var(--font-mono); white-space: nowrap; }
 .slot.past { color: var(--faint); }
 .slot.past .muted { color: var(--faint); }
 .slot.now { background: color-mix(in srgb, var(--tape) 22%, transparent); margin: 0 -12px; padding-inline: 12px; border-radius: 12px; border-top-color: transparent; }
@@ -465,6 +465,8 @@ dialog.sheet .field select, dialog.sheet .field input { max-width: 100%; }
 .pass-foot .spacer { flex: 1; }
 /* A note goes on its own line under the buttons, so the edit pencil never wraps alone onto an empty row. */
 .pass-foot .pass-note { flex-basis: 100%; }
+.tzn { font-size: .72em; font-weight: 600; color: var(--muted); letter-spacing: .04em; margin-left: 2px; }
+.tznote { margin: 0 0 6px; display: flex; gap: 6px; align-items: center; }
 .hotel { display: grid; gap: 10px; }
 .hotel .inout { display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: center; background: var(--surface-2); border-radius: var(--r-sm); padding: 10px 12px; }
 .hotel .inout .end { text-align: right; }
@@ -517,7 +519,28 @@ dialog.sheet .field select, dialog.sheet .field input { max-width: 100%; }
 // (see docs/GIGTRIP-SPEC.md) so the real build is mostly wiring.
 // Edits are kept in this browser only; "Reset sample data" in Settings.
 // =====================================================================
-const NOW = { date: '2027-04-12', min: 16 * 60 + 5 };   // mock clock: Mon Apr 12, 4:05 pm
+// Sample data lives on a fixed show day (Mon Apr 12, 2027) so the demo always lands on a show; the time of day is the
+// device's real clock, so the day sheet moves during a demo. Times are stored as venue-local "HH:MM".
+const DEVICE_TZ = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+const NOW = { date: '2027-04-12', get min() { return nowIn(DEVICE_TZ).min; } };
+// Time zones — by the city's state/province (shows, hotels) or the airport (flights). Unknown → treated as the device's zone.
+const TZ_REGION = { NY: 'America/New_York', MA: 'America/New_York', PA: 'America/New_York', DC: 'America/New_York', NC: 'America/New_York', TN: 'America/Chicago', IL: 'America/Chicago', CO: 'America/Denver', ME: 'America/New_York', OR: 'America/Los_Angeles', WA: 'America/Los_Angeles', TX: 'America/Chicago', FL: 'America/New_York', GA: 'America/New_York', MD: 'America/New_York', MI: 'America/Detroit', NJ: 'America/New_York', CT: 'America/New_York', VA: 'America/New_York', OH: 'America/New_York', KY: 'America/New_York', SC: 'America/New_York', IN: 'America/Indiana/Indianapolis', WI: 'America/Chicago', MN: 'America/Chicago', MO: 'America/Chicago', LA: 'America/Chicago', OK: 'America/Chicago', KS: 'America/Chicago', NE: 'America/Chicago', IA: 'America/Chicago', AR: 'America/Chicago', MS: 'America/Chicago', AL: 'America/Chicago', AZ: 'America/Phoenix', NM: 'America/Denver', UT: 'America/Denver', MT: 'America/Denver', WY: 'America/Denver', ID: 'America/Boise', NV: 'America/Los_Angeles', CA: 'America/Los_Angeles', HI: 'Pacific/Honolulu', AK: 'America/Anchorage', ON: 'America/Toronto', QC: 'America/Toronto', NS: 'America/Halifax', NB: 'America/Halifax', PE: 'America/Halifax', NL: 'America/St_Johns', BC: 'America/Vancouver', AB: 'America/Edmonton', SK: 'America/Regina', MB: 'America/Winnipeg' };
+const TZ_AIRPORT = { DCA: 'America/New_York', IAD: 'America/New_York', BWI: 'America/New_York', EWR: 'America/New_York', JFK: 'America/New_York', LGA: 'America/New_York', BOS: 'America/New_York', PHL: 'America/New_York', CLT: 'America/New_York', AVL: 'America/New_York', ATL: 'America/New_York', MIA: 'America/New_York', PWM: 'America/New_York', DTW: 'America/Detroit', ORD: 'America/Chicago', MDW: 'America/Chicago', BNA: 'America/Chicago', AUS: 'America/Chicago', DFW: 'America/Chicago', MSP: 'America/Chicago', DEN: 'America/Denver', SLC: 'America/Denver', PHX: 'America/Phoenix', LAS: 'America/Los_Angeles', LAX: 'America/Los_Angeles', SFO: 'America/Los_Angeles', SAN: 'America/Los_Angeles', SEA: 'America/Los_Angeles', PDX: 'America/Los_Angeles', YYZ: 'America/Toronto', YTZ: 'America/Toronto', YOW: 'America/Toronto', YUL: 'America/Toronto', YHZ: 'America/Halifax', YVR: 'America/Vancouver', YYC: 'America/Edmonton', YEG: 'America/Edmonton', YWG: 'America/Winnipeg' };
+const tzFor = place => { const m = /,\s*([A-Z]{2})\b/.exec(place || ''); return (m && TZ_REGION[m[1]]) || null; };
+const showTz = s => (s && (s.tz || tzFor(s.city))) || DEVICE_TZ;
+const airportTz = code => TZ_AIRPORT[(code || '').toUpperCase()] || DEVICE_TZ;
+const tzParts = (tz, date) => { const o = {}; new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).formatToParts(date).forEach(x => { o[x.type] = x.value; }); return o; };
+// What the clock says right now in a zone: { date: 'YYYY-MM-DD', min: minutes since midnight }.
+const nowIn = tz => { const o = tzParts(tz, new Date()); return { date: `${o.year}-${o.month}-${o.day}`, min: Number(o.hour) * 60 + Number(o.minute) }; };
+// A wall-clock time in one zone as an instant, so it can be shown in another.
+const fromWall = (iso, hhmm, tz) => { const [y, mo, d] = iso.split('-').map(Number); const [h, mi] = hhmm.split(':').map(Number); const guess = Date.UTC(y, mo - 1, d, h, mi); const o = tzParts(tz, new Date(guess)); const asIf = Date.UTC(+o.year, o.month - 1, +o.day, +o.hour, +o.minute); return new Date(guess - (asIf - guess)); };
+const tzAbbr = (tz, iso) => { const d = iso ? fromWall(iso, '12:00', tz) : new Date(); return (new Intl.DateTimeFormat(undefined, { timeZone: tz, timeZoneName: 'short' }).formatToParts(d).find(x => x.type === 'timeZoneName') || {}).value || ''; };
+// Time formatting follows the device (12- or 24-hour, the person's language).
+const TIME_FMT = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' });
+const fmtTime = hhmm => { if (!hhmm) return ''; const [h, m] = hhmm.split(':').map(Number); return TIME_FMT.format(new Date(2000, 0, 1, h, m)).replace(/\u202f/g, ' '); };
+// A venue-local time with its zone when it is not the device's; `yourTime` says what the device's clock reads then.
+const timeIn = (hhmm, tz, iso) => !hhmm ? '' : fmtTime(hhmm) + (tz && tz !== DEVICE_TZ ? ` <span class="tzn">${esc(tzAbbr(tz, iso))}</span>` : '');
+const yourTime = (hhmm, tz, iso) => { if (!hhmm || !tz || tz === DEVICE_TZ) return ''; const o = tzParts(DEVICE_TZ, fromWall(iso || NOW.date, hhmm, tz)); return fmtTime(`${o.hour}:${o.minute}`); };
 const KINDS = { manager: 'Management', tm: 'Tour manager', artist: 'Artist', crew: 'Band & crew', venue: 'Venue', agent: 'Agent' };
 const STATUSES = [['confirmed', 'Confirmed'], ['hold', 'Hold'], ['pencil', 'Pencil'], ['offer', 'Offer'], ['cancelled', 'Cancelled']];
 const DEALS = [['vs', 'Guarantee vs % of net'], ['flat', 'Flat guarantee'], ['door', 'Door deal (% of net box office)'], ['fest', 'Festival flat fee']];
@@ -781,12 +804,14 @@ const pctOf = (c, p) => Math.round(c * p / 100);
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const DAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const dt = iso => { const [y, m, d] = iso.split('-').map(Number); return new Date(y, m - 1, d); };
-const fmtDate = iso => { if (!iso) return '—'; const d = dt(iso); return `${DAY[d.getDay()]} ${MON[d.getMonth()]} ${d.getDate()}`; };
-const short = iso => { if (!iso) return '—'; const d = dt(iso); return `${MON[d.getMonth()]} ${d.getDate()}`; };
+const DATE_LONG = new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'short', day: 'numeric' }), DATE_SHORT = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' });
+const fmtDate = iso => iso ? DATE_LONG.format(dt(iso)) : '—';
+const short = iso => iso ? DATE_SHORT.format(dt(iso)) : '—';
 const toMin = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
-const ampm = t => { let [h, m] = t.split(':').map(Number); const p = h >= 12 ? 'pm' : 'am'; h = h % 12 || 12; return `${h}:${String(m).padStart(2, '0')} ${p}`; };
+const ampm = fmtTime;   // older call sites; the device decides 12- or 24-hour
 const daysUntil = iso => Math.round((dt(iso) - dt(NOW.date)) / 864e5);
-const dateBox = (iso, tape) => { const d = dt(iso); return `<div class="datebox${tape ? ' tape' : ''}"><div class="m">${DAY[d.getDay()]}</div><div class="d">${d.getDate()}</div><div class="m">${MON[d.getMonth()]}</div></div>`; };
+const DATE_WD = new Intl.DateTimeFormat(undefined, { weekday: 'short' }), DATE_MO = new Intl.DateTimeFormat(undefined, { month: 'short' });
+const dateBox = (iso, tape) => { const d = dt(iso); return `<div class="datebox${tape ? ' tape' : ''}"><div class="m">${DATE_WD.format(d)}</div><div class="d">${d.getDate()}</div><div class="m">${DATE_MO.format(d)}</div></div>`; };
 const statusChip = s => { const st = s.status;
   if (!isMgr() && !isVenue() && typeof me === 'function') return st === 'cancelled' ? '<span class="chip st-cancelled">Cancelled</span>' : st === 'confirmed' ? '<span class="chip st-confirmed">Confirmed</span>' : '<span class="chip st-pencil">Not confirmed yet</span>'; const label = st === 'hold' ? `Hold ${s.hold || ''}`.trim() : (STATUSES.find(x => x[0] === st) || [, st])[1]; return `<span class="chip st-${st}">${label}</span>`; };
 const initials = n => String(n).split(/\s+/).map(w => w[0]).slice(0, 2).join('');
@@ -1002,7 +1027,7 @@ function passHTML(x, { edit = false, compact = false } = {}) {
   const mine = x.who === me(), past = x.date < NOW.date;
   return `<article class="pass ${mine ? 'mine' : ''} ${past ? 'past' : ''}">
     <div class="pass-top">${dateBox(x.date)}<div class="grow"><b>${esc(mine ? 'You' : whoLabel(x.who))}</b><div class="small muted">${fmtDate(x.date)}${x.conf ? ` · conf <span class="mono" style="user-select:all">${esc(x.conf)}</span>` : ''}</div></div><span class="chip plain mono">${esc(p ? p.pretty : x.flight || x.label)}</span></div>
-    <div class="pass-route"><div><div class="code">${esc(x.from || '—')}</div><div class="when"><b>${x.dep ? ampm(x.dep) : ''}</b></div></div><div class="pass-line">${icon('plane')}</div><div class="end"><div class="code">${esc(x.to || '—')}</div><div class="when"><b>${x.arr ? ampm(x.arr) : ''}</b></div></div></div>
+    <div class="pass-route"><div><div class="code">${esc(x.from || '—')}</div><div class="when"><b>${timeIn(x.dep, airportTz(x.from), x.date)}</b></div></div><div class="pass-line">${icon('plane')}</div><div class="end"><div class="code">${esc(x.to || '—')}</div><div class="when"><b>${timeIn(x.arr, airportTz(x.to), x.date)}</b></div></div></div>
     ${compact ? '' : `<div class="pass-foot">${past ? '<span class="chip st-settled plain">Landed</span>' : p ? `<button class="btn btn-secondary btn-sm" type="button" data-act="flightMap" data-id="${x.id}">${icon('travel')} Live map</button><a class="btn btn-outline btn-sm" href="${flightAware(p.callsign)}" target="_blank" rel="noopener noreferrer">FlightAware ${icon('ext')}</a>` : ''}<span class="spacer"></span>${edit ? editBtn('flight', x.id, 'Edit flight') : ''}${x.notes ? `<span class="small muted pass-note">${esc(x.notes)}</span>` : ''}</div>`}
   </article>`;
 }
@@ -1015,7 +1040,7 @@ function hotelHTML(x, { edit = false, compact = false } = {}) {
   return `<section class="card hotel">
     ${compact ? '<div class="eyebrow">Hotel</div>' : ''}
     <div class="row between" style="align-items:flex-start"><div><b style="font-size:16px">${esc(x.name || x.label)}</b>${x.address ? `<div class="small muted" style="user-select:all">${esc(x.address)}</div>` : ''}</div>${past ? '<span class="chip st-settled plain">Checked out</span>' : edit ? editBtn('hotel', x.id, 'Edit hotel') : ''}</div>
-    ${x.checkIn ? `<div class="inout"><div><div class="eyebrow">Check in</div><b>${short(x.checkIn)}</b><span class="small muted">${x.inTime ? ampm(x.inTime) : ''}</span></div><span class="nights">${nights ? `${nights} night${nights === 1 ? '' : 's'}` : ''}</span><div class="end"><div class="eyebrow">Check out</div><b>${x.checkOut ? short(x.checkOut) : '—'}</b><span class="small muted">${x.outTime ? ampm(x.outTime) : ''}</span></div></div>` : ''}
+    ${x.checkIn ? `<div class="inout"><div><div class="eyebrow">Check in</div><b>${short(x.checkIn)}</b><span class="small muted">${timeIn(x.inTime, tzFor(x.address) || DEVICE_TZ, x.checkIn)}</span></div><span class="nights">${nights ? `${nights} night${nights === 1 ? '' : 's'}` : ''}</span><div class="end"><div class="eyebrow">Check out</div><b>${x.checkOut ? short(x.checkOut) : '—'}</b><span class="small muted">${timeIn(x.outTime, tzFor(x.address) || DEVICE_TZ, x.checkOut || x.checkIn)}</span></div></div>` : ''}
     ${compact ? (myRoom && guests.includes(me()) ? `<div class="rooms"><span class="chip plain">Your room ${esc(myRoom)}</span></div>` : '') : guests.length ? `<div><div class="eyebrow" style="margin-bottom:6px">Who's where</div><div class="rooms">${Object.entries(rooms).sort().map(([r, names]) => `<span class="chip plain ${r !== '—' && r === myRoom ? 'st-pending' : ''}">${r === '—' ? 'No room yet' : 'Room ' + esc(r)} · ${esc(names.join(', '))}</span>`).join('')}</div></div>` : ''}
     ${x.notes && !compact ? `<div class="note">${esc(x.notes)}</div>` : ''}
     <div class="row wrap" style="gap:8px">${x.conf ? `<span class="chip plain mono" style="user-select:all" title="Confirmation">${esc(x.conf)}</span>` : ''}<a class="btn btn-outline btn-sm" href="${mapsSearch(x.address || x.name || x.label)}" target="_blank" rel="noopener noreferrer">Directions ${icon('ext')}</a>${url ? `<a class="btn btn-outline btn-sm" href="${esc(url)}" target="_blank" rel="noopener noreferrer">Open on ${esc(siteName(url))} ${icon('ext')}</a>` : ''}</div>
@@ -1414,7 +1439,7 @@ const HELP = {
   settle: { what: 'The night-of settlement. Type the real box-office numbers and the sheet recalculates.', do: ['Add the promoter’s agreed expenses', 'Enter withholding tax if any', 'Mark as settled — it flows into commissions and the budget'], who: 'Management and the tour manager. The venue can view it. Never crew or artist unless you allow it.' },
   money: { what: 'Money across the roster: deposits due, commission statements and tour budgets.', do: ['Mark deposits received', 'Pick an artist for their commission statement', 'Edit budget lines per tour'], who: 'Management only, unless you give someone the Profit area.' },
   guests: { what: 'The guest list for one show.', do: ['Approve or decline requests', 'Add someone yourself', 'The venue sees only the approved list'], who: 'Everyone can request; management and the tour manager approve.' },
-  travel: { what: 'Flights as boarding passes, hotels with check-in/out and who is in which room, van legs with drive times.', do: ['Add a flight by its number — the times fill in', 'Live map follows a flight in the air; FlightAware has the status', 'Hotel cards take rooms from each person’s card in Party, with directions and the booking site'], who: 'Crew see only their own flights and rooms. Management and the tour manager see everyone’s.' },
+  travel: { what: 'Flights as boarding passes (times local to each airport), hotels with check-in/out and who is in which room, van legs with drive times.', do: ['Add a flight by its number — the times fill in', 'Live map follows a flight in the air; FlightAware has the status', 'Hotel cards take rooms from each person’s card in Party, with directions and the booking site'], who: 'Crew see only their own flights and rooms. Management and the tour manager see everyone’s.' },
   mymoney: { what: 'Your own pay, per diems and expenses. Nobody else’s.', do: ['Add an expense with a receipt photo', 'See what is still owed back to you'], who: 'Only you and management.' },
   party: { what: 'Everyone on this artist’s team and the venue crew for tonight.', do: ['Tap a person to open their card', 'Management: set what they bring and what they can see', 'Each person ticks off their own items'], who: 'Everyone. Phone numbers hide from the venue except the tour manager’s.' },
   access: { what: 'Who sees what. Management and tour managers have the same full access to everything; the defaults here are for everyone else, and any one person can be changed on their card in Party.', do: ['Hidden / View / Edit for every area, per role', 'Money is three separate areas so costs and profit can be hidden separately', '"See it as…" to check the result'], who: 'Management and tour managers. Manager = the office: the whole roster, offers, holds and the money across the year. Tour manager = the road: assigned to specific artists, running day sheets, advancing, travel, guest lists and the night-of settlement. Same powers, different scope.' },
@@ -1422,7 +1447,7 @@ const HELP = {
   settings: { what: 'Templates, rates, appearance and your imports.', do: ['Edit the advance and day-sheet templates once; every new show uses them', 'Import data or see what an earlier import created', 'Light or dark mode'], who: 'Management.' },
   imports: { what: 'Every import you have done, what it created and where it went.', do: ['Open the shows, tasks or contacts an import created', 'Undo an import if it came in wrong', 'Import another file'], who: 'Management.' },
   myhome: { what: 'Your tours and one-off shows, each on its own card, with what is next.', do: ['Tap a tour to see every date and the routing', 'Tap a show to see its day sheet and contacts', 'Today takes you straight to the current day sheet'], who: 'Artists and crew. Management and tour managers get the Artists page instead.' },
-  today: { what: 'The day sheet for today, plus the venue, your hotel and room, your flight if you fly today, and who to call.', do: ['Tick off what you are bringing', 'Reserve a table straight from a dinner line — OpenTable opens inside GigTrip', 'Add the day to your calendar'], who: 'Everyone on the road.' },
+  today: { what: 'The day sheet for today, plus the venue, your hotel and room, your flight if you fly today, and who to call. Times are the venue’s local time in your device’s format; when you are in another time zone, your own time shows alongside.', do: ['Tick off what you are bringing', 'Reserve a table straight from a dinner line — OpenTable opens inside GigTrip', 'Add the day to your calendar'], who: 'Everyone on the road.' },
 };
 // Notes about what the real build will do are for the owner and management, never for talent or venues.
 const proto = text => isMgr() ? text : '';
@@ -2219,14 +2244,18 @@ const stageTime = s => { const sl = DB.slots.filter(x => x.show === s.id); const
 // lines the venue doesn't need: the tour's own calls, hotel, money. Management can override per line.
 const TOUR_ONLY = /lobby call|bus call|van |hotel|settlement|per diem|bus |lobby/i;
 const venueSees = x => x.venue === 'yes' ? true : x.venue === 'no' ? false : !TOUR_ONLY.test(x.label + ' ' + (x.who || ''));
+// "Times are New York (EDT) · 3 hours ahead of you" — shown only when the show is in another zone than the device.
+function tzNote(s) { const tz = showTz(s); if (tz === DEVICE_TZ) return ''; const a = tzParts(tz, new Date()), b = tzParts(DEVICE_TZ, new Date()); const diff = (Date.UTC(+a.year, a.month - 1, +a.day, +a.hour, +a.minute) - Date.UTC(+b.year, b.month - 1, +b.day, +b.hour, +b.minute)) / 36e5; const h = Math.abs(diff); const rel = diff === 0 ? 'same as yours' : `${h % 1 ? h.toFixed(1) : h} hour${h === 1 ? '' : 's'} ${diff > 0 ? 'ahead of' : 'behind'} you`; return `<p class="small muted tznote">${icon('today')} Times are ${esc(cityOf(s).split(',')[0])} local (${esc(tzAbbr(tz, s.date))}) · ${rel}</p>`; }
+// The clock line on Today: the venue's time, and the device's when it differs.
+function clockText(tz = DEVICE_TZ) { const n = nowIn(tz), t = `${fmtTime(`${Math.floor(n.min / 60)}:${n.min % 60}`)}`; if (tz === DEVICE_TZ) return t; const d = nowIn(DEVICE_TZ); return `${t} ${esc(tzAbbr(tz))} · ${fmtTime(`${Math.floor(d.min / 60)}:${d.min % 60}`)} your time`; }
 function daySheet(showId, edit) {
   const slots = DB.slots.filter(x => x.show === showId && (!isVenue() || venueSees(x))).sort((a, b) => a.time.localeCompare(b.time));
-  const today = show(showId).date === NOW.date;
-  const next = slots.findIndex(x => toMin(x.time) > NOW.min);
+  const sh = show(showId), tz = showTz(sh), today = sh.date === NOW.date;
+  const next = slots.findIndex(x => toMin(x.time) > nowIn(tz).min);
   const nowIdx = today ? (next === -1 ? slots.length - 1 : next - 1) : -2;
-  return `<div class="sheet">${slots.map((x, i) => `
+  return `${tzNote(sh)}<div class="sheet">${slots.map((x, i) => `
     <div class="slot ${i < nowIdx ? 'past' : ''} ${i === nowIdx ? 'now' : ''} ${x.key ? 'key' : ''}">
-      <span class="t">${x.time}</span><div class="row between" style="align-items:flex-start"><div><div class="what">${esc(x.label)}${i === nowIdx ? ' <span class="chip st-pending plain">Now</span>' : ''}</div><div class="small muted">${esc(x.who || '')}${edit && isMgr() && !venueSees(x) ? ' · <span title="The venue does not see this line">tour only</span>' : ''}</div></div>${edit ? editBtn('slot', x.id, `Edit ${x.label}`) : ''}</div>
+      <span class="t">${fmtTime(x.time)}</span><div class="row between" style="align-items:flex-start"><div><div class="what">${esc(x.label)}${i === nowIdx ? ' <span class="chip st-pending plain">Now</span>' : ''}</div><div class="small muted">${yourTime(x.time, tz, sh.date) ? `${yourTime(x.time, tz, sh.date)} your time · ` : ''}${esc(x.who || '')}${edit && isMgr() && !venueSees(x) ? ' · <span title="The venue does not see this line">tour only</span>' : ''}</div></div>${edit ? editBtn('slot', x.id, `Edit ${x.label}`) : ''}</div>
       ${x.ot || safeUrl(x.url) ? `<div class="booking">${x.ot ? `<button class="btn btn-ot btn-sm" type="button" data-act="reserve" data-id="${x.id}">${icon('fork')} Reserve on OpenTable</button>` : ''}${safeUrl(x.url) ? `<a class="btn btn-outline btn-sm" href="${esc(safeUrl(x.url))}" target="_blank" rel="noopener noreferrer">Book on ${esc(siteName(x.url))} ${icon('ext')}</a>` : ''}</div>` : ''}
     </div>`).join('')}</div>`;
 }
@@ -2248,26 +2277,27 @@ V.today = () => {
   const s = todays.length === 1 && cur() === 'all' ? todays[0] : DB.shows.find(x => x.date === NOW.date && x.status !== 'cancelled' && x.artist === cur());
   if (!s) {
     const up = curShows().filter(x => x.date > NOW.date && x.status !== 'cancelled').slice(0, 4);
-    return `<div class="ribbon"><span class="tapechip">Day off</span><span>${fmtDate(NOW.date)}${proto(` · mock clock ${ampm('16:05')}`)}</span></div>
+    return `<div class="ribbon"><span class="tapechip">Day off</span><span>${fmtDate(NOW.date)} · ${clockText()}</span></div>
       <div class="head"><div><div class="eyebrow">${esc(artist(cur()).name)}</div><h1 class="display">No show today</h1></div></div>
       <section class="card"><h2 style="margin-bottom:4px">Coming up</h2><div class="list">${up.map(x => `<div class="li click" data-show="${x.id}">${dateBox(x.date)}<div class="grow"><b>${esc(x.city)}</b> · ${esc(x.venue)}<div class="small muted">${daysUntil(x.date) === 1 ? 'Tomorrow' : 'In ' + daysUntil(x.date) + ' days'} · ${pctDone(x.id)}% advanced</div></div>${statusChip(x)}</div>`).join('') || '<p class="muted">Nothing booked yet.</p>'}</div></section>`;
   }
   const slots = DB.slots.filter(x => x.show === s.id).sort((a, b) => a.time.localeCompare(b.time));
-  const next = slots.find(x => toMin(x.time) > NOW.min);
+  const tz = showTz(s), nowMin = nowIn(tz).min;
+  const next = slots.find(x => toMin(x.time) > nowMin);
   const p = P(me());
   const venue = isVenue();
   const hotel = DB.travel.find(x => x.type === 'hotel' && (x.checkIn || x.date) <= NOW.date && (x.checkOut || x.date) >= NOW.date && seesTravel(x, me()));
   const myFlight = DB.travel.find(x => x.type === 'flight' && x.date === NOW.date && seesTravel(x, me()));
   const contacts = DB.contacts.filter(c => c.show === s.id);
   return `
-  <div class="ribbon"><span class="tapechip">Show day</span><span>${fmtDate(NOW.date)}${proto(` · mock clock ${ampm('16:05')}`)}</span></div>
+  <div class="ribbon"><span class="tapechip">Show day</span><span>${fmtDate(NOW.date)} · ${clockText(tz)}</span></div>
   <section class="laminate">
     <div class="band"><span>${venue ? 'Venue · production' : 'All access'}</span><span>${esc(tour(s.tour)?.name || artist(s.artist).name)}</span></div>
     <div class="body">
       <div><div class="eyebrow">${esc(artist(s.artist).name)} · ${venue ? 'at your venue' : esc(s.venue)}</div>
         <h1 class="display">${esc(cityOf(s))}</h1>
-        <div class="muted">${esc(s.venue)} · ${slots.filter(x => /Doors|Curfew/.test(x.label)).map(x => `${x.label.toLowerCase()} ${ampm(x.time)}`).join(' · ')}</div></div>
-      ${next ? `<div class="next"><span class="t">${next.time}</span><div><b>${esc(next.label)}</b><div class="small muted">in ${toMin(next.time) - NOW.min} min · ${esc(next.who || '')}</div></div></div>` : ''}
+        <div class="muted">${esc(s.venue)} · ${slots.filter(x => /Doors|Curfew/.test(x.label)).map(x => `${x.label.toLowerCase()} ${fmtTime(x.time)}`).join(' · ')}</div></div>
+      ${next ? `<div class="next"><span class="t">${fmtTime(next.time)}</span><div><b>${esc(next.label)}</b><div class="small muted">in ${toMin(next.time) - nowMin} min${yourTime(next.time, tz, s.date) ? ` · ${yourTime(next.time, tz, s.date)} your time` : ''} · ${esc(next.who || '')}</div></div></div>` : ''}
     </div>
   </section>
   <div class="grid2 wide-left">
@@ -2567,7 +2597,7 @@ V.settings = () => `
       <div class="list">${DB.templates.advance.map(t => `<div class="li"><div class="grow"><b>${esc(t.label)}</b><div class="small muted">${esc(P(t.owner).name)} · ${t.before} days before</div></div>${editBtn('tmplAdv', t.id)}</div>`).join('')}</div></section>
     <div class="stack">
       <section class="card stack"><div class="row between"><h2>Day-sheet template</h2>${addBtn('newTmplSlot', 'Add')}</div>
-        <div class="list">${DB.templates.slots.map(t => `<div class="li"><span class="mono">${t.time}</span><div class="grow">${esc(t.label)}</div>${editBtn('tmplSlot', t.id)}</div>`).join('')}</div></section>
+        <div class="list">${DB.templates.slots.map(t => `<div class="li"><span class="mono">${fmtTime(t.time)}</span><div class="grow">${esc(t.label)}</div>${editBtn('tmplSlot', t.id)}</div>`).join('')}</div></section>
       <section class="card stack"><div class="row between"><h2>Rates</h2><button class="btn btn-secondary btn-sm" data-act="rates">${icon('edit')} Edit</button></div>
         <dl class="kv"><dt>Per diem</dt><dd>${money(DB.settings.perDiem)} / day</dd><dt>Agent commission</dt><dd>${DB.settings.agentPct}%</dd><dt>Management commission</dt><dd>${DB.settings.mgmtPct}%</dd></dl></section>
       <section class="card stack"><h2>Appearance</h2><div class="seg themeseg">${THEMES.map(([k, l]) => `<button aria-pressed="${THEME === k}" data-act="theme" data-id="${k}">${l}</button>`).join('')}</div></section>
