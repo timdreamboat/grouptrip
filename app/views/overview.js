@@ -23,12 +23,12 @@ function nextUpCard({ trip }) {
   const n = nextUp(trip);
   if (!n) return '';
   return `
-    <a class="card row-link" href="#/t/${trip.id}/plan" style="display:flex;gap:14px;align-items:center;text-decoration:none">
-      <div class="tl-icon ${n.opentableRid ? 'ot' : ''}">${icon(n.opentableRid ? 'utensils' : 'calendar')}</div>
+    <a class="card row-link" href="#/t/${trip.id}/${n.kind === 'checkin' ? 'travel' : 'plan'}" style="display:flex;gap:14px;align-items:center;text-decoration:none">
+      <div class="tl-icon ${n.opentableRid ? 'ot' : ''}">${icon(n.kind === 'checkin' ? 'bed' : n.opentableRid ? 'utensils' : 'calendar')}</div>
       <div style="flex:1;min-width:0">
         <div class="eyebrow">Next up</div>
         <div style="font-weight:600;font-size:17px">${esc(n.title)}</div>
-        <div class="small muted">${esc(fmtDay(n.day))}${n.time ? ` · ${esc(fmtTime(n.time))}` : ''}</div>
+        <div class="small muted">${esc(fmtDay(n.day))}${n.time ? ` · ${n.kind === 'checkin' ? 'from ' : ''}${esc(fmtTime(n.time))}` : ''}${n.kind === 'checkin' && n.stay.address ? ` · ${esc(n.stay.address)}` : ''}</div>
       </div>
       ${icon('chevron')}
     </a>`;

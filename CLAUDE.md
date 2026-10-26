@@ -194,6 +194,13 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
   notification goes only to them). Calendar has a "Showing: Everyone / My /
   <person>'s schedule" picker (hidden for attendees on private trips);
   Home/Today use `myPlans()`.
+- Shared stay first (owner, 2026-10-26: "the first activity should be the
+  check-in if the location is a shared Airbnb"): `isSharedStay()` in
+  common.js = a stay with a check-in date that everyone (or 2+ people)
+  shares. Its check-in leads its day in the Calendar ("from 4:00 PM ·
+  Everyone's base", above flights and earlier plans), Home's "Next up" shows
+  it until it has happened (`nextUp()` includes `sharedCheckIns()`), and the
+  map opens on it before check-in. A one-person hotel keeps its time slot.
 - Hotels: `stay_guests` says who stays where (a person can be at more than
   one, e.g. moving hotels). Map/plan cards show "From each hotel" (distance
   needs coordinates → Google key; Route opens Google Maps directions, since

@@ -4,7 +4,7 @@
 import { esc, icon, avatar, fmtDay, fmtTime, tripDays, sheet, embedSheet, confirmSheet, busy, toast, copy, emptyState, safeUrl, siteName, suggest } from '../ui.js';
 import * as store from '../store.js';
 import * as embed from '../embeds.js';
-import { going, organizer, firstName, nameOf, words, isPrivate } from './common.js';
+import { going, organizer, firstName, nameOf, words, isPrivate, isSharedStay } from './common.js';
 import { handleStayClick } from './stays.js';
 import { mountTripMap, focusPin, pinned, staysOnMap, stayQuery, hasGoogleKey, googleFindPlace, placeQuery, fromHotelsHTML } from './tripmap.js';
 import { distanceText, placeSuggester } from '../places.js';
@@ -40,7 +40,9 @@ export function render(el, ctx) {
     if (!byDay.has(e.day)) byDay.set(e.day, []);
     byDay.get(e.day).push(e);
   }
-  for (const list of byDay.values()) list.sort((a, b) => a.time.localeCompare(b.time));
+  // A shared stay's check-in leads its day (everyone's base), then the rest by time.
+  const lead = (e) => (e.kind === 'in' && isSharedStay(e.s) ? 0 : 1);
+  for (const list of byDay.values()) list.sort((a, b) => lead(a) - lead(b) || a.time.localeCompare(b.time));
   const days = [...new Set([...tripDays(trip), ...[...byDay.keys()].filter(Boolean)])].sort();
   const undated = byDay.get('') ?? [];
   const org = organizer(trip);
@@ -173,12 +175,13 @@ function entry(e, ctx) {
       </a></div>`;
   }
   const s = e.s;
-  return `<div class="tl-item">${time}
-    <article class="card tl-card muted-card">
+  const base = e.kind === 'in' && isSharedStay(s);
+  return `<div class="tl-item">${base ? `<div class="tl-time">${e.time ? `from ${esc(fmtTime(e.time))}` : ''}</div>` : time}
+    <article class="card tl-card ${base ? '' : 'muted-card'}">
       <div style="display:flex;gap:12px;align-items:center">
         <div class="tl-icon">${icon('bed')}</div>
         <div style="flex:1;min-width:0"><div style="font-weight:600">${e.kind === 'in' ? 'Check in' : 'Check out'} · ${esc(s.name)}</div>
-          ${s.address ? `<div class="small muted">${esc(s.address)}</div>` : ''}</div>
+          <div class="small muted">${base ? "Everyone's base" : ''}${base && s.address ? ' · ' : ''}${s.address ? esc(s.address) : ''}</div></div>
         ${s.address ? `<button class="btn btn-icon btn-sm btn-secondary" data-stay-map="${s.id}" aria-label="Map">${icon('map')}</button>` : ''}
       </div>
     </article></div>`;

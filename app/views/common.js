@@ -38,10 +38,20 @@ export const privacyPicker = (trip) => `
       <span class="kind-card"><b>${icon(k === 'private' ? 'lock' : 'users')} ${label}</b><small>${blurb}</small></span></label>`).join('')}</div>`;
 
 // The next plan that hasn't happened yet (or the first one before the trip).
+// A stay the group shares (an Airbnb, a cabin): everyone's base, so its
+// check-in is the first thing on the day it starts — before flights and plans.
+export const isSharedStay = (s) => Boolean(s.checkIn) && (!s.guests?.length || s.guests.length > 1);
+export const sharedCheckIns = (trip) => trip.stays.filter(isSharedStay)
+  .map((s) => ({ kind: 'checkin', id: `in-${s.id}`, title: `Check in · ${s.name}`, day: s.checkIn, time: s.checkInTime || '', stay: s }));
+
+// The next thing on the calendar: a plan, or the shared stay's check-in on
+// the day everyone arrives (owner, 2026-10-26: "the first activity should be
+// the check-in if the location is a shared Airbnb").
 export function nextUp(trip) {
   const now = new Date();
   const todayIso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  const dated = myPlans(trip).filter((i) => i.day);
+  const dated = [...myPlans(trip).filter((i) => i.day), ...sharedCheckIns(trip)]
+    .sort((a, b) => a.day.localeCompare(b.day) || (a.kind !== 'checkin') - (b.kind !== 'checkin') || (a.time || '').localeCompare(b.time || ''));
   return dated.find((i) => i.day >= todayIso) ?? null;
 }
 
