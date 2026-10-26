@@ -6,7 +6,7 @@
 import { esc, icon, avatarStack, fmtDay, fmtTime } from '../ui.js';
 import { GOOGLE_MAPS_KEY, GOOGLE_MAP_ID } from '../config.js';
 import { distanceText, middleOf, routeUrl } from '../places.js';
-import { guestsOf, namesOf, isSharedStay } from './common.js';
+import { guestsOf, namesOf, calendarOrder } from './common.js';
 
 export const hasGoogleKey = Boolean(GOOGLE_MAPS_KEY);
 
@@ -197,12 +197,15 @@ function mountEmbed(el, detailEl, trip, pins, stays) {
       <div class="pin-chips">${spots.map((p) => `<button class="pin-chip ${p.stay ? 'stay' : ''} ${p === spot ? 'on' : ''}" data-pin="${p.id}" title="${esc(p.title)}" aria-label="${esc(p.title)}">${p.chip ?? p.label}</button>`).join('')}</div>
       ${spot ? `<div class="pin-detail">${spot.card()}</div>` : ''}` : '';
   };
-  // Start on the shared stay until everyone has checked in, then the next
-  // plan that hasn't happened yet, else the hotel.
+  // Start on whatever comes first on the calendar and hasn't happened yet —
+  // a check-in or a plan — else the first plan, else the hotel.
   const today = new Date().toISOString().slice(0, 10);
-  const base = stays.find((st) => isSharedStay(st) && st.checkIn >= today);
-  const next = pins.find((p) => !p.day || p.day >= today);
-  show(spots.find((sp) => sp.id === (base?.id ?? next?.id)) ?? spots[0] ?? null);
+  const upcoming = [
+    ...stays.filter((st) => st.checkIn).map((st) => ({ kind: 'checkin', id: st.id, day: st.checkIn, time: st.checkInTime || '', stay: st })),
+    ...pins.filter((p) => p.day).map((p) => ({ kind: 'plan', id: p.id, day: p.day, time: p.time || '' })),
+  ].sort(calendarOrder).find((e) => e.day >= today);
+  const next = upcoming ?? pins.find((p) => !p.day || p.day >= today);
+  show(spots.find((sp) => sp.id === next?.id) ?? spots[0] ?? null);
   // Focus moving into the map means they're panning/zooming it.
   const onBlur = () => {
     if (!el.isConnected) return window.removeEventListener('blur', onBlur);

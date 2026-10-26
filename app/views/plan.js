@@ -43,6 +43,7 @@ export function render(el, ctx) {
   // A shared stay's check-in leads its day (everyone's base), then the rest by time.
   const lead = (e) => (e.kind === 'in' && isSharedStay(e.s) ? 0 : 1);
   for (const list of byDay.values()) list.sort((a, b) => lead(a) - lead(b) || a.time.localeCompare(b.time));
+  // (same rule as calendarOrder in common.js, which Home's "Next up" and the map use)
   const days = [...new Set([...tripDays(trip), ...[...byDay.keys()].filter(Boolean)])].sort();
   const undated = byDay.get('') ?? [];
   const org = organizer(trip);

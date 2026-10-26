@@ -41,17 +41,23 @@ export const privacyPicker = (trip) => `
 // A stay the group shares (an Airbnb, a cabin): everyone's base, so its
 // check-in is the first thing on the day it starts — before flights and plans.
 export const isSharedStay = (s) => Boolean(s.checkIn) && (s.everyone || !s.guests?.length || s.guests.length > 1);
-export const sharedCheckIns = (trip) => trip.stays.filter(isSharedStay)
+// Check-ins that are on my calendar: the shared place, or a place I'm on.
+export const myCheckIns = (trip) => trip.stays
+  .filter((s) => s.checkIn && (isSharedStay(s) || (trip.me && s.guests?.includes(trip.me.id))))
   .map((s) => ({ kind: 'checkin', id: `in-${s.id}`, title: `Check in · ${s.name}`, day: s.checkIn, time: s.checkInTime || '', stay: s }));
 
-// The next thing on the calendar: a plan, or the shared stay's check-in on
-// the day everyone arrives (owner, 2026-10-26: "the first activity should be
-// the check-in if the location is a shared Airbnb").
+// Calendar order: by day, a shared stay's check-in leads its day (everyone's
+// base), everything else by time (owner, 2026-10-26: "the first activity
+// should be the check-in if the location is a shared Airbnb").
+export const calendarOrder = (a, b) => a.day.localeCompare(b.day)
+  || (a.kind === 'checkin' && isSharedStay(a.stay) ? 0 : 1) - (b.kind === 'checkin' && isSharedStay(b.stay) ? 0 : 1)
+  || (a.time || '').localeCompare(b.time || '');
+
+// The next thing on the calendar, check-in or plan.
 export function nextUp(trip) {
   const now = new Date();
   const todayIso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  const dated = [...myPlans(trip).filter((i) => i.day), ...sharedCheckIns(trip)]
-    .sort((a, b) => a.day.localeCompare(b.day) || (a.kind !== 'checkin') - (b.kind !== 'checkin') || (a.time || '').localeCompare(b.time || ''));
+  const dated = [...myPlans(trip).filter((i) => i.day), ...myCheckIns(trip)].sort(calendarOrder);
   return dated.find((i) => i.day >= todayIso) ?? null;
 }
 
