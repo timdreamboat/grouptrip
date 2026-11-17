@@ -39,7 +39,8 @@ export function render(root, trip, onJoined) {
             <button class="btn btn-primary btn-lg btn-block">Join trip ${icon('arrow')}</button>
             <p class="hint" style="text-align:center;margin:-2px 0 0">${me
               ? `Joining as <b>@${esc(me)}</b>`
-              : 'No account needed. Your username and PIN bring your trips to any phone or laptop.'}</p>
+              : 'No account needed. Your username and PIN bring your trips to any phone or laptop.'}
+              <br><a href="privacy.html" target="_blank" rel="noopener" style="color:inherit">Privacy &amp; your data</a></p>
           </form>
         </div>
       </div>

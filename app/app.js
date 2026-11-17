@@ -41,6 +41,8 @@ async function route() {
   if (page === 't' && code) return openTrip(code, extra || 'home');
   current = {};
   paint(() => home.render(root));
+  // A message carried over a reload (e.g. after deleting your data).
+  try { const msg = sessionStorage.getItem('grouptrip.flash'); if (msg) { sessionStorage.removeItem('grouptrip.flash'); toast(msg); } } catch { /* ignore */ }
   refreshTrips();
 }
 

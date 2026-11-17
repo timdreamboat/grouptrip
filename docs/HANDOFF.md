@@ -241,8 +241,12 @@ trips with "zz-…" usernames for tests and delete them after.
 - Supabase stays in Canada Central.
 - Email is **off** (`EMAIL_ENABLED = false`); people use the browser or the
   installed app. Server side is built but idle.
-- "Before sharing" items (rate limiting, backups, privacy note) — **skipped**
-  by the owner for now.
+- "Before sharing" items: privacy page, delete-my-data and photo reports were
+  built 2026-11-17 (see CLAUDE.md → Privacy basics). Rate limiting and
+  backups are still skipped.
+- Public contact email: none for now (owner, 2026-11-17). Add one on the
+  7 Wood Systems domain once the app moves to AWS and goes live under that
+  brand; the privacy page has a placeholder sentence.
 - App renamed **GroupTripIt** (2026-09-28; grouptrip.com was taken). Shown
   everywhere people see it. Internal names stay `grouptrip` on purpose: the
   repo, Pages URL, Supabase project, localStorage keys (renaming would lose

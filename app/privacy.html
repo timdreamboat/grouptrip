@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Privacy &amp; your data · GroupTripIt</title>
+<meta name="description" content="What GroupTripIt stores, who can see it, and how to delete it.">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap">
+<link rel="stylesheet" href="style.css">
+<style>
+  .doc { max-width: 680px; margin: 0 auto; padding: 20px 16px 64px; }
+  .doc h1 { font-size: clamp(40px, 9vw, 56px); margin: 22px 0 6px; }
+  .doc h2 { font-size: 20px; margin: 34px 0 10px; }
+  .doc p, .doc li { line-height: 1.6; }
+  .doc ul { padding-left: 20px; display: grid; gap: 8px; margin: 10px 0; }
+  .doc .card { margin: 18px 0; }
+  .doc a { color: inherit; }
+  .doc .updated { color: var(--muted); font-size: 14px; }
+</style>
+</head>
+<body>
+<main class="doc">
+  <a class="brand" href="./" style="text-decoration:none"><span class="brand-mark"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg></span>GroupTripIt</a>
+
+  <h1 class="display">Privacy &amp; your data</h1>
+  <p class="updated">Last updated November 17, 2026 · GroupTripIt is in pre-release.</p>
+
+  <div class="card">
+    <p style="margin:0"><b>The short version.</b> GroupTripIt stores what your group types into a trip so everyone on that trip can see it. There are no ads, no tracking and nothing is sold. You can delete your username and everything under it at any time, from inside the app.</p>
+  </div>
+
+  <h2>What's stored, and why</h2>
+  <ul>
+    <li><b>Your username and PIN.</b> The username ties your trips together across devices. The PIN is stored only as a one-way scramble (a hash); nobody, including us, can read it.</li>
+    <li><b>A passkey, if you add one.</b> Only its public half. Your face, fingerprint or phone passcode never leave your device.</li>
+    <li><b>A recovery email, if you add one.</b> Used only to send a PIN reset code. Never for trip updates or marketing.</li>
+    <li><b>What you put in a trip:</b> the name you go by, your RSVP, flights, where you're staying, plans, polls and votes, lists, expenses and who paid, a Venmo username if you add it, and any photos or receipts you upload.</li>
+    <li><b>Notification details,</b> if you turn notifications on: the address your phone or browser gives us to deliver them.</li>
+  </ul>
+  <p>We don't ask for your real name, phone number, address, contacts, location or payment details.</p>
+
+  <h2>Who can see it</h2>
+  <ul>
+    <li><b>People on the same trip</b> see what's shared in that trip. On business trips set to private, each person sees only their own schedule, flights, stays, expenses and photos; the organizer sees everything.</li>
+    <li><b>Anyone with a trip's invite link</b> can see the trip's name, place, dates, who's going, the schedule and where the group is staying, and can join. Expenses, polls, lists, photos, Venmo usernames and the organizer's notes are shown only after joining, and the organizer is told when someone joins. Treat the link like a key: share it only with the people you're inviting. (Private business trips don't list names on the invite.)</li>
+    <li><b>Your private packing list</b> is visible only to you.</li>
+    <li><b>Calendar links</b> you subscribe to show the schedule, including hotel confirmation numbers, to any app holding the link. Your personal "My schedule" link can be replaced with a new one from the Calendar tab.</li>
+    <li><b>Uploaded photos and receipts</b> are stored at web addresses that are long and unguessable but not password-protected. Someone who is given a photo's direct address can open it.</li>
+  </ul>
+
+  <h2>What we don't do</h2>
+  <ul>
+    <li>No advertising, no analytics or tracking, no selling or sharing of your data for marketing.</li>
+    <li>No cookies. The app keeps your username, trips and settings in your browser's own storage on your device so it opens quickly and works offline.</li>
+    <li>We never see or store your logins for other services. Venmo, OpenTable, booking and ticket sites open on their own pages, where you sign in with them.</li>
+  </ul>
+
+  <h2>Other services the app uses</h2>
+  <p>To show maps, weather, photos and search results, your browser talks to these services directly. They receive the request (for example the place you searched for) and, like any website you visit, your device's internet address. They don't receive your username or your trip.</p>
+  <ul>
+    <li><b>Google Maps</b> for embedded maps and directions, and <b>Google Fonts</b> for typefaces.</li>
+    <li><b>OpenStreetMap search</b> (Photon by Komoot, and Nominatim) for finding places.</li>
+    <li><b>Wikipedia, Wikimedia Commons, Wikidata and Openverse</b> for destination photos.</li>
+    <li><b>Windy</b> for the weather forecast, <b>Frankfurter</b> for exchange rates, <b>adsb.fi</b> for the live flight map.</li>
+    <li><b>AeroDataBox</b> looks up scheduled flight times. Only the flight number and date are sent, from our server.</li>
+    <li><b>Apple, Google or Mozilla</b> deliver notifications to your device if you turn them on.</li>
+  </ul>
+  <p>The app's files are served by GitHub Pages. Trip data, photos and receipts are stored with Supabase in Canada.</p>
+
+  <h2>How long it's kept</h2>
+  <p>Until you or your trip's organizer delete it. Deleting a trip removes everything in it, including its photos and receipts.</p>
+
+  <h2 id="delete">Deleting your data</h2>
+  <ul>
+    <li><b>Everything:</b> open GroupTripIt, tap your <b>@username</b>, then <b>Delete my username and data</b>, and confirm with your PIN.</li>
+    <li>Trips you organize are deleted for everyone on them.</li>
+    <li>On trips you joined, your name, flights, photos, receipts, votes, packing list and Venmo username are removed. Expenses you were part of stay, shown as "Former member", so the rest of the group's totals still add up.</li>
+    <li><b>Just one trip:</b> on My trips, use the "⋯" menu on the trip to leave it (or delete it, if you organize it).</li>
+    <li><b>One photo, expense or flight:</b> use the bin icon next to it.</li>
+  </ul>
+
+  <h2 id="report">Report a photo or a problem</h2>
+  <ul>
+    <li><b>A photo that shouldn't be there:</b> open it and tap the flag. It is hidden for you straight away and the trip's organizer is asked to review and remove it.</li>
+    <li><b>A person who shouldn't be on your trip:</b> the organizer can remove them from the People tab.</li>
+    <li><b>Someone using your username:</b> change your PIN (tap your @username), which signs out every other device.</li>
+    <li><b>Anything else:</b> GroupTripIt is in pre-release, and a contact address will be listed here before public launch. Until then, please raise it with the person who invited you to try the app.</li>
+  </ul>
+
+  <h2>Children</h2>
+  <p>GroupTripIt isn't meant for children under 13, and we don't knowingly collect their information. A parent or organizer can add a child's first name to a family trip; that name is treated like any other trip detail.</p>
+
+  <h2>Changes</h2>
+  <p>If this page changes, the date at the top changes.</p>
+
+  <p style="margin-top:36px"><a class="btn btn-secondary" href="./">Back to GroupTripIt</a></p>
+</main>
+</body>
+</html>

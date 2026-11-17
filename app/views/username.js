@@ -328,7 +328,11 @@ export function openUsername() {
         </div></div>` : `
         <button class="btn btn-primary btn-block" data-unlock>${icon('lock')}Enter your PIN</button>
         <p class="hint" style="margin:6px 0 0">This device hasn't been checked with your PIN yet.</p>`}
-      <button class="btn btn-ghost btn-block" data-switch style="margin-top:8px">${icon('logout')}Use a different username</button>`,
+      <button class="btn btn-ghost btn-block" data-switch style="margin-top:8px">${icon('logout')}Use a different username</button>
+      <div style="display:flex;justify-content:center;gap:14px;margin-top:10px">
+        <a class="link-btn" href="privacy.html" target="_blank" rel="noopener">Privacy &amp; your data</a>
+        ${proven ? '<button type="button" class="link-btn" data-delete-me style="color:var(--bad)">Delete my username and data</button>' : ''}
+      </div>`,
     onMount(dlg, close) {
       const list = dlg.querySelector('[data-list]');
       const draw = async () => {
@@ -362,6 +366,7 @@ export function openUsername() {
       dlg.querySelector('[data-add]')?.addEventListener('click', async (e) => { if (await addPasskey(e.currentTarget)) draw(); });
       dlg.querySelector('[data-pin]')?.addEventListener('click', () => { close(); changePin(); });
       dlg.querySelector('[data-unlock]')?.addEventListener('click', async () => { close(); if (await askUsername({ username: u })) openUsername(); });
+      dlg.querySelector('[data-delete-me]')?.addEventListener('click', () => { close(); deleteMe(); });
       dlg.querySelector('[data-switch]').onclick = async () => {
         close();
         if (!(await confirmSheet({ title: 'Switch username?', message: `Your trips stay under @${u}. Enter it and your PIN any time to get them back.`, confirm: 'Switch' }))) return;
@@ -397,6 +402,41 @@ function recoveryEmailSheet(onSaved) {
       form.querySelector('[data-remove]').onclick = async (e) => {
         if (await busy(e.currentTarget, () => store.setRecoveryEmail(null))) { close(); toast('Recovery email removed'); onSaved?.(); }
       };
+    },
+  });
+}
+
+// Delete everything under this username. Says exactly what goes, then asks for the PIN.
+function deleteMe() {
+  const u = store.username();
+  const trips = store.listTrips().filter((t) => t.role !== 'invited');
+  const mine = trips.filter((t) => t.role === 'organizer'), joined = trips.filter((t) => t.role !== 'organizer');
+  sheet({
+    title: 'Delete my data',
+    body: `
+      <div class="stack" style="gap:10px">
+        <p style="margin:0">This removes <b>@${esc(u)}</b> for good. It can't be undone.</p>
+        <ul class="steps" style="margin:0">
+          ${mine.length ? `<li><b>${mine.length} trip${mine.length === 1 ? '' : 's'} you organize will be deleted for everyone:</b> ${esc(mine.map((t) => t.name).join(', '))}.</li>` : ''}
+          ${joined.length ? `<li><b>You'll be removed from ${joined.length} trip${joined.length === 1 ? '' : 's'} you joined.</b> Your name, flights, photos, receipts and votes go. Expenses you were part of stay, without your name, so the group's totals still add up.</li>` : ''}
+          <li>Your username, PIN, passkeys and recovery email are deleted.</li>
+        </ul>
+        <div data-step></div>
+      </div>`,
+    onMount(dlg, close) {
+      pinForm(dlg.querySelector('[data-step]'), {
+        intro: 'Enter your PIN to confirm.',
+        button: 'Delete everything',
+        onPin: async (pin, fail) => {
+          const r = await store.deleteAccount(pin);
+          if (!r.ok) return fail(r.error || 'Wrong PIN');
+          try { sessionStorage.setItem('grouptrip.flash', 'Your username and data were deleted'); } catch { /* ignore */ }
+          close();
+          location.hash = '#/';
+          location.reload();
+        },
+      });
+      const b = dlg.querySelector('[data-step] .btn-primary'); b.classList.remove('btn-primary'); b.classList.add('btn-danger');
     },
   });
 }

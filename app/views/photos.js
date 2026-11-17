@@ -31,8 +31,9 @@ export function render(el, ctx) {
         <div class="day-head"><h3>${esc(fmtDay(g.day, { weekday: 'long', month: 'short', day: 'numeric' }))}</h3>
           <span class="small muted">${g.items.length}</span></div>
         <div class="photo-grid">${g.items.map((p) => `
-          <button class="photo" data-open="${p.id}" aria-label="Open photo">
-            <img src="${esc(store.photoUrl(p.thumbPath))}" alt="" loading="lazy" decoding="async"></button>`).join('')}</div>
+          <button class="photo" data-open="${p.id}" aria-label="Open photo${p.reports ? ' (reported)' : ''}">
+            <img src="${esc(store.photoUrl(p.thumbPath))}" alt="" loading="lazy" decoding="async">
+            ${p.reports ? `<span class="photo-flag">${icon('flag')}Reported</span>` : ''}</button>`).join('')}</div>
       </section>`).join('')
     : `<div class="card">${emptyState('sparkle', 'Start the album', 'Add photos from your phone — everyone on the trip can see them and save the ones they like.',
         `<button class="btn btn-primary" data-action="add">${icon('plus')}Add photos</button>`)}</div>`}`;
@@ -91,8 +92,11 @@ function openViewer(ctx, start) {
           <div class="small" style="opacity:.7">${esc(fmtDay(localIso(p.createdAt)))} · ${i + 1} of ${photos.length}</div></div></div>
         <span style="flex:1"></span>
         <button class="btn btn-icon viewer-btn" data-save aria-label="Save">${icon('share')}</button>
-        ${mine || isOrg ? `<button class="btn btn-icon viewer-btn" data-del aria-label="Delete">${icon('trash')}</button>` : ''}
+        ${mine || isOrg ? `<button class="btn btn-icon viewer-btn" data-del aria-label="Delete">${icon('trash')}</button>`
+          : `<button class="btn btn-icon viewer-btn" data-report aria-label="Report this photo">${icon('flag')}</button>`}
       </div>
+      ${isOrg && p.reports ? `<div class="viewer-note">${icon('flag')}<span>Reported by ${p.reports} ${p.reports === 1 ? 'person' : 'people'}. Remove it, or keep it if it's fine.</span>
+        <button class="btn btn-sm viewer-btn" data-keep>Keep</button><button class="btn btn-sm btn-danger" data-del>Remove</button></div>` : ''}
       <div class="viewer-stage">
         <img src="${esc(store.photoUrl(p.path))}" alt="" style="background-image:url('${esc(store.photoUrl(p.thumbPath))}')">
         ${i > 0 ? `<button class="viewer-nav prev" data-prev aria-label="Previous">${icon('back')}</button>` : ''}
@@ -108,7 +112,17 @@ function openViewer(ctx, start) {
     else if (t.hasAttribute('data-prev')) go(-1);
     else if (t.hasAttribute('data-next')) go(1);
     else if (t.hasAttribute('data-save')) save(photos[i]);
-    else if (t.hasAttribute('data-del')) {
+    else if (t.hasAttribute('data-report')) {
+      const ok = await confirmSheet({ title: 'Report this photo?', message: "It will be hidden for you right away, and the organizer will be asked to review it. They won't be told who reported it.", confirm: 'Report', danger: true });
+      if (!ok) return;
+      try { await store.reportPhoto(trip.id, photos[i].id); } catch (err) { toast(err.message, { error: true }); return; }
+      dlg.close();
+      ctx.refresh('Reported — the organizer has been asked to review it');
+    } else if (t.hasAttribute('data-keep')) {
+      try { await store.keepPhoto(trip.id, photos[i].id); } catch (err) { toast(err.message, { error: true }); return; }
+      dlg.close();
+      ctx.refresh('Photo kept');
+    } else if (t.hasAttribute('data-del')) {
       const ok = await confirmSheet({ title: 'Delete this photo?', message: 'It will be removed for everyone.', confirm: 'Delete', danger: true });
       if (!ok) return;
       try { await store.removePhoto(trip.id, photos[i].id); } catch (err) { toast(err.message, { error: true }); return; }

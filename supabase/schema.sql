@@ -2717,3 +2717,168 @@ begin
   if def not like '%''everyone'', s.everyone%' then raise exception '_get_trip_all patch did not apply'; end if;
   execute def;
 end $$;
+
+-- ============ v16: report a photo + delete my username and data (owner, 2026-11-17) ============
+-- The "before sharing" basics, also required by both app stores.
+-- 1. Report a photo: anyone on the trip can report a photo that isn't theirs.
+--    It disappears for the person who reported it, the organizer is told and
+--    sees a "Reported" badge, and either removes the photo or keeps it.
+--    photo_reports is also the record for the owner to review.
+-- 2. Delete my username and data (`_delete_account`, called by the `account`
+--    Edge Function, which also deletes the files): needs the PIN. Trips the
+--    person organizes are deleted for everyone. On trips they joined, their
+--    flights, photos, receipts, votes, packing list and Venmo go and the seat
+--    becomes "Former member" — it stays only so the group's expenses still add
+--    up; a seat with no money attached is removed entirely.
+
+create table photo_reports (
+  photo_id   uuid not null references photos(id) on delete cascade,
+  member_id  uuid not null references members(id) on delete cascade,
+  reason     text,
+  created_at timestamptz not null default now(),
+  primary key (photo_id, member_id)
+);
+create index on photo_reports (member_id);
+alter table photo_reports enable row level security;
+revoke all on photo_reports from anon, authenticated;
+
+create function report_photo(p_code text, p_token text, p_photo uuid, p_reason text default null) returns void
+language plpgsql security definer set search_path = public as $$
+declare a members := _actor(p_code, p_token); ph photos;
+begin
+  select * into ph from photos where id = p_photo and trip_id = a.trip_id;
+  if ph.id is null then raise exception 'Photo not found'; end if;
+  if ph.uploaded_by = a.id then raise exception 'That''s your own photo — you can remove it'; end if;
+  insert into photo_reports (photo_id, member_id, reason) values (ph.id, a.id, nullif(left(trim(coalesce(p_reason, '')), 300), ''))
+  on conflict do nothing;
+  if found then
+    perform _notify(a.trip_id,
+      (select coalesce(array_agg(id), '{}') from members where trip_id = a.trip_id and is_organizer and id <> a.id),
+      'A photo was reported',
+      'Someone reported a photo in ' || (select name from trips where id = a.trip_id) || '. Open Photos to remove it or keep it.', -- never says who
+      'photos');
+  end if;
+end $$;
+
+-- Organizer: "Keep photo" clears its reports (it shows again for everyone).
+create function dismiss_photo_reports(p_code text, p_token text, p_photo uuid) returns void
+language plpgsql security definer set search_path = public as $$
+declare o members := _organizer(p_code, p_token);
+begin
+  delete from photo_reports r using photos ph where r.photo_id = ph.id and ph.id = p_photo and ph.trip_id = o.trip_id;
+end $$;
+
+-- The trip view: a photo I reported is hidden from me; the organizer gets a count.
+do $$
+declare def text := pg_get_functiondef('public.get_trip(text,text)'::regprocedure);
+begin
+  def := replace(def, E'\n  return j;\nend', E'
+  if mid is not null then
+    j := jsonb_set(j, ''{photos}'', coalesce((
+      select jsonb_agg(case when org then p || jsonb_build_object(''reports'',
+                 (select count(*) from photo_reports r where r.photo_id = (p->>''id'')::uuid)) else p end order by n)
+      from jsonb_array_elements(j->''photos'') with ordinality as t(p, n)
+      where org or not exists (select 1 from photo_reports r where r.photo_id = (p->>''id'')::uuid and r.member_id = mid::uuid)), ''[]''));
+  end if;
+  return j;
+end');
+  if def not like '%photo_reports%' then raise exception 'get_trip patch did not apply'; end if;
+  execute def;
+end $$;
+
+-- Venmo-change alerts stay quiet while an account is being deleted.
+create or replace function _on_venmo() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.venmo is distinct from old.venmo then
+    new.venmo_changed_at := now();
+    if old.venmo is not null and coalesce(current_setting('grouptrip.quiet', true), '') <> 'on' then
+      perform _notify(new.trip_id,
+        (select coalesce(array_agg(id), '{}') from members where trip_id = new.trip_id and (id = new.id or is_organizer)),
+        new.name || '''s Venmo was changed',
+        'Now @' || coalesce(new.venmo, '(removed)') || ' on ' || (select name from trips where id = new.trip_id)
+          || '. If that wasn''t them, tell the organizer before anyone pays.', 'money');
+    end if;
+  end if;
+  return new;
+end $$;
+
+-- Service role only. Answers {ok:false, error} for a wrong PIN (so the try is
+-- counted); otherwise deletes and returns what the Edge Function must remove
+-- from storage: whole trip folders and single files.
+create function _delete_account(p_username text, p_pin text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare u text := _clean_username(p_username); chk jsonb; m members;
+  folders text[]; files text[] := '{}'; got text[]; n_trips int; n_seats int := 0;
+begin
+  if not exists (select 1 from usernames where username = u) then
+    return jsonb_build_object('ok', false, 'error', 'Set a PIN for this username first');
+  end if;
+  chk := unlock_username(u, p_pin);
+  if not coalesce((chk->>'ok')::boolean, false) then return chk; end if;
+  perform set_config('grouptrip.quiet', 'on', true);
+
+  -- Trips this person organizes go, for everyone.
+  select coalesce(array_agg(trip_id::text), '{}') into folders from members where username = u and is_organizer;
+  n_trips := coalesce(array_length(folders, 1), 0);
+  delete from trips where id::text = any(folders);
+
+  -- Trips they joined: their things go; the seat stays only if money hangs on it.
+  for m in select * from members where username = u loop
+    n_seats := n_seats + 1;
+    with gone as (delete from photos where uploaded_by = m.id returning path, thumb_path)
+      select coalesce(array_agg(x), '{}') into got from gone, unnest(array[path, thumb_path]) x;
+    files := files || got;
+    with cleared as (select id, receipt_path, receipt_thumb from expenses where paid_by = m.id and receipt_path is not null)
+      select coalesce(array_agg(x), '{}') into got from cleared, unnest(array[receipt_path, receipt_thumb]) x where x is not null;
+    files := files || got;
+    update expenses set receipt_path = null, receipt_thumb = null where paid_by = m.id and receipt_path is not null;
+    delete from flights where member_id = m.id;
+    delete from list_items where owner_id = m.id;
+    update list_items set claimed_by = null where claimed_by = m.id;
+    delete from poll_votes where member_id = m.id;
+    delete from stay_guests where member_id = m.id;
+    delete from push_subscriptions where member_id = m.id;
+    delete from photo_reports where member_id = m.id;
+    delete from notifications where trip_id = m.trip_id and sent_at is not null; -- old alerts carry names
+    if exists (select 1 from expenses where paid_by = m.id)
+       or exists (select 1 from expense_splits where member_id = m.id)
+       or exists (select 1 from settlements where from_member = m.id or to_member = m.id) then
+      update members set name = 'Former member', username = null, venmo = null, email = null, email_notify = false,
+        user_id = null, rsvp = 'declined',
+        token = replace(gen_random_uuid()::text, '-', ''), calendar_key = replace(gen_random_uuid()::text, '-', '')
+      where id = m.id;
+    else
+      delete from members where id = m.id;
+    end if;
+  end loop;
+
+  delete from usernames where username = u; -- devices, passkeys and reset codes go with it
+  return jsonb_build_object('ok', true, 'folders', to_jsonb(folders), 'files', to_jsonb(files), 'trips', n_trips, 'seats', n_seats);
+end $$;
+revoke execute on function _delete_account(text, text) from public, anon, authenticated;
+
+
+-- ============ v17: the invite link shows less before you join (2026-11-17) ============
+-- Someone holding only the share code (the invite page, the whole-trip
+-- calendar feed) used to receive the entire trip — expenses, polls, lists,
+-- photos, Venmo names and the "Good to know" notes with door codes. They now
+-- get what those two screens need: trip basics, who's going, the schedule,
+-- flights and stays. Everything else arrives once they've joined (which the
+-- organizer is told about).
+do $$
+declare def text := pg_get_functiondef('public.get_trip(text,text)'::regprocedure);
+begin
+  def := replace(def, E'\n  return j;\nend', E'
+  if mid is null then
+    j := j || jsonb_build_object(
+      ''expenses'', ''[]''::jsonb, ''settlements'', ''[]''::jsonb, ''lists'', ''[]''::jsonb,
+      ''polls'', ''[]''::jsonb, ''photos'', ''[]''::jsonb, ''notes'', null,
+      ''members'', coalesce((select jsonb_agg((m - ''venmo'') - ''venmoChangedAt'' order by n)
+                             from jsonb_array_elements(j->''members'') with ordinality as t(m, n)), ''[]''));
+  end if;
+  return j;
+end');
+  if def not like '%''notes'', null%' then raise exception 'get_trip patch did not apply'; end if;
+  execute def;
+end $$;

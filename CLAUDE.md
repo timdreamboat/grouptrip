@@ -271,6 +271,30 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
   shares always sum exactly). Settlements ("mark as paid") count in
   `balances()`. Receipts live in the trip's photo folder (not the album).
 
+## Privacy basics (v16–v17, owner 2026-11-17)
+- `app/privacy.html` is the public privacy page (plain static page; linked
+  from the home footer, the username sheet and the invite page). Keep it true:
+  when what's stored, who sees it or which outside services are called
+  changes, update the page and its date. It has no contact email yet — the
+  owner will add one on the 7 Wood Systems domain after the AWS move.
+- Before joining, the share code alone returns only what the invite page and
+  the whole-trip calendar feed need (basics, names/RSVPs, schedule, flights,
+  stays). Expenses, settlements, lists, polls, photos, Venmo names and the
+  "Good to know" notes come only with a seat (`get_trip`, `mid is null`).
+- Report a photo: flag in the viewer (not on your own photos) →
+  `report_photo` → hidden for the reporter, organizers get an anonymous
+  "A photo was reported" alert and a "Reported" badge with Keep / Remove
+  (`dismiss_photo_reports`). `photo_reports` is the record to review:
+  `select * from photo_reports order by created_at desc`.
+- Delete my username and data: username sheet → "Delete my username and
+  data" → PIN → Edge Function `account` → `_delete_account(username, pin)`.
+  Trips they organize are deleted for everyone (folder purged). On joined
+  trips their flights, photos, receipts, votes, packing list, stay spots and
+  push subscriptions go; the seat becomes "Former member" only if expenses,
+  splits or settlements hang on it (so balances still sum to zero), else it
+  is removed. Old sent alerts for those trips are cleared (they carry names).
+  NEVER test this on demo usernames.
+
 ## Outside connections are safe on their own (v9, owner 2026-09-24)
 Even with a PIN, a GroupTripIt username is a light lock, so partner connections must
 not depend on GroupTripIt identity: Venmo, OpenTable and booking sites always

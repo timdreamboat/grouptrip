@@ -77,6 +77,7 @@ export function render(root) {
             ].map(([ic, t, d]) => `<div class="feature"><div class="tl-icon">${icon(ic)}</div><h3>${t}</h3><p>${d}</p></div>`).join('')}
           </div>
         </section>`}
+      <footer class="site-foot"><a href="privacy.html">Privacy &amp; your data</a><a href="privacy.html#report">Report a problem</a></footer>
     </div>`;
 
   root.querySelectorAll('[data-signin]').forEach((b) => b.onclick = async () => {

@@ -311,6 +311,28 @@ export async function uploadPhotos(code, files, onProgress) {
 }
 
 export const removePhoto = (code, id) => photosFn({ action: 'delete', code, token: tokenFor(code), id });
+// Report a photo that isn't yours: hidden for you, the organizer is asked to review it.
+export const reportPhoto = (code, id, reason = '') => act('report_photo', code, { p_photo: id, p_reason: reason });
+// Organizer: keep a reported photo (clears its reports).
+export const keepPhoto = (code, id) => act('dismiss_photo_reports', code, { p_photo: id });
+
+// Delete my username and everything under it (needs the PIN). Resolves
+// { ok, trips, seats } or { ok: false, error }. On success this device is wiped too.
+export async function deleteAccount(pin) {
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/account`, {
+    method: 'POST',
+    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'delete', username: username(), pin }),
+  });
+  const r = await res.json().catch(() => null);
+  if (!r) throw new Error("Couldn't delete right now — please try again");
+  if (r.ok) {
+    listTrips().forEach((t) => forgetTrip(t.id));
+    joinedCodes().forEach((c) => forgetTrip(c));
+    try { for (const k of Object.keys(localStorage)) if (k.startsWith('grouptrip.')) localStorage.removeItem(k); } catch { /* ignore */ }
+  }
+  return r;
+}
 
 // A receipt photo for an expense (same trip folder as the album, not in it).
 export async function uploadReceipt(code, file) {

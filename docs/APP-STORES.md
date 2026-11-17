@@ -57,6 +57,10 @@ Without those, it would likely be rejected.
   review surface). The iPad would still run the iPhone version.
 
 ### Phase 1 — Store readiness in the web app (helps the website too)
+**Status 2026-11-17:** privacy page (`app/privacy.html`), in-app "Delete my
+username and data" and photo reporting are built and live. Still missing for
+the stores: a public support/contact email (waiting on the 7 Wood Systems
+domain) and a short support page.
 Both stores require these, and none of them exist yet:
 - **Privacy policy page and support page**, public URLs. The owner skipped the
   privacy note earlier; it becomes mandatory here.
