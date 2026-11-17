@@ -479,11 +479,27 @@ dialog.sheet .field select, dialog.sheet .field input { max-width: 100%; }
 .embed-frame { width: 100%; height: min(70vh, 640px); border: 0; display: block; background: var(--surface-2); }
 .slot .booking { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; margin-top: -4px; }
 .row.wrap { flex-wrap: wrap; }
+/* Company accent colour (Settings › Your company): overrides the tape colour everywhere it is used. */
+:root[data-accent] { --tape: var(--brand); --accent-ink: var(--brand-ink); }
+@media (prefers-color-scheme: dark) { :root[data-accent]:not([data-theme="light"]) { --accent-ink: var(--brand); } }
+:root[data-accent][data-theme="dark"] { --accent-ink: var(--brand); }
+.orgline { flex: none; padding: 0 12px 6px; font-size: 12px; line-height: 1.4; font-weight: 600; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.viewbar { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.viewchip { height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--text); font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; }
+.viewchip[aria-pressed="true"] { background: var(--text); color: var(--bg); border-color: var(--text); }
+.arr { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.arr li { display: flex; align-items: center; gap: 6px; padding: 4px 8px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface); }
+.arr li label { flex: 1; min-width: 0; display: flex; gap: 10px; align-items: center; min-height: 36px; cursor: pointer; font-size: 14px; }
+.arr input { width: 18px; height: 18px; accent-color: var(--good); flex: none; margin: 0; }
+.swatch { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--line-strong); cursor: pointer; padding: 0; flex: none; }
+.swatch[aria-pressed="true"] { outline: 2px solid var(--text); outline-offset: 2px; }
+.cfline { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
 </style>
 
 <div class="shell">
   <aside class="side">
     <a class="brand" href="#home" data-act="goHome" aria-label="GigTrip home"><span class="logo">G</span><b>GigTrip</b></a>
+    <div class="orgline" id="orgname"></div>
     <nav id="sidenav"></nav>
     <div class="foot">
       <span id="footimport"></span><span>Prototype · sample data</span><button class="btn btn-outline btn-sm" data-act="help" data-id="__page" style="justify-content:flex-start">? What is this page</button>
@@ -561,7 +577,20 @@ const CITIES = {
 let seq = 0; const uid = p => p + (Date.now() % 1e6).toString(36) + (seq++).toString(36);
 const addDays = (iso, n) => { const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
 
+// Sample data + the sample company's own set-up: custom fields, saved views, branding.
 function seed() {
+  const d = ensureShape(seedBase());
+  d.fields = [{ id: 'cf_support', label: 'Support act', type: 'text', vis: 'all' }, { id: 'cf_onsale', label: 'On-sale date', type: 'date', vis: 'mgmt' }, { id: 'cf_radio', label: 'Radio promo booked', type: 'yesno', vis: 'mgmt' }];
+  d.shows.filter(x => x.tour === 't1').forEach((x, i) => { x.cf = { cf_support: 'Hollow Pines', cf_onsale: '2027-01-15', cf_radio: i % 2 === 0 }; });
+  d.views = { rae: [
+    { id: 'vw_holds', name: 'Holds to chase', seasonView: 'table', status: 'hold', artist: 'all', sort: { k: 'date', dir: 1 }, cols: ['date', 'artist', 'city', 'venue', 'status', 'g'], q: '' },
+    { id: 'vw_money', name: 'Deposits', seasonView: 'table', status: 'confirmed', artist: 'all', sort: { k: 'depDue', dir: 1 }, cols: ['date', 'artist', 'city', 'g', 'dep', 'depDue'], q: '' },
+  ] };
+  return d;
+}
+// Shape added after the first testers saved data: fill in what an older save lacks.
+function ensureShape(d) { d.fields ||= []; d.prefs ||= {}; d.views ||= {}; d.settings.org ||= { name: 'Northlight Mgmt', accent: 'tape' }; return d; }
+function seedBase() {
   const people = {
     rae:   { name: 'Rae Collins',  kind: 'manager', role: 'Manager · Northlight Mgmt', group: 'office', ph: '(416) 555-0110', hue: 30 },
     sol:   { name: 'Sol Mendez',   kind: 'manager', role: 'Day-to-day manager · Northlight', group: 'office', ph: '(416) 555-0111', hue: 120 },
@@ -761,7 +790,7 @@ function seed() {
 // a company starting from nothing: keep templates, rates and role defaults; drop the sample roster
 function blank() {
   const d = seed();
-  d.artists = []; d.tours = []; d.shows = []; d.offers = []; d.slots = []; d.tasks = []; d.docs = []; d.contacts = []; d.supply = []; d.guests = []; d.travel = []; d.budget = []; d.showExp = []; d.sheets = {}; d.myexp = []; d.activity = []; d.imports = [];
+  d.artists = []; d.tours = []; d.shows = []; d.offers = []; d.slots = []; d.tasks = []; d.docs = []; d.contacts = []; d.supply = []; d.guests = []; d.travel = []; d.budget = []; d.showExp = []; d.sheets = {}; d.myexp = []; d.activity = []; d.imports = []; d.fields = []; d.views = {}; d.prefs = {}; d.settings.org = { name: 'Your company', accent: 'tape' };
   d.people = { rae: d.people.rae, dana: d.people.dana }; d.people.dana.artists = ['*'];
   return d;
 }
@@ -781,7 +810,7 @@ function addDemoImages(d) {
   d.demoImg = true; return d;
 }
 const FILES = {};   // uploaded files live in memory for the mock (object URLs)
-function load() { try { const v = JSON.parse(localStorage.getItem(KEY)); return v && v.v === 5 ? addDemoImages(v) : null; } catch { return null; } }
+function load() { try { const v = JSON.parse(localStorage.getItem(KEY)); return v && v.v === 5 ? ensureShape(addDemoImages(v)) : null; } catch { return null; } }
 function save() { try { localStorage.setItem(KEY, JSON.stringify(DB)); } catch {} }
 let DB = load() || seed();
 
@@ -918,6 +947,76 @@ function navFor() {
   const first = { artist: ['myhome', 'today', 'tour', 'guests'], crew: ['myhome', 'today', 'travel', 'mymoney'], venue: ['today', 'show', 'guests', 'party'] }[P(me()).kind] || [];
   return n.sort((a, b) => (first.indexOf(a[0]) + 1 || 99) - (first.indexOf(b[0]) + 1 || 99));
 }
+// ---------- custom views ----------
+// Each person: their own table columns, saved views and home layout (DB.prefs / DB.views, keyed by person).
+// The company: custom fields on every show and its name + accent colour (DB.fields, DB.settings.org).
+const ACCENTS = { tape: ['Stage yellow', null], coral: ['Coral', 8], mint: ['Mint', 158], sky: ['Sky', 205], violet: ['Violet', 262], rose: ['Rose', 335] };
+const orgName = () => DB.settings.org?.name || 'Your company';
+function applyBrand() {
+  const k = DB.settings.org?.accent, h = ACCENTS[k]?.[1], r = document.documentElement;
+  if (h == null) { r.removeAttribute('data-accent'); r.style.removeProperty('--brand'); r.style.removeProperty('--brand-ink'); }
+  else { r.dataset.accent = k; r.style.setProperty('--brand', `hsl(${h} 88% 70%)`); r.style.setProperty('--brand-ink', `hsl(${h} 70% 30%)`); }
+  const o = document.querySelector('#orgname'); if (o) o.textContent = orgName();
+}
+const pref = () => (DB.prefs[me()] ||= {});
+const myViews = () => (DB.views[me()] ||= []);
+const FIELD_TYPES = [['text', 'Text'], ['number', 'Number'], ['date', 'Date'], ['yesno', 'Yes / no'], ['choice', 'Pick from a list']];
+const cfShow = (f, v) => v == null || v === '' || v === false || v === 0 ? '' : f.type === 'yesno' ? 'Yes' : f.type === 'date' ? short(v) : f.type === 'number' ? Number(v).toLocaleString() : String(v);
+const cfSeen = () => DB.fields.filter(f => isMgr() || (f.vis === 'all' && !isVenue()));
+const cfLine = s => { const out = cfSeen().filter(f => f.vis === 'all' && cfShow(f, s.cf?.[f.id])).map(f => `<span class="chip plain">${esc(f.label)}: ${esc(cfShow(f, s.cf[f.id]))}</span>`).join(''); return out ? `<div class="cfline">${out}</div>` : ''; };
+// Every column the Season table can show; a person picks and orders their own.
+function boardCols() {
+  return [
+    { k: 'date', l: 'Date', get: r => r.date, cell: r => short(r.date) },
+    { k: 'artist', l: 'Artist', get: r => artist(r.artist).name, cell: r => esc(artist(r.artist).name) },
+    { k: 'city', l: 'City', get: r => r.city, cell: r => `<span class="${r.status === 'cancelled' ? 'cancelled-text' : ''}">${esc(r.city)}</span>` },
+    { k: 'venue', l: 'Venue', get: r => r.venue, cell: r => esc(r.venue) },
+    { k: 'tour', l: 'Tour', get: r => tour(r.tour)?.name || '', cell: r => esc(tour(r.tour)?.name || '—') },
+    { k: 'cap', l: 'Cap', num: 1, get: r => r.cap || 0, cell: r => (r.cap || 0).toLocaleString() },
+    { k: 'status', l: 'Status', get: r => r.status, cell: r => statusChip(r) + (r.src ? ' ' + srcChip(r) : '') },
+    { k: 'stage', l: 'Stage time', get: r => r.kind === 'show' ? stageTime(r) : '', cell: r => r.kind === 'show' && stageTime(r) ? fmtTime(stageTime(r)) : '—' },
+  ].concat(can('costs') ? [
+    { k: 'g', l: 'Guarantee', num: 1, get: r => (r.deal ? r.deal.g : r.g) || 0, cell: r => money(r.deal ? r.deal.g : r.g, false, r.cur) },
+    { k: 'dep', l: 'Deposit', num: 1, get: r => (r.deal ? r.deal.dep : 0) || 0, cell: r => r.deal && r.deal.dep ? money(r.deal.dep, false, r.cur) + (r.deal.depPaid ? ' ✓' : '') : '—' },
+    { k: 'depDue', l: 'Deposit due', get: r => r.deal?.depDue || '9', cell: r => r.deal?.depDue ? short(r.deal.depDue) : '—' },
+  ] : []).concat([{ k: 'adv', l: 'Advanced', num: 1, get: r => r.kind === 'show' ? pctDone(r.id) : -1, cell: r => r.kind === 'show' ? pctDone(r.id) + '%' : '—' }])
+    .concat(cfSeen().map(f => ({ k: 'cf:' + f.id, l: f.label, num: f.type === 'number', get: r => r.cf?.[f.id] ?? '', cell: r => esc(cfShow(f, r.cf?.[f.id])) || '—' })));
+}
+const DEFAULT_COLS = ['date', 'artist', 'city', 'venue', 'cap', 'status', 'g', 'dep', 'adv'];
+const myCols = () => { const all = boardCols(), out = (pref().cols || DEFAULT_COLS).map(k => all.find(c => c.k === k)).filter(Boolean); return out.length ? out : all.slice(0, 4); };
+// A saved view = what is on the Season board right now: list/table, status, artist, search, sorting and columns.
+const viewState = () => ({ seasonView: S.seasonView, status: S.status, artist: cur(), sort: { ...S.sort }, cols: myCols().map(c => c.k), q: S.q || '' });
+const sameView = v => { const n = viewState(); return v.seasonView === n.seasonView && v.status === n.status && v.artist === n.artist && (v.q || '') === n.q && (n.seasonView !== 'table' || (v.sort.k === n.sort.k && v.sort.dir === n.sort.dir && (v.cols || []).join() === n.cols.join())); };
+function viewBar() {
+  const vs = myViews(), on = vs.find(sameView);
+  return `<div class="viewbar"><span class="small muted">Your views</span>${vs.map(v => `<button class="viewchip" type="button" data-act="view" data-id="${v.id}" aria-pressed="${v === on}">${esc(v.name)}</button>`).join('')}${on ? editBtn('editView', on.id, 'Rename or delete this view') : `<button class="btn btn-outline btn-sm" type="button" data-act="saveView">${icon('plus')} Save this view</button>`}</div>`;
+}
+// Home pages are built from cards; each person chooses which and in what order.
+const HOME_CARDS = {
+  mgmt: [['start', 'Getting started'], ['today', 'Shows today'], ['attention', 'Needs attention'], ['money', 'Deposits to chase'], ['offers', 'Open offers'], ['all', 'All artists'], ['artists', 'Artist cards']],
+  road: [['next', 'Next show'], ['travel', 'My next travel'], ['tours', 'Tours'], ['oneoffs', 'One-off shows']],
+};
+const HOME_DEFAULT = { mgmt: ['start', 'today', 'all', 'artists'], road: ['next', 'tours', 'oneoffs'] };
+const homeKind = () => MGMT.includes(S.role) ? 'mgmt' : 'road';
+const homeAvail = () => HOME_CARDS[homeKind()].filter(([id]) => (id !== 'start' || S.role === 'manager') && (id !== 'money' || can('costs')) && (id !== 'offers' || isMgr()));
+const myHome = () => { const ok = homeAvail().map(c => c[0]); return (pref().home || HOME_DEFAULT[homeKind()]).filter(id => ok.includes(id)); };
+const customBtn = () => `<button class="btn btn-secondary btn-sm" type="button" data-act="customHome">${icon('edit')} Customize</button>`;
+const ordered = (all, want) => want.map(k => all.find(a => a[0] === k)).filter(Boolean).map(a => [a[0], a[1], true]).concat(all.filter(a => !want.includes(a[0])).map(a => [a[0], a[1], false]));
+// A tick-and-reorder list (table columns, home cards). `items` = [[id, label, on]] in display order.
+function openArrange({ title, note, items, onSave, onReset }) {
+  openForm({ title, fields: [], submit: 'Save',
+    extra: `<p class="small muted" style="margin:0">${esc(note)}</p><ul class="arr">${items.map(([id, label, on]) => `<li data-w="${esc(id)}"><label><input type="checkbox" ${on ? 'checked' : ''}> ${esc(label)}</label><button type="button" class="iconbtn" data-mv="-1" aria-label="Move ${esc(label)} up">↑</button><button type="button" class="iconbtn" data-mv="1" aria-label="Move ${esc(label)} down">↓</button></li>`).join('')}</ul>${onReset ? '<div><button type="button" class="btn btn-outline btn-sm" data-arrreset>Back to the standard layout</button></div>' : ''}`,
+    onSave(o, form) { const ids = [...form.querySelectorAll('.arr li')].filter(li => li.querySelector('input').checked).map(li => li.dataset.w); if (!ids.length) { toast('Keep at least one ticked'); return false; } onSave(ids); } });
+  const d = document.querySelector('#dlg');
+  d.querySelectorAll('[data-mv]').forEach(b => b.addEventListener('click', () => { const li = b.closest('li'), up = b.dataset.mv === '-1', sib = up ? li.previousElementSibling : li.nextElementSibling; if (!sib) return; if (up) li.parentNode.insertBefore(li, sib); else li.parentNode.insertBefore(sib, li); b.focus(); }));
+  const r = d.querySelector('[data-arrreset]'); if (r) r.addEventListener('click', () => { onReset(); d.close(); save(); route(); toast('Back to the standard layout'); });
+}
+const orgCard = () => `<section class="card stack"><div class="row between"><h2>Your company</h2><button class="btn btn-secondary btn-sm" data-act="org">${icon('edit')} Edit</button></div>
+  <dl class="kv"><dt>Name</dt><dd>${esc(orgName())}</dd><dt>Colour</dt><dd><span class="row wrap" style="gap:8px">${Object.entries(ACCENTS).map(([k, [l, h]]) => `<button type="button" class="swatch" data-act="accent" data-id="${k}" aria-pressed="${(DB.settings.org?.accent || 'tape') === k}" aria-label="${l}" title="${l}" style="background:${h == null ? 'hsl(47 100% 55%)' : `hsl(${h} 88% 70%)`}"></button>`).join('')}</span></dd></dl>
+  <p class="small muted" style="margin:0">Your name and colour show for everyone you invite — artists, crew and venues.</p></section>`;
+const fieldsCard = () => `<section class="card stack"><div class="row between"><h2>Custom fields</h2>${addBtn('newField', 'Add')}</div>
+  <p class="small muted" style="margin:0">Track anything your company needs on every show. A field appears on the show form and show page, as a Season table column, and in exports.</p>
+  <div class="list">${DB.fields.map(f => `<div class="li"><div class="grow"><b>${esc(f.label)}</b><div class="small muted">${(FIELD_TYPES.find(t => t[0] === f.type) || FIELD_TYPES[0])[1]} · ${f.vis === 'all' ? 'everyone on the tour sees it' : 'management only'}</div></div>${editBtn('field', f.id, 'Edit field')}</div>`).join('') || '<p class="muted" style="margin:0">None yet.</p>'}</div></section>`;
 function attention() {
   const items = [];
   if (!canEdit('advance')) return items;
@@ -1059,6 +1158,17 @@ const seesTravel = (item, pid) => item.who === 'all' || (item.who === 'road' && 
 
 // ---------- entity editors ----------
 const E = {};
+E.field = id => {
+  const f = id ? DB.fields.find(x => x.id === id) : null;
+  openForm({ title: f ? 'Edit field' : 'Add a field', value: f || { type: 'text', vis: 'mgmt' },
+    fields: [{ k: 'label', label: 'Name', ph: 'e.g. Support act', req: true, full: true }, { k: 'type', label: 'Kind', type: 'select', options: FIELD_TYPES }, { k: 'vis', label: 'Who sees it', type: 'select', options: [['mgmt', 'Management only'], ['all', 'Everyone on the tour']] },
+      { k: 'options', label: 'Choices — only for “Pick from a list”, separated by commas', full: true, ph: 'e.g. Announced, On sale, Sold out' }],
+    onSave(o) { const x = f || { id: uid('cf') }; Object.assign(x, o); if (!f) DB.fields.push(x); log(`${f ? 'Changed' : 'Added'} the field “${x.label}”`); toast('Field saved'); },
+    onDelete: f ? () => { DB.fields = DB.fields.filter(x => x !== f); DB.shows.forEach(x => { if (x.cf) delete x.cf[f.id]; }); Object.values(DB.prefs).forEach(pr => { if (pr.cols) pr.cols = pr.cols.filter(k => k !== 'cf:' + f.id); }); Object.values(DB.views).forEach(vs => vs.forEach(v => { if (v.cols) v.cols = v.cols.filter(k => k !== 'cf:' + f.id); })); log(`Removed the field “${f.label}”`); } : null });
+};
+E.org = () => openForm({ title: 'Your company', value: DB.settings.org,
+  fields: [{ k: 'name', label: 'Company name', req: true, full: true }, { k: 'accent', label: 'Colour', type: 'select', options: Object.entries(ACCENTS).map(([k, v]) => [k, v[0]]) }],
+  onSave(o) { Object.assign(DB.settings.org, o); applyBrand(); log(`Changed the company name to ${o.name}`); toast('Saved'); } });
 E.show = (id, preset = {}) => {
   const s = id ? show(id) : null;
   const defA = preset.artist || (cur() !== 'all' ? cur() : DB.artists[0].id);
@@ -1078,6 +1188,8 @@ E.show = (id, preset = {}) => {
       { k: 'address', label: 'Venue address', full: true, group: 'Venue details' }, { k: 'parking', label: 'Parking / load-in notes', type: 'textarea', full: true, group: 'Venue details' },
       { k: 'hospitality', label: 'Hospitality', full: true, group: 'Venue details' }, { k: 'wifi', label: 'Wi-Fi', group: 'Venue details' }, { k: 'guestCap', label: 'Guest list spots', type: 'number', group: 'Venue details' },
       { k: 'note', label: 'Notes (e.g. festival set time)', full: true, group: 'Venue details' },
+      ...DB.fields.map(f => ({ k: 'cf.' + f.id, label: f.label, group: 'Your fields', full: f.type === 'yesno', type: f.type === 'yesno' ? 'check' : f.type === 'choice' ? 'select' : ['number', 'date'].includes(f.type) ? f.type : undefined,
+        options: f.type === 'choice' ? [['', '—'], ...String(f.options || '').split(',').map(x => x.trim()).filter(Boolean).map(x => [x, x])] : undefined })),
     ], openGroups: !!s,
     onSave(o, form) {
       const t = s || { id: uid('sh'), settled: null, deal: {}, cover: null };
@@ -1430,9 +1542,9 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme
 
 // ---------- page help (the ? next to every title) ----------
 const HELP = {
-  home: { what: 'Every artist you work with, one card each. Pick an artist and every other page shows only their shows, money and team.', do: ['Tap an artist to work on them; tap "All artists" to see the whole roster', 'Sort by who needs attention first', 'Management: add an artist or bring in data from Excel'], who: 'Management and tour managers with more than one artist.' },
+  home: { what: 'Every artist you work with, one card each. Pick an artist and every other page shows only their shows, money and team.', do: ['Tap an artist to work on them; tap "All artists" to see the whole roster', 'Customize: choose which cards show on your home (shows today, needs attention, deposits, offers) and their order', 'Sort by who needs attention first', 'Management: add an artist or bring in data from Excel'], who: 'Management and tour managers with more than one artist.' },
   overview: { what: 'One artist at a glance: what is coming up, their tours, their team and anything overdue.', do: ['Tap the picture to change it', 'Add a tour or a one-off show', 'Open any upcoming show'], who: 'Management.' },
-  board: { what: 'Your dates sheet. Every show and open offer, by month or as a sortable table.', do: ['List or Table view; search and filter by status', 'Table: tick rows to change several statuses at once', 'Import a spreadsheet, or export this view back to Excel'], who: 'Management, and anyone given the Season area. Deals show only to people who may see show costs.' },
+  board: { what: 'Your dates sheet. Every show and open offer, by month or as a sortable table.', do: ['List or Table view; search and filter by status', 'Table: choose and order your own columns, including your company’s custom fields', 'Save this view keeps your filters, sorting and columns under a name — one tap to come back', 'Table: tick rows to change several statuses at once', 'Import a spreadsheet, or export this view back to Excel'], who: 'Management, and anyone given the Season area. Deals show only to people who may see show costs.' },
   offers: { what: 'Offers from agents and promoters waiting for an answer.', do: ['Accept as hold → a Hold 1 appears on the Season board with your advance tasks', 'Counter or decline', 'Log an offer that came by email'], who: 'Management.' },
   tour: { what: 'A run of shows for one artist: routing, readiness and money.', do: ['Switch tour with the picker', 'Tap a show to open it', 'Add a show to this tour'], who: 'Management.' },
   show: { what: 'Everything about one show, in tabs: the deal, advance tasks, who brings what, documents, the day sheet and contacts.', do: ['Tick tasks off or change their status; tap a task to comment', 'Drop files onto Docs to upload riders, plots and contracts', 'Use a template to start the day sheet, then adjust times'], who: 'Each role sees only the tabs they are allowed: crew see the day sheet, the venue sees only its own show.' },
@@ -1444,9 +1556,9 @@ const HELP = {
   party: { what: 'Everyone on this artist’s team and the venue crew for tonight.', do: ['Tap a person to open their card', 'Management: set what they bring and what they can see', 'Each person ticks off their own items'], who: 'Everyone. Phone numbers hide from the venue except the tour manager’s.' },
   access: { what: 'Who sees what. Management and tour managers have the same full access to everything; the defaults here are for everyone else, and any one person can be changed on their card in Party.', do: ['Hidden / View / Edit for every area, per role', 'Money is three separate areas so costs and profit can be hidden separately', '"See it as…" to check the result'], who: 'Management and tour managers. Manager = the office: the whole roster, offers, holds and the money across the year. Tour manager = the road: assigned to specific artists, running day sheets, advancing, travel, guest lists and the night-of settlement. Same powers, different scope.' },
   activity: { what: 'What needs attention, and who changed what.', do: ['Tap an item to go fix it', 'Overdue tasks, deposits, expiring offers and guest requests land here first'], who: 'Anyone who can edit advance tasks.' },
-  settings: { what: 'Templates, rates, appearance and your imports.', do: ['Edit the advance and day-sheet templates once; every new show uses them', 'Import data or see what an earlier import created', 'Light or dark mode'], who: 'Management.' },
+  settings: { what: 'Your company name and colour, your own fields, templates, rates, appearance and your imports.', do: ['Add a custom field once; it appears on every show, in the Season table and in exports', 'Set your company name and colour — everyone you invite sees them', 'Edit the advance and day-sheet templates once; every new show uses them', 'Import data or see what an earlier import created', 'Light or dark mode'], who: 'Management.' },
   imports: { what: 'Every import you have done, what it created and where it went.', do: ['Open the shows, tasks or contacts an import created', 'Undo an import if it came in wrong', 'Import another file'], who: 'Management.' },
-  myhome: { what: 'Your tours and one-off shows, each on its own card, with what is next.', do: ['Tap a tour to see every date and the routing', 'Tap a show to see its day sheet and contacts', 'Today takes you straight to the current day sheet'], who: 'Artists and crew. Management and tour managers get the Artists page instead.' },
+  myhome: { what: 'Your tours and one-off shows, each on its own card, with what is next.', do: ['Customize: choose which cards show on your home and their order', 'Tap a tour to see every date and the routing', 'Tap a show to see its day sheet and contacts', 'Today takes you straight to the current day sheet'], who: 'Artists and crew. Management and tour managers get the Artists page instead.' },
   today: { what: 'The day sheet for today, plus the venue, your hotel and room, your flight if you fly today, and who to call. Times are the venue’s local time in your device’s format; when you are in another time zone, your own time shows alongside.', do: ['Tick off what you are bringing', 'Reserve a table straight from a dinner line — OpenTable opens inside GigTrip', 'Add the day to your calendar'], who: 'Everyone on the road.' },
 };
 // Notes about what the real build will do are for the owner and management, never for talent or venues.
@@ -1885,8 +1997,8 @@ const importTitle = id => { const r = DB.imports.find(x => x.id === id); return 
 
 // ---------- export (Excel-ready CSV; copy, or download where the browser allows it) ----------
 const EXPORTS = {
-  shows: { label: 'Shows (dates sheet)', head: ['date', 'artist', 'city', 'venue', 'capacity', 'status', 'deal_type', 'guarantee', 'artist_pct', 'deposit', 'deposit_due', 'deposit_paid', 'currency', 'tour', 'notes'],
-    rows: () => curShows().map(s => [s.date, artist(s.artist).name, s.city, s.venue, s.cap, s.status, s.deal.type, (s.deal.g / 100).toFixed(2), s.deal.pct || '', (s.deal.dep / 100).toFixed(2), s.deal.depDue || '', s.deal.depPaid ? 'yes' : 'no', s.cur, tour(s.tour)?.name || '', s.note || '']) },
+  shows: { label: 'Shows (dates sheet)', get head() { return ['date', 'artist', 'city', 'venue', 'capacity', 'status', 'deal_type', 'guarantee', 'artist_pct', 'deposit', 'deposit_due', 'deposit_paid', 'currency', 'tour', 'notes'].concat(DB.fields.map(f => f.label)); },
+    rows: () => curShows().map(s => [s.date, artist(s.artist).name, s.city, s.venue, s.cap, s.status, s.deal.type, (s.deal.g / 100).toFixed(2), s.deal.pct || '', (s.deal.dep / 100).toFixed(2), s.deal.depDue || '', s.deal.depPaid ? 'yes' : 'no', s.cur, tour(s.tour)?.name || '', s.note || '', ...DB.fields.map(f => cfShow(f, s.cf?.[f.id]))]) },
   tasks: { label: 'Advance tasks (ClickUp-style)', head: ['task_name', 'status', 'assignee', 'due_date', 'list', 'artist'],
     rows: () => DB.tasks.filter(t => show(t.show) && inCur(show(t.show).artist)).map(t => [t.label, t.status, P(t.owner).name, t.due, `${short(show(t.show).date)} · ${cityOf(show(t.show))} · ${show(t.show).venue}`, artist(show(t.show).artist).name]) },
   contacts: { label: 'Contacts', head: ['name', 'role', 'phone', 'show'], rows: () => DB.contacts.filter(c => show(c.show) && inCur(show(c.show).artist)).map(c => [c.name, c.role, c.ph, `${short(show(c.show).date)} · ${cityOf(show(c.show))}`]) },
@@ -1937,9 +2049,8 @@ V.board = () => {
   const deals = can('costs');
   let body;
   if (S.seasonView === 'table') {
-    const cols = [['date', 'Date'], ['artist', 'Artist'], ['city', 'City'], ['venue', 'Venue'], ['cap', 'Cap'], ['status', 'Status']].concat(deals ? [['g', 'Guarantee'], ['dep', 'Deposit']] : []).concat([['adv', 'Advanced']]);
-    const val = (r, k) => k === 'artist' ? artist(r.artist).name : k === 'g' ? (r.deal ? r.deal.g : r.g) : k === 'dep' ? (r.deal ? r.deal.dep : 0) : k === 'adv' ? (r.kind === 'show' ? pctDone(r.id) : -1) : r[k];
-    rows.sort((a, b) => { const x = val(a, S.sort.k), y = val(b, S.sort.k); return (x > y ? 1 : x < y ? -1 : 0) * S.sort.dir; });
+    const cols = myCols(), sortCol = boardCols().find(c => c.k === S.sort.k) || cols[0];
+    rows.sort((a, b) => { const x = sortCol.get(a), y = sortCol.get(b); return (x > y ? 1 : x < y ? -1 : 0) * S.sort.dir; });
     const shows = rows.filter(r => r.kind === 'show');
     body = `
     ${edit && S.sel.size ? `<div class="bulkbar"><span>${S.sel.size} selected</span>
@@ -1947,12 +2058,10 @@ V.board = () => {
       <button class="btn btn-primary btn-sm" data-act="bulkStatus">Set status</button><button class="btn btn-secondary btn-sm" data-act="bulkClear">Clear</button></div>` : ''}
     <section class="card" style="padding:6px 8px"><div class="scroll-x"><table>
       <thead><tr>${edit ? `<th class="sel"><input type="checkbox" id="selall" aria-label="Select all shows" ${shows.length && shows.every(s => S.sel.has(s.id)) ? 'checked' : ''}></th>` : ''}
-        ${cols.map(([k, l]) => `<th class="${['cap', 'g', 'dep', 'adv'].includes(k) ? 'r' : ''}"><button class="sort" data-act="sort" data-id="${k}">${l}${S.sort.k === k ? (S.sort.dir > 0 ? ' ↑' : ' ↓') : ''}</button></th>`).join('')}</tr></thead>
+        ${cols.map(c => `<th class="${c.num ? 'r' : ''}"><button class="sort" data-act="sort" data-id="${esc(c.k)}">${esc(c.l)}${S.sort.k === c.k ? (S.sort.dir > 0 ? ' ↑' : ' ↓') : ''}</button></th>`).join('')}</tr></thead>
       <tbody>${rows.map(r => `<tr class="click" ${r.kind === 'show' ? `data-show="${r.id}"` : `data-act="offer" data-id="${r.id}"`}>
         ${edit ? `<td class="sel">${r.kind === 'show' ? `<input type="checkbox" data-sel="${r.id}" ${S.sel.has(r.id) ? 'checked' : ''} aria-label="Select ${esc(r.city)}">` : ''}</td>` : ''}
-        <td>${short(r.date)}</td><td>${esc(artist(r.artist).name)}</td><td class="${r.status === 'cancelled' ? 'cancelled-text' : ''}">${esc(r.city)}</td><td>${esc(r.venue)}</td><td class="r">${(r.cap || 0).toLocaleString()}</td>
-        <td>${statusChip(r)}${r.src ? ' ' + srcChip(r) : ''}</td>${deals ? `<td class="r">${money(val(r, 'g'), false, r.cur)}</td><td class="r">${r.deal && r.deal.dep ? money(r.deal.dep, false, r.cur) + (r.deal.depPaid ? ' ✓' : '') : '—'}</td>` : ''}
-        <td class="r">${r.kind === 'show' ? pctDone(r.id) + '%' : '—'}</td></tr>`).join('')}</tbody>
+        ${cols.map(c => `<td class="${c.num ? 'r' : ''}">${c.cell(r)}</td>`).join('')}</tr>`).join('')}</tbody>
     </table></div></section>`;
   } else {
     const byMonth = {};
@@ -1968,7 +2077,7 @@ V.board = () => {
           </div>`).join('')}</div></section>`).join('') : `<p class="muted">Nothing matches.</p>`;
   }
   return `
-  <div class="head"><div><div class="eyebrow">${cur() === 'all' ? `Northlight Mgmt · ${myArtists().length} artists` : esc(artist(cur()).name)}</div><h1 class="display">Season 2027</h1>
+  <div class="head"><div><div class="eyebrow">${cur() === 'all' ? `${esc(orgName())} · ${myArtists().length} artists` : esc(artist(cur()).name)}</div><h1 class="display">Season 2027</h1>
     <div class="sub muted">${cur() === 'all' ? 'Every date for every artist — your Excel dates sheet, shared.' : 'Every date for this artist. Switch to All artists for the whole roster.'}</div></div>
     ${edit ? `<div class="addbar">${addBtn('newShow', 'Add show', '', 'btn-tape')}<button class="btn btn-secondary btn-sm" data-act="import">${icon('upload')} Import from Excel…</button><button class="btn btn-secondary btn-sm" data-act="export">Export</button></div>` : ''}</div>
   <div class="stats">
@@ -1978,9 +2087,10 @@ V.board = () => {
     ${statBtn('statusFilter', 'offer', 'Open offers', count('offer'), S.status === 'offer')}
   </div>
   ${S.status !== 'all' ? `<div class="row wrap" style="gap:8px"><span class="small muted">Showing ${(STATUSES.find(x => x[0] === S.status) || ['', 'imported'])[1].toLowerCase()} only</span><button class="btn btn-outline btn-sm" data-act="statusFilter" data-id="${S.status}">Show everything</button></div>` : ''}
+  ${viewBar()}
   <div class="stack">
     <div class="row wrap between"><div class="seg" data-filter="seasonView"><button aria-pressed="${S.seasonView === 'list'}" data-v="list">List</button><button aria-pressed="${S.seasonView === 'table'}" data-v="table">Table</button></div>
-      <label class="field" for="q" style="flex:1;max-width:320px"><span class="sr">Search</span><input id="q" type="search" placeholder="Search city, venue, artist" value="${esc(S.q)}" style="height:36px"></label></div>
+      <label class="field" for="q" style="flex:1;min-width:150px;max-width:320px"><span class="sr">Search</span><input id="q" type="search" placeholder="Search city, venue, artist" value="${esc(S.q)}" style="height:36px"></label>${S.seasonView === 'table' ? `<button class="btn btn-secondary btn-sm" type="button" data-act="cols">${icon('edit')} Columns</button>` : ''}</div>
     <label class="viewas" for="artpick">Artist <select id="artpick"><option value="all">All artists (${myArtists().length})</option>${myArtists().map(a => `<option value="${a.id}" ${cur() === a.id ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}</select></label>
     <div class="seg" data-filter="status">${segS.map(([k, l]) => `<button aria-pressed="${S.status === k}" data-v="${k}">${l}</button>`).join('')}</div>
   </div>
@@ -1999,23 +2109,36 @@ V.home = () => {
   else if (S.hsort === 'att') list.sort((x, y) => y.att - x.att || x.a.name.localeCompare(y.a.name));
   else list.sort((x, y) => (x.next?.date || '9').localeCompare(y.next?.date || '9'));
   const today = myArtists().map(a => info(a).today).filter(Boolean);
+  const mineIds = myArtists().map(a => a.id);
+  const card = (title, rows, empty, more) => `<section class="card"><div class="row between" style="margin-bottom:4px"><h2>${title}</h2>${more || ''}</div><div class="list">${rows.join('') || `<p class="muted" style="margin:0">${empty}</p>`}</div></section>`;
+  const unpaid = DB.shows.filter(x => mineIds.includes(x.artist) && x.deal.dep && !x.deal.depPaid && x.deal.depDue && x.status !== 'cancelled').sort((x, y) => x.deal.depDue.localeCompare(y.deal.depDue));
+  const openOffers = DB.offers.filter(o => o.status === 'offer' && mineIds.includes(o.artist)).sort((x, y) => (x.expires || '9').localeCompare(y.expires || '9'));
+  const parts = {
+    start: () => startCard(),
+    today: () => card('Shows today', today.map(x => `<div class="li click" data-show="${x.id}">${dateBox(x.date, true)}<div class="grow"><b>${esc(artist(x.artist).name)}</b> · ${esc(cityOf(x))}<div class="small muted">${esc(x.venue)}${stageTime(x) ? ' · on stage ' + fmtTime(stageTime(x)) : ''} · ${pctDone(x.id)}% advanced</div></div>${icon('chev')}</div>`), 'No shows today.'),
+    attention: () => card(`Needs attention · ${att.length}`, att.slice(0, 4).map(x => `<div class="li click" ${x.act ? `data-act="${x.act}" data-id="${x.id}"` : `data-go="${x.go}"`}><div class="grow"><span class="chip ${/overdue/i.test(x.kind) ? 'st-cancelled' : 'st-pending'} plain">${x.kind}</span><div><b>${esc(x.text)}</b></div><div class="small muted">${esc(x.sub)}</div></div>${icon('chev')}</div>`), 'All clear.', att.length > 4 ? '<a class="btn btn-outline btn-sm" href="#activity">See all</a>' : ''),
+    money: () => card(`Deposits to chase · ${unpaid.length}`, unpaid.slice(0, 4).map(x => `<div class="li click" data-go="money">${dateBox(x.deal.depDue)}<div class="grow"><b>${money(x.deal.dep, false, x.cur)}</b> · ${esc(x.venue)}<div class="small muted">${esc(artist(x.artist).name)} · ${daysUntil(x.deal.depDue) < 0 ? '<span class="late">overdue</span>' : 'due ' + short(x.deal.depDue)}</div></div>${icon('chev')}</div>`), 'Every deposit is in.'),
+    offers: () => card(`Open offers · ${openOffers.length}`, openOffers.slice(0, 4).map(o => `<div class="li click" data-go="offers">${dateBox(o.date)}<div class="grow"><b>${esc(o.city)}</b> · ${esc(o.venue)}<div class="small muted">${esc(artist(o.artist).name)} · ${esc(o.deal)} · answer by ${short(o.expires)}</div></div>${icon('chev')}</div>`), 'No open offers.'),
+    all: () => allPart(), artists: () => artistsPart(),
+  };
   return `
-  <div class="head"><div><div class="eyebrow">${isMgr() ? 'Northlight Mgmt' : esc(p.name) + ' · ' + esc(KINDS[p.kind])}</div><h1 class="display">Your artists</h1>
+  <div class="head"><div><div class="eyebrow">${isMgr() ? esc(orgName()) : esc(p.name) + ' · ' + esc(KINDS[p.kind])}</div><h1 class="display">Your artists</h1>
     <div class="sub muted">${myArtists().length} artists · ${today.length ? `${today.length} show${today.length > 1 ? 's' : ''} today · ` : ''}pick one to work on</div></div>
-    ${isMgr() ? `<div class="addbar">${addBtn('newArtist', 'Add artist', '', 'btn-tape')}<button class="btn btn-secondary btn-sm" data-act="import">${icon('upload')} Import data</button></div>` : ''}</div>
+    <div class="addbar">${isMgr() ? `${addBtn('newArtist', 'Add artist', '', 'btn-tape')}<button class="btn btn-secondary btn-sm" data-act="import">${icon('upload')} Import data</button>` : ''}${customBtn()}</div></div>
+  ${myHome().map(id => parts[id]()).join('')}`;
+  function artistsPart() { return `<div class="stack" style="gap:18px">
   <div class="row wrap between">
     <label class="field" for="hq" style="flex:1;min-width:200px;max-width:360px"><span class="sr">Search artists</span><input id="hq" type="search" placeholder="Search ${myArtists().length} artists" value="${esc(S.hq)}" style="height:38px"></label>
     <div class="seg" data-filter="hsort"><button aria-pressed="${S.hsort === 'next'}" data-v="next">Next show</button><button aria-pressed="${S.hsort === 'att'}" data-v="att">Needs attention</button><button aria-pressed="${S.hsort === 'az'}" data-v="az">A–Z</button></div>
   </div>
-  ${startCard()}
-  <button class="acard" data-act="pickArtist" data-id="all" aria-current="${cur() === 'all'}"><span class="ph aph" style="background:var(--tape)">${icon('board')}</span>
-    <div class="grow"><div><b>All artists</b></div><div class="small muted">${isMgr() ? 'Season board, deposits and offers across the roster' : 'Everything across your artists'}</div></div>${att.length ? `<span class="cnt">${att.length}</span>` : ''}</button>
   <div class="hgrid">${list.map(({ a, next, today, att, shows }) => `
     <button class="acard" data-act="pickArtist" data-id="${a.id}" aria-current="${cur() === a.id}">${artistPh(a)}
       <div class="grow"><div><b>${esc(a.name)}</b> <span class="small muted">${esc(a.genre || '')}</span></div>
         <div class="small">${today ? `<span class="chip st-pending plain">Show today · ${esc(cityOf(today))}</span>` : next ? `<span class="muted">Next: ${short(next.date)} · ${esc(cityOf(next))}</span>` : '<span class="muted">No upcoming shows</span>'}</div>
         <div class="small muted">${shows.filter(s => s.status === 'confirmed').length} confirmed · ${shows.filter(s => s.status === 'hold').length} hold${shows.filter(s => s.status === 'hold').length === 1 ? '' : 's'}</div></div>
-      ${att ? `<span class="cnt" aria-label="${att} need attention">${att}</span>` : ''}${icon('chev')}</button>`).join('') || (myArtists().length ? '<p class="muted">No artists match.</p>' : `<section class="card stack"><h2>No artists yet</h2><p class="muted" style="margin:0">Add one, or import your dates sheet — artists are created from the artist column.</p><div class="addbar">${addBtn('newArtist', 'Add artist')}<button class="btn btn-tape btn-sm" data-act="import">${icon('upload')} Import data</button></div></section>`)}</div>`;
+      ${att ? `<span class="cnt" aria-label="${att} need attention">${att}</span>` : ''}${icon('chev')}</button>`).join('') || (myArtists().length ? '<p class="muted">No artists match.</p>' : `<section class="card stack"><h2>No artists yet</h2><p class="muted" style="margin:0">Add one, or import your dates sheet — artists are created from the artist column.</p><div class="addbar">${addBtn('newArtist', 'Add artist')}<button class="btn btn-tape btn-sm" data-act="import">${icon('upload')} Import data</button></div></section>`)}</div></div>`; }
+  function allPart() { return `<button class="acard" data-act="pickArtist" data-id="all" aria-current="${cur() === 'all'}"><span class="ph aph" style="background:var(--tape)">${icon('board')}</span>
+    <div class="grow"><div><b>All artists</b></div><div class="small muted">${isMgr() ? 'Season board, deposits and offers across the roster' : 'Everything across your artists'}</div></div>${att.length ? `<span class="cnt">${att.length}</span>` : ''}</button>`; }
 };
 
 V.overview = () => {
@@ -2076,6 +2199,13 @@ V.myhome = () => {
   const tours = DB.tours.filter(t => t.artist === a.id).map(t => { const shows = mine.filter(s => s.tour === t.id); const next = shows.find(s => s.date >= NOW.date); const r = tourRange(t); return { t, shows, next, done: !!(r.end && r.end < NOW.date) || (shows.length && !next) }; })
     .sort((x, y) => (x.done - y.done) || ((x.next?.date || '9').localeCompare(y.next?.date || '9')));
   const oneOffs = mine.filter(s => !s.tour);
+  const nx = [...mine].sort((x, y) => x.date.localeCompare(y.date)).find(s => s.date >= NOW.date);
+  const trip = DB.travel.filter(x => seesTravel(x, me()) && (x.checkOut || x.date) >= NOW.date).sort((x, y) => x.date.localeCompare(y.date))[0];
+  const parts = {
+    next: () => nx ? `<section class="card"><h2 style="margin-bottom:4px">Next show</h2><div class="list"><div class="li click" data-show="${nx.id}">${dateBox(nx.date, nx.date === NOW.date)}<div class="grow"><b>${esc(nx.city)}</b> · ${esc(nx.venue)}<div class="small muted">${nx.date === NOW.date ? 'Today' : daysUntil(nx.date) === 1 ? 'Tomorrow' : 'In ' + daysUntil(nx.date) + ' days'}${stageTime(nx) ? ' · on stage ' + fmtTime(stageTime(nx)) : ''}</div></div>${statusChip(nx)}</div></div></section>` : '',
+    travel: () => trip ? `<section class="card"><h2 style="margin-bottom:4px">My next travel</h2><div class="list"><div class="li click" data-go="travel">${dateBox(trip.date)}<div class="grow"><b>${esc(trip.type === 'hotel' ? trip.name || trip.label : trip.label)}</b><div class="small muted">${trip.type === 'flight' ? `${esc(trip.flight || '')} · departs ${fmtTime(trip.dep || trip.time)}` : trip.type === 'hotel' ? `Check in ${short(trip.checkIn || trip.date)}` : `${trip.time ? fmtTime(trip.time) + ' · ' : ''}${esc(trip.detail || '')}`}</div></div>${icon('chev')}</div></div></section>` : '',
+    tours: () => toursPart(), oneoffs: () => oneOffsPart(),
+  };
   const card = ({ t, shows, next, done }) => `<button class="tcard ${done ? 'past' : ''}" data-act="gotour" data-id="${t.id}">
     ${coverBlock('tour:' + t.id, t, a, `${artistPh(a, 'ph')}<span class="tn">${esc(t.name)}</span>`)}
     <div class="tbody"><div class="row between"><span class="small muted">${esc(t.season)} · ${rangeText(t)}</span><span class="small muted">${shows.length} show${shows.length === 1 ? '' : 's'}</span></div>
@@ -2083,10 +2213,11 @@ V.myhome = () => {
   return `
   <div class="head"><div><div class="eyebrow">${esc(p.name)} · ${esc(p.role)}</div><h1 class="display">${p.kind === 'artist' ? 'Your tours' : esc(a.name)}</h1>
     <div class="sub muted">${tours.length} tour${tours.length === 1 ? '' : 's'}${oneOffs.length ? ` · ${oneOffs.length} one-off show${oneOffs.length === 1 ? '' : 's'}` : ''}${today ? ` · show today in ${esc(cityOf(today))}` : ''}</div></div>
-    ${today ? `<button class="btn btn-tape" data-go="today">${icon('today')} Today's day sheet</button>` : ''}</div>
-  <div class="hgrid">${tours.map(card).join('')}</div>
-  ${oneOffs.length ? `<section class="card"><h2 style="margin-bottom:4px">One-off shows</h2><div class="list">${oneOffs.map(s => `<div class="li click" data-show="${s.id}">${s.cover ? `<img class="thumb wide" src="${s.cover}" alt="">` : dateBox(s.date, s.date === NOW.date)}<div class="grow"><b>${esc(s.city)}</b> · ${esc(s.venue)}<div class="small muted">${fmtDate(s.date)}${s.note ? ' · ' + esc(s.note) : ''}</div></div>${statusChip(s)}</div>`).join('')}</div></section>` : ''}
+    <div class="addbar">${today ? `<button class="btn btn-tape btn-sm" data-go="today">${icon('today')} Today's day sheet</button>` : ''}${customBtn()}</div></div>
+  ${myHome().map(id => parts[id]()).join('')}
   ${!tours.length && !oneOffs.length ? '<p class="muted">Nothing booked yet. Management adds shows; they appear here.</p>' : ''}`;
+  function toursPart() { return tours.length ? `<div class="hgrid">${tours.map(card).join('')}</div>` : ''; }
+  function oneOffsPart() { return `${oneOffs.length ? `<section class="card"><h2 style="margin-bottom:4px">One-off shows</h2><div class="list">${oneOffs.map(s => `<div class="li click" data-show="${s.id}">${s.cover ? `<img class="thumb wide" src="${s.cover}" alt="">` : dateBox(s.date, s.date === NOW.date)}<div class="grow"><b>${esc(s.city)}</b> · ${esc(s.venue)}<div class="small muted">${fmtDate(s.date)}${s.note ? ' · ' + esc(s.note) : ''}</div></div>${statusChip(s)}</div>`).join('')}</div></section>` : ''}`; }
 };
 
 V.tour = () => {
@@ -2175,6 +2306,7 @@ V.show = () => {
         ${s.deal.pct && s.deal.type !== 'flat' && s.deal.type !== 'fest' ? `<dt>Artist %</dt><dd>${s.deal.pct}%</dd>` : ''}
         <dt>Deposit</dt><dd>${s.deal.dep ? `${money(s.deal.dep, false, s.cur)} · ${s.deal.depPaid ? 'received' : 'due ' + short(s.deal.depDue)}` : 'None'}</dd>
         <dt>Capacity</dt><dd>${s.cap.toLocaleString()}</dd><dt>Currency</dt><dd>${s.cur}</dd>
+        ${DB.fields.map(f => cfShow(f, s.cf?.[f.id]) ? `<dt>${esc(f.label)}</dt><dd>${esc(cfShow(f, s.cf[f.id]))}</dd>` : '').join('')}
         <dt>${s.settled != null ? 'Settled at' : 'Expected'}</dt><dd><b>${money(fee, false, s.cur)}</b></dd></dl>
       <div class="addbar">${isMgr() ? `<button class="btn btn-secondary btn-sm" data-act="show" data-id="${s.id}">${icon('edit')} Edit deal + details</button>` : ''}<button class="btn btn-tape btn-sm" data-act="gosettle" data-id="${s.id}">${icon('settle')} Settlement</button></div></div>
       <div class="note">Real build: the ticketing page (Ticketmaster, AXS, Dice) and venue site open here as embeds or new-tab buttons — GigTrip never copies ticket counts from them.</div></div>`;
@@ -2211,7 +2343,7 @@ V.show = () => {
   return `
   <div class="head"><div><div class="eyebrow">${isVenue() ? 'Your show' : `${esc(artist(s.artist).name)}${s.tour ? ' · ' + esc(tour(s.tour)?.name || '') : ' · one-off'}`}</div>
     <h1 class="display">${esc(cityOf(s))}</h1>
-    <div class="sub muted">${fmtDate(s.date)} · ${esc(s.venue)}${isMgr() || isVenue() ? ' · cap ' + s.cap.toLocaleString() : ''}${s.note ? ' · ' + esc(s.note) : ''}</div></div>
+    <div class="sub muted">${fmtDate(s.date)} · ${esc(s.venue)}${isMgr() || isVenue() ? ' · cap ' + s.cap.toLocaleString() : ''}${s.note ? ' · ' + esc(s.note) : ''}</div>${cfLine(s)}</div>
     <div class="row wrap">${s.settled != null ? '<span class="chip st-settled">Settled</span>' : statusChip(s)}
       ${isVenue() ? '' : `<label class="viewas" for="pick">Show <select id="pick">${curShows().filter(x => hasHome() || x.id === s.id || x.date >= NOW.date).map(x => `<option value="${x.id}" ${x.id === s.id ? 'selected' : ''}>${short(x.date)} · ${esc(cityOf(x))}${hasHome() ? ' · ' + esc(artist(x.artist).name) : ''}</option>`).join('')}</select></label>`}
       ${isMgr() ? editBtn('show', s.id, 'Edit show') : ''}</div></div>
@@ -2421,7 +2553,7 @@ V.money = () => {
     }
   }
   return `
-  <div class="head"><div><div class="eyebrow">${cur() === 'all' ? 'Northlight Mgmt · all artists' : esc(artist(cur()).name)}</div><h1 class="display">Money</h1><div class="sub muted">Deposits, commissions and tour budgets across the roster.</div></div></div>
+  <div class="head"><div><div class="eyebrow">${cur() === 'all' ? esc(orgName()) + ' · all artists' : esc(artist(cur()).name)}</div><h1 class="display">Money</h1><div class="sub muted">Deposits, commissions and tour budgets across the roster.</div></div></div>
   <section class="card stack"><div class="tabs" role="tablist">${tabs.map(([k, l]) => `<button role="tab" aria-selected="${S.moneyTab === k}" data-mtab="${k}">${l}</button>`).join('')}</div>${body}</section>`;
 };
 
@@ -2591,10 +2723,11 @@ V.activity = () => {
 };
 
 V.settings = () => `
-  <div class="head"><div><div class="eyebrow">Management only</div><h1 class="display">Settings</h1><div class="sub muted">Templates used for every new show, and your rates.</div></div></div>
+  <div class="head"><div><div class="eyebrow">Management only</div><h1 class="display">Settings</h1><div class="sub muted">Your company, your own fields, the templates used for every new show, and your rates.</div></div></div>
   <div class="grid2">
+    <div class="stack">${orgCard()}${fieldsCard()}
     <section class="card stack"><div class="row between"><h2>Advance template</h2>${addBtn('newTmplAdv', 'Add')}</div>
-      <div class="list">${DB.templates.advance.map(t => `<div class="li"><div class="grow"><b>${esc(t.label)}</b><div class="small muted">${esc(P(t.owner).name)} · ${t.before} days before</div></div>${editBtn('tmplAdv', t.id)}</div>`).join('')}</div></section>
+      <div class="list">${DB.templates.advance.map(t => `<div class="li"><div class="grow"><b>${esc(t.label)}</b><div class="small muted">${esc(P(t.owner).name)} · ${t.before} days before</div></div>${editBtn('tmplAdv', t.id)}</div>`).join('')}</div></section></div>
     <div class="stack">
       <section class="card stack"><div class="row between"><h2>Day-sheet template</h2>${addBtn('newTmplSlot', 'Add')}</div>
         <div class="list">${DB.templates.slots.map(t => `<div class="li"><span class="mono">${fmtTime(t.time)}</span><div class="grow">${esc(t.label)}</div>${editBtn('tmplSlot', t.id)}</div>`).join('')}</div></section>
@@ -2625,6 +2758,7 @@ V.about = () => `
 
 // ---------- router ----------
 function route() {
+  applyBrand();
   const nav = navFor();
   let r = location.hash.slice(1);
   if (r !== 'more' && (!V[r] || !nav.some(n => n[0] === r))) r = nav[0][0];
@@ -2686,6 +2820,15 @@ const ACT = {
   fresh: (id, el) => { if (!el.dataset.sure) { el.dataset.sure = '1'; el.textContent = 'Tap again — this clears the sample data'; return; } DB = blank(); save(); S.artistId = 'all'; S.showId = null; S.tourId = null; route(); toast('Clean slate. Bring your data in.'); openImportWizard(); },
   gosettle: id => { S.showId = id; go('settle'); },
   sort: k => { S.sort = { k, dir: S.sort.k === k ? -S.sort.dir : 1 }; route(); },
+  view: id => { const v = myViews().find(x => x.id === id); if (!v) return; S.seasonView = v.seasonView; S.status = v.status; S.sort = { ...v.sort }; S.q = v.q || ''; if (v.cols) pref().cols = [...v.cols]; if (v.artist !== cur() && (v.artist === 'all' || myArtists().some(a => a.id === v.artist))) { S.artistId = v.artist; store.set('artist', v.artist); } S.sel.clear(); save(); route(); },
+  saveView: () => openForm({ title: 'Save this view', fields: [{ k: 'name', label: 'Name', ph: 'e.g. Holds to chase', req: true, full: true }], submit: 'Save view',
+    extra: '<p class="small muted" style="margin:0">Keeps the filters, sorting, columns and artist you have on screen now. Only you see your views.</p>',
+    onSave(o) { myViews().push({ id: uid('vw'), name: o.name, ...viewState() }); toast('View saved'); } }),
+  editView: id => { const v = myViews().find(x => x.id === id); if (!v) return; openForm({ title: 'Your view', value: v, fields: [{ k: 'name', label: 'Name', req: true, full: true }], onSave(o) { v.name = o.name; toast('View renamed'); }, onDelete() { DB.views[me()] = myViews().filter(x => x !== v); toast('View deleted'); } }); },
+  cols: () => openArrange({ title: 'Table columns', note: 'Tick the columns you want and put them in your order. This is your own layout — nobody else’s changes.', items: ordered(boardCols().map(c => [c.k, c.l]), myCols().map(c => c.k)), onSave(ids) { pref().cols = ids; toast('Columns saved'); }, onReset() { delete pref().cols; } }),
+  customHome: () => openArrange({ title: 'Your home page', note: 'Choose what shows on your home page and in what order. Only your own home changes.', items: ordered(homeAvail(), myHome()), onSave(ids) { pref().home = ids; toast('Home updated'); }, onReset() { delete pref().home; } }),
+  newField: () => E.field(null), field: id => E.field(id), org: () => E.org(),
+  accent: k => { DB.settings.org.accent = k; applyBrand(); commit('Colour changed'); },
   bulkStatus: () => { const st = $('#bulkst').value; S.sel.forEach(id => { const s = show(id); if (s) s.status = st; }); commit(`${S.sel.size} shows set to ${st}`, `Set ${S.sel.size} shows to ${st}`); S.sel.clear(); route(); },
   bulkClear: () => { S.sel.clear(); route(); },
   acceptOffer: id => {

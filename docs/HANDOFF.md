@@ -59,6 +59,20 @@ and what's pending**.
   text, small tap targets, broken pictures, plus an eye-test checklist. Order
   for every major GigTrip change: gigtrip-qa → gigtrip-ui-qa → code review →
   publish.
+- Custom views (2026-11-17, owner: "flexibility for users to customize their
+  view" — the gap against RoadOps, see `docs/GIGTRIP-VS-ROADOPS.md`):
+  - Each person (`DB.prefs[person]`, `DB.views[person]`): Season table
+    **Columns** picker (tick + reorder, `boardCols()`/`myCols()`), **saved
+    views** (filters, sort, columns, artist under a name; `viewBar()`), and a
+    **Customize** button on both home pages that picks and orders cards
+    (`HOME_CARDS`; management gets Shows today, Needs attention, Deposits to
+    chase, Open offers; artists/crew get Next show, My next travel).
+  - The company (`DB.fields`, `DB.settings.org`): **custom fields** on every
+    show (text, number, date, yes/no, pick-list; management-only or everyone
+    on the tour — never the venue) that appear on the show form, show page,
+    as table columns and in exports; **company name + accent colour**
+    (Settings › Your company, `applyBrand()` overrides `--tape`).
+  - Older saved data gets the new shape through `ensureShape()`.
 - Times (2026-10-26, owner: "based on the setting the user has on their
   device, or local to where the user is and where the show is"): times and
   dates format through `Intl` with the device's locale (12/24-hour, language).

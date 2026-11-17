@@ -126,6 +126,31 @@
   if (qaShow && open(() => E.show(qaShow.id), 'Edit show')) { const del = d.querySelector('[data-del]'); del.click(); del.click(); await wait(60); check(!DB.shows.some(s => s.id === qaShow.id), 'Delete show did not remove it'); check(!DB.tasks.some(t => t.show === qaShow.id), 'Deleting a show left its tasks behind'); }
   if (d.open) d.close();
 
+  // 5b. Custom views (2026-11-17): saved views, own columns, custom fields, home cards, company branding.
+  S.role = 'manager'; S.artistId = 'all'; S.status = 'all'; S.seasonView = 'list'; S.q = ''; delete pref().cols; delete pref().home;
+  ACT.view('vw_holds'); render('board');
+  check(S.status === 'hold' && S.seasonView === 'table' && [...main.querySelectorAll('thead th button.sort')].map(b => b.textContent.replace(/[ ↑↓]/g, '')).join() === 'Date,Artist,City,Venue,Status,Guarantee', 'Saved view did not apply its filter and columns');
+  check(main.querySelector('.viewchip[aria-pressed="true"]')?.textContent === 'Holds to chase' && !main.querySelector('[data-act="saveView"]'), 'The active saved view is not marked');
+  ACT.statusFilter('hold'); render('board'); check(!main.querySelector('.viewchip[aria-pressed="true"]') && !!main.querySelector('[data-act="saveView"]'), 'Changing a filter did not offer "Save this view"');
+  if (open(() => ACT.saveView(), 'Save view')) { set('name', 'QA view'); await submit(); check(myViews().some(v => v.name === 'QA view' && v.status === 'all'), 'Save this view did not save'); }
+  if (open(() => ACT.cols(), 'Columns')) { d.querySelectorAll('.arr li').forEach(li => { li.querySelector('input').checked = ['date', 'city'].includes(li.dataset.w); }); await submit(); S.seasonView = 'table'; render('board'); check(main.querySelectorAll('thead th button.sort').length === 2, 'Column picker did not change the table'); }
+  delete pref().cols; S.seasonView = 'list'; S.status = 'all';
+  const f0 = DB.fields.length;
+  if (open(() => E.field(null), 'Add field')) { set('label', 'QA field'); await submit(); check(DB.fields.length === f0 + 1, 'Add custom field did not save'); }
+  const qf = DB.fields.find(f => f.label === 'QA field');
+  if (qf && open(() => E.show('nyc'), 'Edit show with custom field')) { set('cf.' + qf.id, 'QA value'); await submit(); check(show('nyc').cf?.[qf.id] === 'QA value', 'Custom field value did not save on the show'); check(boardCols().some(c => c.k === 'cf:' + qf.id), 'Custom field is not offered as a table column'); }
+  S.artistId = 'jv'; S.showId = 'nyc'; S.showTab = 'deal'; render('show'); check(/QA field/.test(txt()) && /Support act: Hollow Pines/.test(txt()), 'Show page does not show custom fields');
+  S.role = 'crew'; S.showTab = 'sheet'; render('show'); check(/Support act: Hollow Pines/.test(txt()) && !/On-sale date|QA field/.test(txt()), 'Crew see a management-only field, or miss an everyone field');
+  S.role = 'venue'; render('show'); check(!/Support act/.test(txt()), 'Venue sees tour custom fields');
+  S.role = 'manager'; if (qf && open(() => E.field(qf.id), 'Delete field')) { const del = d.querySelector('[data-del]'); del.click(); del.click(); await wait(60); check(!DB.fields.includes(qf) && !(qf.id in (show('nyc').cf || {})), 'Deleting a field left its values behind'); }
+  S.artistId = null; render('home'); check(/Shows today/.test(txt()) && !!main.querySelector('[data-act="customHome"]'), 'Manager home is missing its cards or Customize');
+  if (open(() => ACT.customHome(), 'Customize home')) { d.querySelectorAll('.arr li').forEach(li => { li.querySelector('input').checked = ['money', 'artists'].includes(li.dataset.w); }); await submit(); render('home'); check(/Deposits to chase/.test(txt()) && !/Shows today/.test(txt()) && !main.querySelector('.acard[data-id="all"]'), 'Customize home did not change the home page'); }
+  delete pref().home;
+  S.role = 'artist'; S.artistId = 'jv'; render('myhome'); check(/Next show/.test(txt()) && !!main.querySelector('[data-act="customHome"]') && main.querySelectorAll('.tcard').length >= 3, 'Artist home is missing Next show, Customize or the tours');
+  S.role = 'manager'; DB.settings.org.name = 'QA Co'; S.artistId = 'all'; render('board'); check(/QA Co/i.test(txt()), 'Company name does not show on the Season board');
+  ACT.accent('mint'); check(document.documentElement.dataset.accent === 'mint' && getComputedStyle(document.documentElement).getPropertyValue('--tape').includes('--brand') || getComputedStyle(document.querySelector('.logo')).backgroundColor !== 'rgb(255, 204, 26)', 'Accent colour did not apply');
+  ACT.accent('tape'); check(!document.documentElement.dataset.accent, 'Accent colour did not reset');
+
   // 6. Non-management cannot reach management forms through the UI.
   S.role = 'crew'; S.artistId = 'jv'; render('party'); check(!main.querySelector('[data-act="person"]'), 'Crew can edit people');
   render('travel'); check(!main.querySelector('[data-act="newTravel"],[data-act="newFlight"],[data-act="newHotel"]'), 'Crew can add travel for everyone');

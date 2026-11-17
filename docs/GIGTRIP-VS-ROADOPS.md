@@ -33,7 +33,7 @@ listing (v1.22.0, 4.8★ from 64 ratings), and two comparison articles by TourPr
 - Works on any device with a browser, Windows included.
 
 ## What to build to win
-1. Custom views (RoadOps has none beyond colours and toggling sections): saved views and column picker on the
+1. Custom views — IN THE PROTOTYPE since 2026-11-17 (RoadOps has none beyond colours and toggling sections): saved views and column picker on the
    season board, custom fields on shows/people, a home page each person can arrange, company branding.
 2. Table stakes to stop losing on a checklist: offline, forward-an-email / AI import, push with read receipts,
    PDFs (day sheet, guest list, rooming list), live flight status, calendar feeds.
