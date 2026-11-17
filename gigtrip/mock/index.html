@@ -490,6 +490,11 @@ dialog.sheet .field select, dialog.sheet .field input { max-width: 100%; }
 .arr { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
 .arr li { display: flex; align-items: center; gap: 6px; padding: 4px 8px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface); }
 .arr li label { flex: 1; min-width: 0; display: flex; gap: 10px; align-items: center; min-height: 36px; cursor: pointer; font-size: 14px; }
+.arr .grip { width: 40px; height: 36px; border: 0; background: none; color: var(--muted); cursor: grab; touch-action: none; display: grid; place-items: center; border-radius: 8px; flex: none; }
+.arr .grip svg { stroke-width: 3; stroke-linecap: round; }
+.arr .grip:hover, .arr .grip:focus-visible { color: var(--text); background: var(--surface-2); }
+.arr li.drag { border-color: var(--text); background: var(--surface-2); box-shadow: 0 6px 18px rgba(0, 0, 0, .18); position: relative; z-index: 1; }
+.arr li.drag .grip { cursor: grabbing; }
 .arr input { width: 18px; height: 18px; accent-color: var(--good); flex: none; margin: 0; }
 .swatch { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--line-strong); cursor: pointer; padding: 0; flex: none; }
 .swatch[aria-pressed="true"] { outline: 2px solid var(--text); outline-offset: 2px; }
@@ -1025,10 +1030,20 @@ const ordered = (all, want) => want.map(k => all.find(a => a[0] === k)).filter(B
 // A tick-and-reorder list (table columns, home cards). `items` = [[id, label, on]] in display order.
 function openArrange({ title, note, items, onSave, onReset }) {
   openForm({ title, fields: [], submit: 'Save',
-    extra: `<p class="small muted" style="margin:0">${esc(note)}</p><ul class="arr">${items.map(([id, label, on]) => `<li data-w="${esc(id)}"><label><input type="checkbox" ${on ? 'checked' : ''}> ${esc(label)}</label><button type="button" class="iconbtn" data-mv="-1" aria-label="Move ${esc(label)} up">↑</button><button type="button" class="iconbtn" data-mv="1" aria-label="Move ${esc(label)} down">↓</button></li>`).join('')}</ul>${onReset ? '<div><button type="button" class="btn btn-outline btn-sm" data-arrreset>Back to the standard layout</button></div>' : ''}`,
+    extra: `<p class="small muted" style="margin:0">${esc(note)} Drag the dots to reorder.</p><ul class="arr">${items.map(([id, label, on]) => `<li data-w="${esc(id)}"><label><input type="checkbox" ${on ? 'checked' : ''}> ${esc(label)}</label><button type="button" class="grip" data-grip aria-label="Drag to move ${esc(label)}, or use the up and down arrow keys" title="Drag to reorder"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01"/></svg></button></li>`).join('')}</ul>${onReset ? '<div><button type="button" class="btn btn-outline btn-sm" data-arrreset>Back to the standard layout</button></div>' : ''}`,
     onSave(o, form) { const ids = [...form.querySelectorAll('.arr li')].filter(li => li.querySelector('input').checked).map(li => li.dataset.w); if (!ids.length) { toast('Keep at least one ticked'); return false; } onSave(ids); } });
   const d = document.querySelector('#dlg');
-  d.querySelectorAll('[data-mv]').forEach(b => b.addEventListener('click', () => { const li = b.closest('li'), up = b.dataset.mv === '-1', sib = up ? li.previousElementSibling : li.nextElementSibling; if (!sib) return; if (up) li.parentNode.insertBefore(li, sib); else li.parentNode.insertBefore(sib, li); b.focus(); }));
+  // Drag a row by its handle (mouse or finger); the list reorders as you go. The handle also takes the arrow keys.
+  const ul = d.querySelector('.arr');
+  ul.addEventListener('pointerdown', e => {
+    const g = e.target.closest('[data-grip]'); if (!g) return;
+    const li = g.closest('li'); e.preventDefault(); try { ul.setPointerCapture(e.pointerId); } catch {}
+    li.classList.add('drag');
+    const move = ev => { const next = [...ul.children].filter(x => x !== li).find(x => { const r = x.getBoundingClientRect(); return ev.clientY < r.top + r.height / 2; }); if (next !== li.nextElementSibling) ul.insertBefore(li, next || null); };
+    const up = () => { li.classList.remove('drag'); ul.removeEventListener('pointermove', move); ul.removeEventListener('pointerup', up); ul.removeEventListener('pointercancel', up); };
+    ul.addEventListener('pointermove', move); ul.addEventListener('pointerup', up); ul.addEventListener('pointercancel', up);
+  });
+  ul.addEventListener('keydown', e => { const g = e.target.closest('[data-grip]'); if (!g || !['ArrowUp', 'ArrowDown'].includes(e.key)) return; e.preventDefault(); const li = g.closest('li'), sib = e.key === 'ArrowUp' ? li.previousElementSibling : li.nextElementSibling; if (!sib) return; if (e.key === 'ArrowUp') ul.insertBefore(li, sib); else ul.insertBefore(sib, li); g.focus(); });
   const r = d.querySelector('[data-arrreset]'); if (r) r.addEventListener('click', () => { onReset(); d.close(); save(); route(); toast('Back to the standard layout'); });
 }
 const orgCard = () => `<section class="card stack"><div class="row between"><h2>Your company</h2><button class="btn btn-secondary btn-sm" data-act="org">${icon('edit')} Edit</button></div>

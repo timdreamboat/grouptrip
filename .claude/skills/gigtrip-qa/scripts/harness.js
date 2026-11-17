@@ -173,6 +173,15 @@
   S.role = 'venue'; render('show'); check(!/Support act/.test(txt()), 'Venue sees tour custom fields');
   S.role = 'manager'; if (qf && open(() => E.field(qf.id), 'Delete field')) { const del = d.querySelector('[data-del]'); del.click(); del.click(); await wait(60); check(!DB.fields.includes(qf) && !(qf.id in (show('nyc').cf || {})), 'Deleting a field left its values behind'); }
   S.artistId = null; render('home'); check(/Shows today/.test(txt()) && !!main.querySelector('[data-act="customHome"]'), 'Manager home is missing its cards or Customize');
+  if (open(() => ACT.customHome(), 'Customize home: drag')) {
+    const ul = d.querySelector('.arr'), order = () => [...ul.children].map(li => li.dataset.w).join();
+    const o0 = order(), last = ul.lastElementChild, first = ul.firstElementChild, pe = (t, el, y) => el.dispatchEvent(new PointerEvent(t, { bubbles: true, pointerId: 1, clientX: 20, clientY: y }));
+    check(!d.querySelector('[data-mv]') && ul.querySelectorAll('[data-grip]').length === ul.children.length, 'Customize list still has arrows, or a row has no drag handle');
+    pe('pointerdown', last.querySelector('[data-grip]'), last.getBoundingClientRect().top + 5); pe('pointermove', ul, first.getBoundingClientRect().top + 2); pe('pointerup', ul, first.getBoundingClientRect().top + 2);
+    check(ul.firstElementChild === last && !last.classList.contains('drag'), 'Dragging a row to the top did not move it');
+    last.querySelector('[data-grip]').dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true })); check(ul.children[1] === last, 'Arrow keys on the drag handle did not move the row');
+    check(order() !== o0, 'Customize order did not change'); d.close();
+  }
   if (open(() => ACT.customHome(), 'Customize home')) { d.querySelectorAll('.arr li').forEach(li => { li.querySelector('input').checked = ['money', 'artists'].includes(li.dataset.w); }); await submit(); render('home'); check(/Deposits to chase/.test(txt()) && !/Shows today/.test(txt()) && !main.querySelector('.acard[data-id="all"]'), 'Customize home did not change the home page'); }
   delete pref().home;
   S.role = 'artist'; S.artistId = 'jv'; render('myhome'); check(/Next show/.test(txt()) && !!main.querySelector('[data-act="customHome"]') && main.querySelectorAll('.tcard').length >= 3, 'Artist home is missing Next show, Customize or the tours');
