@@ -1,6 +1,6 @@
 // Where we're staying: address, check-in/out, confirmation, map, booking link.
 import { esc, icon, avatar, avatarStack, fmtDay, fmtTime, sheet, embedSheet, confirmSheet, busy, copy, toast, emptyState, safeUrl, siteName, linkDates, suggest } from '../ui.js';
-import { placeSuggester } from '../places.js';
+import { placeSuggester, tripCenter } from '../places.js';
 import { guestsOf, namesOf, firstName } from './common.js';
 import * as store from '../store.js';
 import * as embed from '../embeds.js';
@@ -120,13 +120,14 @@ export function openAddStay(ctx, stay = null) {
       // Hotel names and addresses suggest as they type (nearest the destination
       // first); a pick fills the address and pins the place without a Google key.
       let picked = null; // { name, address, lat, lon }
-      const near = trip.lat != null ? trip : null;
+      // Hotels are searched around the destination itself, closest first.
+      const near = () => (trip.lat != null ? { lat: trip.lat, lon: trip.lon } : tripCenter({ ...trip, stays: [] }));
       suggest(form.elements.name, {
-        search: placeSuggester({ near, tag: 'tourism' }),
+        search: placeSuggester({ near, tag: 'tourism', miles: trip.currency === 'USD' }),
         onPick: (p) => { picked = p; if (!form.elements.address.value.trim() && p.address) form.elements.address.value = p.address; },
       });
       suggest(form.elements.address, {
-        search: placeSuggester({ near }),
+        search: placeSuggester({ near, miles: trip.currency === 'USD' }),
         onPick: (p) => { picked = { ...p, address: p.address || p.name }; form.elements.address.value = picked.address; },
       });
       form.onsubmit = async (e) => {

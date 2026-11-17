@@ -47,6 +47,21 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
    `places.js`, Photon biased to the trip's lat/lon (`osm_tag=tourism` for
    hotel names). A pick stores the place's lat/lon, so plans and hotels get
    pins and "From each hotel" distances without a Google key.
+   Find places (owner, 2026-11-17: everyone who demoed wanted to find
+   dinner, things to do, shows, casinos inside the app, and search results
+   "only in the trip's city, closest to furthest"): `views/explore.js` —
+   category chips on the Calendar page + "Find places nearby" in the plan
+   form. Categories use Photon's reverse search (`nearbyPlaces()`: nearest
+   50 with the category's OSM tags, "Show more" samples further out);
+   name search (`searchPlaces()`) is limited to ~40 km around `tripCenter()`
+   (the shared stay if pinned, else the destination) and sorted by distance,
+   falling back to further-away results only when nothing local matches.
+   The plan/hotel type-ahead uses the same search. Reviews/photos/hours stay
+   on Google Maps, tables on OpenTable, tickets on Ticketmaster/Eventbrite/
+   SeatGeek/Google events (new-tab links searched for the destination and
+   dates — no free keyless events source). Overpass was tried and was down
+   (502/timeouts); don't depend on it. The keyless map embeds a plan by its
+   saved coordinates when it has them (a name search can hit the wrong branch).
 4. Calendar map is Google (owner: "OpenStreetMap doesn't work — use Google",
    2026-09-22). `views/tripmap.js` has two modes:
    - No key (today): Google's free embed (`maps.google.com/maps?q=…&output=embed`),

@@ -576,6 +576,30 @@ dialog.viewer::backdrop { background: #000; }
 .viewer-nav.next { right: 12px; }
 @media (hover: none) { .viewer-nav { display: none; } }
 
+/* ---------- find places ---------- */
+.explore-strip, .explore-cats { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0 -16px 14px; padding: 2px 16px; }
+.explore-strip::-webkit-scrollbar, .explore-cats::-webkit-scrollbar { display: none; }
+@media (min-width: 960px) { .explore-strip { margin-inline: 0; padding-inline: 0; flex-wrap: wrap; } }
+.explore-chip, .explore-cats button {
+  flex: none; display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 14px; border-radius: 99px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 600 14px var(--font-ui); white-space: nowrap;
+}
+.explore-chip.find { background: var(--text); color: var(--bg); border-color: var(--text); }
+.explore-chip svg.i { width: 16px; height: 16px; }
+.explore-cats { margin: 12px -20px 10px; padding: 2px 20px; }
+.explore-cats button { background: var(--surface-2); border-color: transparent; color: var(--muted); }
+.explore-cats button.on { background: var(--text); color: var(--bg); }
+.explore-near { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 0 2px 8px; min-height: 20px; }
+.explore-near select { height: 30px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--text); padding: 0 8px; font: inherit; max-width: 60vw; }
+.explore-rows .row { width: 100%; background: none; border: 0; text-align: left; cursor: pointer; color: inherit; font: inherit; }
+.explore-rows .grow { display: grid; min-width: 0; }
+.explore-rows .sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.explore-row + .explore-row { border-top: 1px solid var(--line); }
+.explore-dist { flex: none; font-size: 13px; font-weight: 600; color: var(--muted); }
+.explore-detail { padding: 0 0 14px; }
+.explore-detail .place-preview { display: block; width: 100%; height: 170px; border: 0; border-radius: 12px; background: var(--surface-2); }
+.explore-empty { display: grid; gap: 4px; justify-items: center; text-align: center; padding: 36px 12px; }
+
 /* ---------- group hub (phones) ---------- */
 .seg-nav { display: flex; gap: 5px; overflow-x: auto; scrollbar-width: none; margin: 8px -16px 0; padding: 0 16px; }
 @media (max-width: 360px) { .seg-nav a svg.i { display: none; } }

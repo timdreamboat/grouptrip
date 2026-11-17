@@ -179,11 +179,14 @@ async function mountGoogle(el, trip, pins, stays) {
 // Keyless: Google's embedded map, one place at a time. Buttons under it
 // switch between the hotel (bed) and the plans (numbers).
 function mountEmbed(el, detailEl, trip, pins, stays) {
+  // A saved pin beats a name search: "Badmaash, Los Angeles" can land on the
+  // wrong branch across town; its coordinates can't.
+  const at = (x) => (x.lat != null && x.lon != null ? `${x.lat},${x.lon}` : null);
   const spots = [
-    ...stays.map((st) => ({ id: st.id, stay: true, label: icon('bed', 'tiny'), q: stayQuery(st, trip), card: () => stayCardHTML(st, trip),
+    ...stays.map((st) => ({ id: st.id, stay: true, label: icon('bed', 'tiny'), q: at(st) ?? stayQuery(st, trip), card: () => stayCardHTML(st, trip),
       chip: `${icon('bed', 'tiny')}${guestsOf(trip, st).length ? avatarStack(guestsOf(trip, st), 3, 20) : ''}`,
       title: [st.name, namesOf(guestsOf(trip, st), trip.me?.id)].filter(Boolean).join(' — ') })),
-    ...pins.map((it, i) => ({ id: it.id, label: String(i + 1), title: it.title, q: placeQuery(it, trip), card: () => cardHTML(it, i + 1, trip) })),
+    ...pins.map((it, i) => ({ id: it.id, label: String(i + 1), title: it.title, q: at(it) ?? placeQuery(it, trip), card: () => cardHTML(it, i + 1, trip) })),
   ];
   const show = (spot) => {
     // Google's keyless map centers on the place but draws no marker, so we

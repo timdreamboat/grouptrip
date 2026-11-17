@@ -7,7 +7,8 @@ import * as embed from '../embeds.js';
 import { going, organizer, firstName, nameOf, words, isPrivate, isSharedStay } from './common.js';
 import { handleStayClick } from './stays.js';
 import { mountTripMap, focusPin, pinned, staysOnMap, stayQuery, hasGoogleKey, googleFindPlace, placeQuery, fromHotelsHTML } from './tripmap.js';
-import { distanceText, placeSuggester } from '../places.js';
+import { distanceText, placeSuggester, tripCenter } from '../places.js';
+import { exploreStrip, handleExploreClick, openExplore } from './explore.js';
 
 // Plans can be for everyone (no names) or for specific people.
 export const isFor = (it, id) => !it.forMembers?.length || it.forMembers.includes(id);
@@ -82,6 +83,8 @@ export function render(el, ctx) {
           `<option value="${esc(m.id)}" ${who === m.id ? 'selected' : ''}>${esc(nameOfMember(m))}'s schedule</option>`).join('')}
       </select></label>`) : ''}
 
+    ${trip.destination ? exploreStrip() : ''}
+
     ${mapCard(trip)}
 
     ${entries.length ? '' : `<div class="card">${isOrg
@@ -128,6 +131,7 @@ export function render(el, ctx) {
     if (stayMap && focusPin(stayMap.dataset.stayMap)) {
       return el.querySelector('#trip-map')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
+    if (handleExploreClick(e, ctx)) return;
     if (await handleStayClick(e, ctx)) return;
     const t = e.target.closest('[data-action],[data-jump],[data-ot],[data-map],[data-del],[data-edit],[data-from]');
     if (!t) return;
@@ -312,10 +316,11 @@ export function openAddItem(ctx, day, preset = {}) {
             <p class="hint" style="margin:6px 0 0">Only they see it${trip.privacy === 'private' ? '' : ' in "My schedule"'} and get the notification.</p>
           </div>
         </div>
-        <label class="field"><span>Place</span><input name="place" placeholder="Restaurant, park, or an address" autocomplete="off" value="${v('place')}"></label>
+        <label class="field"><span>Place</span><input name="place" placeholder="Restaurant, park, or an address" autocomplete="off" value="${esc(it?.place ?? preset.place?.name ?? '')}"></label>
+        ${trip.destination ? `<button type="button" class="btn btn-xs btn-secondary" data-find style="justify-self:start;margin-top:-6px">${icon('search')}Find places nearby</button>` : ''}
         <div class="place-status" id="place-status" aria-live="polite"></div>
         <label class="field"><span>Notes</span><input name="notes" placeholder="Reservation under Tim, dress code…" value="${v('notes')}"></label>
-        <details class="more" ${it?.opentableRid || it?.bookingUrl ? 'open' : ''}>
+        <details class="more" ${it?.opentableRid || it?.bookingUrl || preset.booking ? 'open' : ''}>
           <summary>${icon('utensils')} Booking — OpenTable or a link</summary>
           <div class="form">
             <label class="field"><span>OpenTable link or restaurant ID</span>
@@ -363,17 +368,25 @@ export function openAddItem(ctx, day, preset = {}) {
       });
       // Suggestions as they type, nearest the destination first. Picking one
       // pins the plan right away (no Google key needed).
+      // A chosen place (from the suggestions or "Find places") is pinned as is.
+      const pin = (p) => {
+        clearTimeout(timer);
+        const label = p.label ?? [p.name, p.address].filter(Boolean).join(', ');
+        form.elements.place.value = p.name;
+        found = { q: p.name, hit: { lat: p.lat, lon: p.lon, label } };
+        status.className = 'place-status found';
+        status.innerHTML = `${icon('pin', 'tiny')}Pinned: ${esc(label)}
+          <iframe class="place-preview" title="Map preview" loading="lazy" src="${esc(embed.mapEmbed(label))}"></iframe>`;
+      };
+      // Only places around the trip, closest first.
       suggest(form.elements.place, {
-        search: placeSuggester({ near: trip.lat != null ? trip : trip.stays.find((st) => st.lat != null) }),
-        onPick: (p) => {
-          clearTimeout(timer);
-          const label = [p.name, p.detail].filter(Boolean).join(', ');
-          found = { q: p.name, hit: { lat: p.lat, lon: p.lon, label } };
-          status.className = 'place-status found';
-          status.innerHTML = `${icon('pin', 'tiny')}Pinned: ${esc(label)}
-            <iframe class="place-preview" title="Map preview" loading="lazy" src="${esc(embed.mapEmbed(label))}"></iframe>`;
-        },
+        search: placeSuggester({ near: () => tripCenter(trip), miles: trip.currency === 'USD' }),
+        onPick: pin,
       });
+      if (!it && preset.place) pin(preset.place);
+      dlg.querySelector('[data-find]')?.addEventListener('click', () => openExplore(ctx, {
+        onPick: (p) => { pin(p); if (!form.elements.title.value.trim()) form.elements.title.value = p.name; },
+      }));
 
       const forBox = dlg.querySelector('#for-people');
       dlg.querySelectorAll('[data-for]').forEach((b) => b.onclick = () => {

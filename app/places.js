@@ -182,35 +182,120 @@ export function routeUrl(from, to) {
   return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(at(from))}&destination=${encodeURIComponent(at(to))}`;
 }
 
-// ---------- place type-ahead (plans, hotels) ----------
-// Same Photon search, but for restaurants, shops, attractions, streets and
-// addresses, nearest `near` (the trip's destination) first. `tag` narrows it
-// (e.g. 'tourism' for hotels). Each pick carries lat/lon, so plans and hotels
-// get a map pin even without a Google key.
-export function placeSuggester({ near = null, tag = null } = {}) {
-  return async (q, signal) => {
-    const params = new URLSearchParams({ q, limit: '12', lang: 'en' });
-    if (near?.lat != null && near?.lon != null) {
-      params.set('lat', near.lat); params.set('lon', near.lon);
-      params.set('zoom', '11'); params.set('location_bias_scale', '0.5');
-    }
-    if (tag) params.set('osm_tag', tag);
-    const res = await fetch(`https://photon.komoot.io/api/?${params}`, { signal });
+// ---------- places near the trip (plans, hotels, "Find places") ----------
+// Photon again (free, keyless OpenStreetMap search). Everything here stays
+// around the trip and comes back closest first (owner, 2026-11-17: "if I
+// have a trip in Los Angeles I should only see options in Los Angeles,
+// closest to furthest").
+const AREA_KM = 40; // "in the city": the metro area around the trip
+
+// Where "near" is measured from: the place everyone's staying (if it has a
+// pin), else the destination's center — looked up once if the trip has none.
+export async function tripCenter(trip) {
+  const stay = trip.stays?.find((st) => st.everyone && st.lat != null) ?? trip.stays?.find((st) => st.lat != null);
+  if (stay) return { lat: stay.lat, lon: stay.lon, label: stay.name };
+  if (trip.lat != null) return { lat: trip.lat, lon: trip.lon, label: trip.destination || 'the trip' };
+  const hit = trip.destination ? await locate(trip.destination).catch(() => null) : null;
+  return hit ? { ...hit, label: trip.destination } : null;
+}
+
+const KIND_NAMES = {
+  restaurant: 'Restaurant', fast_food: 'Quick bite', food_court: 'Food court', cafe: 'Café', bakery: 'Bakery', ice_cream: 'Ice cream',
+  bar: 'Bar', pub: 'Pub', nightclub: 'Nightclub', biergarten: 'Beer garden', casino: 'Casino',
+  theatre: 'Theater', cinema: 'Movie theater', arts_centre: 'Arts center', music_venue: 'Music venue', concert_hall: 'Concert hall',
+  events_venue: 'Event venue', stadium: 'Stadium', museum: 'Museum', gallery: 'Gallery', attraction: 'Attraction',
+  theme_park: 'Theme park', zoo: 'Zoo', aquarium: 'Aquarium', viewpoint: 'Viewpoint', park: 'Park', nature_reserve: 'Nature reserve',
+  beach: 'Beach', golf_course: 'Golf course', amusement_arcade: 'Arcade', bowling_alley: 'Bowling', escape_game: 'Escape room',
+  miniature_golf: 'Mini golf', water_park: 'Water park', mall: 'Mall', department_store: 'Department store', marketplace: 'Market',
+  hotel: 'Hotel', guest_house: 'Guest house', hostel: 'Hostel', motel: 'Motel', apartment: 'Rental',
+};
+const kindName = (v) => KIND_NAMES[v] ?? (v && !['yes', 'house', 'residential', 'street'].includes(v) ? v.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase()) : '');
+
+// A Photon result → { name, kind, address, detail, lat, lon, km, dist }.
+function toPlace({ properties: p, geometry }, from, miles) {
+  const street = [p.housenumber, p.street].filter(Boolean).join(' ');
+  const name = p.name || street;
+  if (!name) return null;
+  const [lon, lat] = geometry.coordinates;
+  const town = p.city || p.town || p.village || p.district || p.county || '';
+  const km = from ? distanceKm(from, { lat, lon }) : null;
+  const dist = km == null ? '' : km < 0.08 ? 'right here' : distanceText(from, { lat, lon }, miles);
+  const where = [p.name && street ? street : null, town, p.state].filter((x) => x && x !== name).join(', ');
+  return {
+    name, lat, lon, km, dist, kind: kindName(p.osm_value), town, street: p.osm_key === 'highway',
+    address: [street || null, town, p.state, p.postcode].filter(Boolean).join(', '),
+    detail: [dist, where || p.country].filter(Boolean).join(' · '),
+  };
+}
+// Closest first, one row per place ("The Commerce Casino" = "Commerce Casino").
+function tidy(list) {
+  const seen = new Set();
+  return list.filter(Boolean).sort((a, b) => (a.km ?? 0) - (b.km ?? 0)).filter((p) => {
+    const key = `${p.name.toLowerCase().replace(/^the /, '')}|${p.street ? p.town : `${p.lat.toFixed(2)}|${p.lon.toFixed(2)}`}`;
+    return !seen.has(key) && seen.add(key);
+  });
+}
+function bbox({ lat, lon }, km) {
+  const dLat = km / 111, dLon = km / (111 * Math.max(0.2, Math.cos((lat * Math.PI) / 180)));
+  return [lon - dLon, lat - dLat, lon + dLon, lat + dLat].map((n) => n.toFixed(4)).join(',');
+}
+
+// Places of a kind around a point, closest first (Photon's reverse search:
+// nearest features with any of the given OpenStreetMap tags, 50 at most).
+// `ring` > 0 looks further out: the 50 nearest to four points `ring` steps
+// away from the center, still measured (and sorted) from the center.
+export async function nearbyPlaces(center, tags, { radiusKm = AREA_KM, miles = true, ring = 0 } = {}) {
+  const around = async (pt) => {
+    const q = new URLSearchParams({ lat: pt.lat, lon: pt.lon, radius: String(radiusKm), limit: '50', lang: 'en' });
+    tags.forEach((t) => q.append('osm_tag', t));
+    const res = await fetchT(`https://photon.komoot.io/reverse?${q}`, {}, 9000);
+    if (!res.ok) throw new Error("Couldn't load places right now — try again in a moment");
+    return (await res.json()).features ?? [];
+  };
+  const step = 1.6 * ring; // km
+  const points = ring === 0 ? [center] : [45, 135, 225, 315].map((deg) => ({
+    lat: center.lat + (step / 111) * Math.cos((deg * Math.PI) / 180),
+    lon: center.lon + (step / (111 * Math.max(0.2, Math.cos((center.lat * Math.PI) / 180)))) * Math.sin((deg * Math.PI) / 180),
+  }));
+  const found = (await Promise.all(points.map((pt) => around(pt).catch(() => [])))).flat();
+  return tidy(found.filter((f) => f.properties.name).map((f) => toPlace(f, center, miles)));
+}
+// Two closest-first lists into one, each place once.
+export const mergePlaces = (a, b) => tidy([...a, ...b]);
+
+// Places by name around a point, closest first. Only the trip's area; when
+// nothing there matches, `wide: true` results from further away (each row
+// says how far), so a day trip out of town can still be found.
+// `streets: false` leaves out roads (the finder wants places to go; the plan
+// form's type-ahead keeps them, for addresses).
+export async function searchPlaces(text, center, { tags = [], miles = true, signal, limit = 30, streets = true } = {}) {
+  const ask = async (area) => {
+    const q = new URLSearchParams({ q: text, limit: '40', lang: 'en' });
+    if (center) { q.set('lat', center.lat); q.set('lon', center.lon); q.set('zoom', '11'); q.set('location_bias_scale', '0.5'); }
+    if (center && area) q.set('bbox', bbox(center, AREA_KM));
+    tags.forEach((t) => q.append('osm_tag', t));
+    const res = await fetch(`https://photon.komoot.io/api/?${q}`, { signal });
     if (!res.ok) return [];
     const { features = [] } = await res.json();
-    const seen = new Set();
-    return features.flatMap(({ properties: p, geometry }) => {
-      const street = [p.housenumber, p.street].filter(Boolean).join(' ');
-      const name = p.name || street;
-      if (!name) return [];
-      const town = p.city || p.town || p.village || p.county || '';
-      const detail = [p.name && street ? street : null, town, p.state, p.country].filter((x) => x && x !== name).join(', ');
-      const key = `${name}|${detail}`;
-      if (seen.has(key)) return [];
-      seen.add(key);
-      const [lon, lat] = geometry.coordinates;
-      return [{ name, detail, lat, lon, address: [street || null, town, p.state, p.postcode].filter(Boolean).join(', ') }];
-    }).slice(0, 6);
+    return tidy(features.map((f) => toPlace(f, center, miles))).filter((p) => streets || !p.street);
+  };
+  if (!center) return { places: (await ask(false)).slice(0, limit), wide: false };
+  const local = (await ask(true)).filter((p) => p.km <= AREA_KM * 1.5);
+  if (local.length) return { places: local.slice(0, limit), wide: false };
+  return { places: (await ask(false)).slice(0, Math.min(limit, 8)), wide: true };
+}
+
+// Type-ahead for the place fields in the plan and hotel forms. `near` is a
+// point or a function that resolves to one (see tripCenter). `tag` narrows it
+// (e.g. 'tourism' for hotels). Each pick carries lat/lon, so plans and hotels
+// get a map pin even without a Google key.
+export function placeSuggester({ near = null, tag = null, miles = true } = {}) {
+  let center;
+  return async (q, signal) => {
+    if (center === undefined) center = (typeof near === 'function' ? await near() : near) ?? null;
+    if (center?.lat == null) center = null;
+    const { places } = await searchPlaces(q, center, { tags: tag ? [tag] : [], miles, signal, limit: 6 });
+    return places;
   };
 }
 
