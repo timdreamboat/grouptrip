@@ -500,6 +500,9 @@ dialog.sheet .field select, dialog.sheet .field input { max-width: 100%; }
 .batch .pillsel { max-width: 160px; }
 .linkbtn { border: 0; background: none; padding: 0; font: inherit; color: var(--accent-ink); text-decoration: underline; cursor: pointer; }
 #main input[inputmode]:disabled, #main input[type="text"]:disabled { border-color: transparent; background: transparent; padding-left: 0; opacity: 1; color: var(--text); font-weight: 600; }
+.cancelcard { border: 1.5px solid var(--bad); }
+.stmt { white-space: pre-wrap; background: var(--surface-2); border-radius: var(--r-sm); padding: 10px 12px; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; user-select: all; }
+.plainlist { margin: 0; padding-left: 18px; font-size: 14px; display: grid; gap: 2px; }
 .cfline { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
 </style>
 
@@ -526,6 +529,7 @@ dialog.sheet .field select, dialog.sheet .field input { max-width: 100%; }
           <option value="artist">Artist</option>
           <option value="crew">Band &amp; crew</option>
           <option value="venue">Venue</option>
+          <option value="promoter">Promoter</option>
         </select>
       </label>
     </header>
@@ -602,7 +606,10 @@ function seed() {
   return d;
 }
 // Shape added after the first testers saved data: fill in what an older save lacks.
-function ensureShape(d) { (d.shows || []).forEach(x => { if (!x.ll && cityLL(x.city)) x.ll = cityLL(x.city); }); Object.values(d.people || {}).forEach(x => { if ((x.kind === 'venue' || x.group === 'venue') && !x.show) x.show = 'nyc'; }); d.fields ||= []; d.prefs ||= {}; d.views ||= {}; d.settings.org ||= { name: 'Northlight Mgmt', accent: 'tape' }; return d; }
+function ensureShape(d) {
+  // 2026-11-17: the venue's production staff no longer see settlement; the promoter rep does, through their own card.
+  if (!d.roles2) { if (d.access?.venue) d.access.venue.costs = 'off'; if (d.people?.nina) d.people.nina.over = { ...(d.people.nina.over || {}), costs: 'view' }; d.roles2 = true; }
+  (d.shows || []).forEach(x => { x.guestClose ||= '17:00'; }); (d.shows || []).forEach(x => { if (!x.ll && cityLL(x.city)) x.ll = cityLL(x.city); }); Object.values(d.people || {}).forEach(x => { if ((x.kind === 'venue' || x.group === 'venue') && !x.show) x.show = 'nyc'; }); d.fields ||= []; d.prefs ||= {}; d.views ||= {}; d.settings.org ||= { name: 'Northlight Mgmt', accent: 'tape' }; return d; }
 function seedBase() {
   const people = {
     rae:   { name: 'Rae Collins',  kind: 'manager', role: 'Manager · Northlight Mgmt', group: 'office', ph: '(416) 555-0110', hue: 30 },
@@ -786,7 +793,7 @@ function seedBase() {
       tm:     { season: 'edit', day: 'edit', advance: 'edit', travel: 'edit', guests: 'edit', mymoney: 'edit', costs: 'edit', profit: 'edit' },
       artist: { season: 'off',  day: 'view', advance: 'off',  travel: 'view', guests: 'view', mymoney: 'view', costs: 'off',  profit: 'off' },
       crew:   { season: 'off',  day: 'view', advance: 'view', travel: 'view', guests: 'view', mymoney: 'view', costs: 'off',  profit: 'off' },
-      venue:  { season: 'off',  day: 'view', advance: 'edit', travel: 'off',  guests: 'view', mymoney: 'off',  costs: 'view', profit: 'off' },
+      venue:  { season: 'off',  day: 'view', advance: 'edit', travel: 'off',  guests: 'view', mymoney: 'off',  costs: 'off',  profit: 'off' },   // production staff see no money; a promoter rep gets "Show costs: View" on their own card
       agent:  { season: 'view', day: 'view', advance: 'off',  travel: 'off',  guests: 'off',  mymoney: 'off',  costs: 'view', profit: 'off' },
     },
     imports: [],
@@ -831,7 +838,7 @@ const store = {
   get(k, d) { try { const v = localStorage.getItem('gigtrip.' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v) { try { localStorage.setItem('gigtrip.' + k, JSON.stringify(v)); } catch {} },
 };
-const ME = { manager: 'rae', tm: 'dana', artist: 'juni', crew: 'nico', venue: 'greg' };
+const ME = { manager: 'rae', tm: 'dana', artist: 'juni', crew: 'nico', venue: 'greg', promoter: 'nina' };
 let savedRole = store.get('role', 'manager'); if (savedRole === 'band') savedRole = 'crew';
 const S = {
   role: ME[savedRole] ? savedRole : 'manager', artistId: store.get('artist', null), hq: '', hsort: 'next', showId: 'nyc', tourId: 't1', showTab: '', moneyTab: 'deposits', commArtist: 'jv',
@@ -854,7 +861,7 @@ const ampm = fmtTime;   // older call sites; the device decides 12- or 24-hour
 const daysUntil = iso => Math.round((dt(iso) - dt(NOW.date)) / 864e5);
 const DATE_WD = new Intl.DateTimeFormat(undefined, { weekday: 'short' }), DATE_MO = new Intl.DateTimeFormat(undefined, { month: 'short' });
 const dateBox = (iso, tape) => { const d = dt(iso); return `<div class="datebox${tape ? ' tape' : ''}"><div class="m">${DATE_WD.format(d)}</div><div class="d">${d.getDate()}</div><div class="m">${DATE_MO.format(d)}</div></div>`; };
-const statusChip = s => { const st = s.status;
+const statusChip = s => { const st = s.status; if (st === 'cancelled' && s.cancel && s.cancel.kind === 'postponed') return '<span class="chip st-cancelled">Postponed</span>';
   if (!isMgr() && !isVenue() && typeof me === 'function') return st === 'cancelled' ? '<span class="chip st-cancelled">Cancelled</span>' : st === 'confirmed' ? '<span class="chip st-confirmed">Confirmed</span>' : '<span class="chip st-pencil">Not confirmed yet</span>'; const label = st === 'hold' ? `Hold ${s.hold || ''}`.trim() : (STATUSES.find(x => x[0] === st) || [, st])[1]; return `<span class="chip st-${st}">${label}</span>`; };
 const initials = n => String(n).split(/\s+/).map(w => w[0]).slice(0, 2).join('');
 const P = id => DB.people[id] || { name: 'Someone', kind: 'crew', role: '', hue: 0, over: {} };
@@ -1037,6 +1044,7 @@ function attention() {
   DB.tasks.filter(t => (!venue || t.show === 'nyc') && inCur(show(t.show).artist) && t.status !== 'Done' && t.due < NOW.date && show(t.show).status !== 'cancelled').forEach(t => items.push({ kind: 'Overdue task', text: `${t.label} — ${cityOf(show(t.show))}`, sub: `${P(t.owner).name} · was due ${short(t.due)}`, act: 'task', id: t.id, artist: show(t.show).artist }));
   if (mgr) DB.shows.filter(s => s.deal.dep && !s.deal.depPaid && s.deal.depDue && s.status !== 'cancelled' && daysUntil(s.deal.depDue) <= 7).forEach(s => items.push({ kind: daysUntil(s.deal.depDue) < 0 ? 'Deposit overdue' : 'Deposit due soon', text: `${money(s.deal.dep, false, s.cur)} — ${s.venue}`, sub: `${artist(s.artist).name} · due ${short(s.deal.depDue)}`, go: 'money', artist: s.artist }));
   if (mgr) DB.offers.filter(o => o.status === 'offer' && daysUntil(o.expires) <= 7).forEach(o => items.push({ kind: 'Offer expiring', text: `${o.city} · ${o.venue}`, sub: `${artist(o.artist).name} · answer by ${short(o.expires)}`, go: 'offers', artist: o.artist }));
+  if (mgr) DB.shows.filter(s => s.cancel && inCur(s.artist) && s.date >= NOW.date).forEach(s => { const c = s.cancel, unseen = c.told.filter(t => !t.seen).length; if (unseen) items.push({ kind: c.kind === 'postponed' ? 'Postponed show' : 'Cancelled show', text: `${unseen} ${unseen === 1 ? 'person hasn’t' : 'people haven’t'} seen it — ${cityOf(s)}`, sub: `${artist(s.artist).name} · ${short(s.date)} · call them`, act: 'openShow', id: s.id, artist: s.artist }); if (!c.statement.approved) items.push({ kind: 'Statement waiting', text: `Fan statement not approved — ${cityOf(s)}`, sub: `${artist(s.artist).name} is asked not to post until you approve it`, act: 'openShow', id: s.id, artist: s.artist }); });
   if (canEdit('guests')) DB.guests.filter(g => g.status === 'pending').forEach(g => items.push({ kind: 'Guest request', text: `${g.name}${g.plus ? ' +' + g.plus : ''}`, sub: `for ${P(g.by).name} · ${cityOf(show(g.show))}`, go: 'guests', artist: show(g.show).artist }));
   return items;
 }
@@ -1202,7 +1210,7 @@ E.show = (id, preset = {}) => {
       { k: 'deal.dep', label: 'Deposit ($)', type: 'money', group: 'Deal' }, { k: 'deal.depDue', label: 'Deposit due', type: 'date', group: 'Deal' },
       { k: 'deal.depPaid', label: 'Deposit received', type: 'check', full: true, group: 'Deal' },
       { k: 'address', label: 'Venue address', full: true, group: 'Venue details' }, { k: 'parking', label: 'Parking / load-in notes', type: 'textarea', full: true, group: 'Venue details' },
-      { k: 'hospitality', label: 'Hospitality', full: true, group: 'Venue details' }, { k: 'wifi', label: 'Wi-Fi', group: 'Venue details' }, { k: 'guestCap', label: 'Guest list spots', type: 'number', group: 'Venue details' },
+      { k: 'hospitality', label: 'Hospitality', full: true, group: 'Venue details' }, { k: 'wifi', label: 'Wi-Fi', group: 'Venue details' }, { k: 'guestCap', label: 'Guest list spots', type: 'number', group: 'Venue details' }, { k: 'guestClose', label: 'Guest list closes at', type: 'time', group: 'Venue details' },
       { k: 'note', label: 'Notes (e.g. festival set time)', full: true, group: 'Venue details' },
       ...DB.fields.map(f => ({ k: 'cf.' + f.id, label: f.label, group: 'Your fields', full: f.type === 'yesno', type: f.type === 'yesno' ? 'check' : f.type === 'choice' ? 'select' : ['number', 'date'].includes(f.type) ? f.type : undefined,
         options: f.type === 'choice' ? [['', '—'], ...String(f.options || '').split(',').map(x => x.trim()).filter(Boolean).map(x => [x, x])] : undefined })),
@@ -1563,7 +1571,7 @@ const HELP = {
   board: { what: 'Your dates sheet. Every show and open offer, by month or as a sortable table.', do: ['List or Table view; search and filter by status', 'Table: choose and order your own columns, including your company’s custom fields', 'Save this view keeps your filters, sorting and columns under a name — one tap to come back', 'Table: tick rows to change several statuses at once', 'Import a spreadsheet, or export this view back to Excel'], who: 'Management, and anyone given the Season area. Deals show only to people who may see show costs.' },
   offers: { what: 'Offers from agents and promoters waiting for an answer.', do: ['Accept as hold → a Hold 1 appears on the Season board with your advance tasks', 'Counter or decline', 'Log an offer that came by email'], who: 'Management.' },
   tour: { what: 'A run of shows for one artist: routing, readiness and money.', do: ['Switch tour with the picker', 'Tap a show to open it', 'Add a show to this tour'], who: 'Management.' },
-  show: { what: 'Everything about one show, in tabs: the deal, advance tasks, who brings what, documents, the day sheet and contacts.', do: ['Tick tasks off or change their status; tap a task to comment', 'Drop files onto Docs to upload riders, plots and contracts', 'Use a template to start the day sheet, then adjust times'], who: 'Each role sees only the tabs they are allowed: crew see the day sheet, the venue sees only its own show.' },
+  show: { what: 'Everything about one show, in tabs: the deal, advance tasks, who brings what, documents, the day sheet and contacts.', do: ['Cancel or postpone: tells the venue, promoter, crew and office in one step and drafts a statement for the artist to post', 'Tick tasks off or change their status; tap a task to comment', 'Drop files onto Docs to upload riders, plots and contracts', 'Use a template to start the day sheet, then adjust times'], who: 'Each role sees only the tabs they are allowed: crew see the day sheet, the venue sees only its own show.' },
   settle: { what: 'The night-of settlement. Type the real box-office numbers and the sheet recalculates.', do: ['Add the promoter’s agreed expenses', 'Enter withholding tax if any', 'Mark as settled — it flows into commissions and the budget'], who: 'Management and the tour manager. The venue can view it. Never crew or artist unless you allow it.' },
   money: { what: 'Money across the roster: deposits due, commission statements and tour budgets.', do: ['Mark deposits received', 'Pick an artist for their commission statement', 'Edit budget lines per tour'], who: 'Management only, unless you give someone the Profit area.' },
   guests: { what: 'The guest list for one show.', do: ['Approve or decline requests', 'Add someone yourself', 'The venue sees only the approved list'], who: 'Everyone can request; management and the tour manager approve.' },
@@ -2536,9 +2544,10 @@ V.show = () => {
   <div class="head"><div><div class="eyebrow">${isVenue() ? 'Your show' : `${esc(artist(s.artist).name)}${s.tour ? ' · ' + esc(tour(s.tour)?.name || '') : ' · one-off'}`}</div>
     <h1 class="display">${esc(cityOf(s))}</h1>
     <div class="sub muted">${fmtDate(s.date)} · ${esc(s.venue)}${isMgr() || isVenue() ? ' · cap ' + s.cap.toLocaleString() : ''}${s.note ? ' · ' + esc(s.note) : ''}</div>${cfLine(s)}</div>
-    <div class="row wrap">${s.settled != null ? '<span class="chip st-settled">Settled</span>' : statusChip(s)}
+    <div class="row wrap">${s.settled != null ? '<span class="chip st-settled">Settled</span>' : statusChip(s)}${isMgr() && s.status !== 'cancelled' && s.settled == null && s.date >= NOW.date ? `<button class="btn btn-outline btn-sm" type="button" data-act="cancelShow" data-id="${s.id}">Cancel or postpone</button>` : ''}
       ${isVenue() ? '' : `<label class="viewas" for="pick">Show <select id="pick">${curShows().filter(x => hasHome() || x.id === s.id || x.date >= NOW.date).map(x => `<option value="${x.id}" ${x.id === s.id ? 'selected' : ''}>${short(x.date)} · ${esc(cityOf(x))}${hasHome() ? ' · ' + esc(artist(x.artist).name) : ''}</option>`).join('')}</select></label>`}
       ${isMgr() ? editBtn('show', s.id, 'Edit show') : ''}</div></div>
+  ${cancelCard(s)}
   ${coverBlock('show:' + s.id, s.cover ? s : (tour(s.tour)?.cover ? tour(s.tour) : s), artist(s.artist), `${artistPh(artist(s.artist), 'ph')}<span class="tn">${esc(s.venue)}</span>`, 'banner')}
   <section class="card stack">
     <div class="tabs" role="tablist">${tabs.map(([k, l]) => `<button role="tab" aria-selected="${S.showTab === k}" data-tab="${k}">${k === 'advance' ? `${l} ${pctDone(s.id)}%` : l}</button>`).join('')}</div>
@@ -2570,7 +2579,7 @@ function whoBringsWhat() {
 const stageTime = s => { const sl = DB.slots.filter(x => x.show === s.id); const hit = sl.find(x => x.key && norm(x.label) === norm(artist(s.artist).name)) || sl.find(x => norm(x.label) === norm(artist(s.artist).name)) || sl.find(x => /\bset\b|on stage/i.test(x.label)); return hit ? hit.time : ''; };
 // lines the venue doesn't need: the tour's own calls, hotel, money. Management can override per line.
 const TOUR_ONLY = /lobby call|bus call|van |hotel|settlement|per diem|bus |lobby/i;
-const venueSees = x => x.venue === 'yes' ? true : x.venue === 'no' ? false : !TOUR_ONLY.test(x.label + ' ' + (x.who || ''));
+const venueSees = x => x.venue === 'yes' ? true : x.venue === 'no' ? false : (isVenue() && can('costs') && /settlement/i.test(x.label)) || !TOUR_ONLY.test(x.label + ' ' + (x.who || ''));   // the promoter rep does see the settlement line
 // "Times are New York (EDT) · 3 hours ahead of you" — shown only when the show is in another zone than the device.
 function tzNote(s) { const tz = showTz(s); if (tz === DEVICE_TZ) return ''; const a = tzParts(tz, new Date()), b = tzParts(DEVICE_TZ, new Date()); const diff = (Date.UTC(+a.year, a.month - 1, +a.day, +a.hour, +a.minute) - Date.UTC(+b.year, b.month - 1, +b.day, +b.hour, +b.minute)) / 36e5; const h = Math.abs(diff); const rel = diff === 0 ? 'same as yours' : `${h % 1 ? h.toFixed(1) : h} hour${h === 1 ? '' : 's'} ${diff > 0 ? 'ahead of' : 'behind'} you`; return `<p class="small muted tznote">${icon('today')} Times are ${esc(cityOf(s).split(',')[0])} local (${esc(tzAbbr(tz, s.date))}) · ${rel}</p>`; }
 // The clock line on Today: the venue's time, and the device's when it differs.
@@ -2606,7 +2615,7 @@ V.today = () => {
     const up = curShows().filter(x => x.date > NOW.date && x.status !== 'cancelled').slice(0, 4);
     return `<div class="ribbon"><span class="tapechip">Day off</span><span>${fmtDate(NOW.date)} · ${clockText()}</span></div>
       <div class="head"><div><div class="eyebrow">${esc(artist(cur()).name)}</div><h1 class="display">No show today</h1></div></div>
-      <section class="card"><h2 style="margin-bottom:4px">Coming up</h2><div class="list">${up.map(x => `<div class="li click" data-show="${x.id}">${dateBox(x.date)}<div class="grow"><b>${esc(x.city)}</b> · ${esc(x.venue)}<div class="small muted">${daysUntil(x.date) === 1 ? 'Tomorrow' : 'In ' + daysUntil(x.date) + ' days'} · ${pctDone(x.id)}% advanced</div></div>${statusChip(x)}</div>`).join('') || '<p class="muted">Nothing booked yet.</p>'}</div></section>`;
+      ${isVenue() ? '' : `<section class="card"><h2 style="margin-bottom:4px">Coming up</h2><div class="list">${up.map(x => `<div class="li click" data-show="${x.id}">${dateBox(x.date)}<div class="grow"><b>${esc(x.city)}</b> · ${esc(x.venue)}<div class="small muted">${daysUntil(x.date) === 1 ? 'Tomorrow' : 'In ' + daysUntil(x.date) + ' days'} · ${pctDone(x.id)}% advanced</div></div>${statusChip(x)}</div>`).join('') || '<p class="muted">Nothing booked yet.</p>'}</div></section>`}`;
   }
   const slots = DB.slots.filter(x => x.show === s.id).sort((a, b) => a.time.localeCompare(b.time));
   const tz = showTz(s), nowMin = nowIn(tz).min;
@@ -2752,6 +2761,99 @@ V.money = () => {
   <section class="card stack"><div class="tabs" role="tablist">${tabs.map(([k, l]) => `<button role="tab" aria-selected="${S.moneyTab === k}" data-mtab="${k}">${l}</button>`).join('')}</div>${body}</section>`;
 };
 
+// ---------- cancelling or postponing a show ----------
+// Management cancels once; the people involved are told (promoter and venue first), everyone's pages say so, and a
+// fan statement is drafted for the artist to post themselves once management approves it. GigTrip never posts for anyone.
+const CANCEL_REASONS = [['', 'No reason given'], ['illness', 'illness'], ['weather', 'severe weather'], ['venue', 'a production issue at the venue'], ['travel', 'travel disruption'], ['schedule', 'a scheduling conflict']];
+const REFUNDS = { pop: 'Refunds are available from your point of purchase', keep: 'Tickets remain valid for the new date, and refunds are available from your point of purchase if you can’t make it', seller: 'Ticket holders will be contacted by the ticket seller' };
+const longDate = iso => new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'long', day: 'numeric' }).format(dt(iso));
+function cancelGroups(s) {
+  const ppl = Object.keys(DB.people);
+  return [
+    ['venue', 'Promoter and venue', ppl.filter(k => (P(k).kind === 'venue' || P(k).group === 'venue') && onShow(k, s))],
+    ['party', 'Band and crew', ppl.filter(k => P(k).group === 'road' && onShow(k, s) && k !== me())],
+    ['office', 'Management and agent', ppl.filter(k => P(k).group === 'office' && k !== me())],
+    ['guests', 'Guest list (through whoever asked)', [...new Set(DB.guests.filter(g => g.show === s.id && g.status !== 'declined').map(g => g.by))].filter(k => k !== me())],
+  ];
+}
+function fanStatement(s, c) {
+  const a = artist(s.artist).name, post = c.kind === 'postponed', when = longDate(s.date);
+  const why = c.reasonPublic && c.reason ? ` due to ${(CANCEL_REASONS.find(r => r[0] === c.reason) || [, ''])[1]}` : '';
+  const verb = post ? (c.newDate ? `has been moved to ${longDate(c.newDate)}` : 'has been postponed, with a new date to be announced') : 'has been cancelled';
+  const refund = REFUNDS[c.refund] || REFUNDS.pop;
+  return {
+    short: `${a}’s show at ${s.venue} in ${cityOf(s)} on ${when} ${verb}${why}. ${refund}. We’re sorry, and thank you for understanding.`,
+    caption: `${cityOf(s)} — we’re so sorry.\n\nOur show at ${s.venue} on ${when} ${verb}${why}.\n\n${refund}.\n\nThank you for your patience and for sticking with us. ${post ? 'We can’t wait to see you.' : 'We hope to be back soon.'}\n\n— ${a}`,
+    long: `An update on ${a} at ${s.venue}, ${s.city}\n\nWe’re sorry to share that the show scheduled for ${when} ${verb}${why}. This was not a decision made lightly.\n\nTickets: ${refund}. If you bought through a reseller, please contact them directly.\n\nThank you to everyone who planned to be there, and to the team at ${s.venue}. ${post ? 'We’ll see you soon.' : 'We hope to return as soon as we can.'}\n\n${a} and team`,
+  };
+}
+const STMT_KINDS = [['short', 'Short post', 'X, Threads, Bluesky'], ['caption', 'Caption', 'Instagram, TikTok'], ['long', 'Full statement', 'Facebook, website, email list']];
+function statementBlocks(s, withButtons) {
+  const st = s.cancel.statement;
+  return STMT_KINDS.map(([k, l, where]) => `<div class="stack" style="gap:6px"><div class="row between wrap"><b>${l}</b><span class="small muted">${where} · ${st[k].length} characters</span></div><div class="stmt" id="stmt-${s.id}-${k}">${esc(st[k])}</div>
+    ${withButtons ? `<div class="row wrap" style="gap:6px"><button class="btn btn-tape btn-sm" type="button" data-act="copyStmt" data-id="${s.id}" data-v="${k}">Copy</button>${navigator.share ? `<button class="btn btn-secondary btn-sm" type="button" data-act="shareStmt" data-id="${s.id}" data-v="${k}">Share…</button>` : ''}${k === 'short' ? `<a class="btn btn-outline btn-sm" target="_blank" rel="noopener noreferrer" href="https://twitter.com/intent/tweet?text=${encodeURIComponent(st[k])}">Open in X ${icon('ext')}</a><a class="btn btn-outline btn-sm" target="_blank" rel="noopener noreferrer" href="https://www.threads.net/intent/post?text=${encodeURIComponent(st[k])}">Open in Threads ${icon('ext')}</a>` : ''}</div>` : ''}</div>`).join('');
+}
+function cancelCard(s) {
+  const c = s.cancel; if (!c) return '';
+  const post = c.kind === 'postponed', word = post ? 'Postponed' : 'Cancelled', kind = P(me()).kind;
+  const head = `<div class="row between wrap"><h2>${word} — ${esc(cityOf(s))}, ${fmtDate(s.date)}</h2>${c.newDate ? `<span class="chip st-hold plain">New date ${short(c.newDate)}</span>` : ''}</div>`;
+  let body;
+  if (isMgr()) {
+    const groups = cancelGroups(s).map(([k, l, ids]) => { const told = c.told.filter(t => ids.includes(t.who)); return told.length ? `<dt>${l}</dt><dd>${told.filter(t => t.seen).length} of ${told.length} seen</dd>` : ''; }).join('');
+    const trav = DB.travel.filter(x => x.date === s.date || ((x.checkIn || '') <= s.date && (x.checkOut || '') > s.date)).filter(x => !x.artist || x.artist === s.artist).length;
+    const gl = DB.guests.filter(g => g.show === s.id && g.status !== 'declined').length;
+    const todo = [trav ? `${trav} travel booking${trav === 1 ? '' : 's'} around this date to change or cancel` : '', gl ? `${gl} guest${gl === 1 ? '' : 's'} on the list` : '', s.deal.depPaid && s.deal.dep ? `${money(s.deal.dep, false, s.cur)} deposit already received — check the contract for return terms` : '', 'Tell the ticket seller, and ask them to email ticket holders'].filter(Boolean);
+    body = `<p class="small muted" style="margin:0">${word} by ${esc(P(c.by).name)} · ${esc(c.at)}${c.reason ? ` · ${esc((CANCEL_REASONS.find(r => r[0] === c.reason) || [, ''])[1])}${c.reasonPublic ? '' : ' (kept private)'}` : ''}${c.note ? ` · ${esc(c.note)}` : ''}</p>
+      ${groups ? `<div><div class="eyebrow" style="margin-bottom:4px">Who has been told</div><dl class="kv small">${groups}</dl></div>` : '<p class="small muted" style="margin:0">Nobody has been told through GigTrip.</p>'}
+      <div><div class="eyebrow" style="margin-bottom:4px">Still to do</div><ul class="plainlist">${todo.map(t => `<li>${esc(t)}</li>`).join('')}</ul></div>
+      <div class="stack" style="gap:10px"><div class="row between wrap"><div class="eyebrow">Statement for fans</div><span class="chip ${c.statement.approved ? 'st-confirmed' : 'st-pending'} plain">${c.statement.approved ? `Approved — ${esc(artist(s.artist).name)} can post it` : 'Not approved yet — the artist is asked to wait'}</span></div>${statementBlocks(s, true)}</div>
+      <div class="addbar"><button class="btn btn-primary btn-sm" type="button" data-act="statement" data-id="${s.id}">${icon('edit')} Edit or approve the statement</button><button class="btn btn-outline btn-sm" type="button" data-act="reinstate" data-id="${s.id}">Put the show back</button></div>`;
+  } else if (kind === 'artist') {
+    body = c.statement.approved ? `<p style="margin:0">Your team has told the venue, the promoter and the crew. Here is the statement to post — copy it into each app. Nothing is posted for you.</p>${statementBlocks(s, true)}`
+      : `<p style="margin:0"><b>Please don’t post about this yet.</b> Your team is telling the venue, the promoter and the ticket seller first, and preparing a statement for you. It will appear here when it’s ready.</p>`;
+  } else if (isVenue()) {
+    body = `<p style="margin:0">The tour has ${post ? 'postponed' : 'cancelled'} this show${c.newDate ? ` and is proposing ${longDate(c.newDate)}` : ''}. The tour manager will call about holds, staffing and the deposit.</p><p class="small muted" style="margin:0">For ticket holders: ${esc(REFUNDS[c.refund] || REFUNDS.pop)}.</p>`;
+  } else {
+    body = `<p style="margin:0">No call times for this date${c.newDate ? ` — the new date is ${longDate(c.newDate)}` : ''}. Travel and hotels around ${short(s.date)} are being changed: check Travel before you move.</p>`;
+  }
+  return `<section class="card stack cancelcard" role="status">${head}${body}</section>`;
+}
+// Cancelled shows still ahead of us, for the pages people land on.
+const cancelNotes = () => DB.shows.filter(x => x.cancel && x.date >= NOW.date && (isVenue() ? x.id === (P(me()).show || 'nyc') : inCur(x.artist))).map(cancelCard).join('');
+E.cancel = id => {
+  const s = show(id); if (!s) return;
+  const groups = cancelGroups(s).filter(g => g[2].length);
+  openForm({ title: `Cancel or postpone ${cityOf(s)}`, wide: true, submit: 'Confirm and tell them', value: { kind: 'cancelled', refund: 'pop', ...Object.fromEntries(groups.map(g => ['tell_' + g[0], true])) },
+    top: `<p class="small muted" style="margin:0">${fmtDate(s.date)} · ${esc(s.venue)}. The people you tick get a phone alert and an email straight away, promoter and venue first. Nothing goes out in public: you get a statement to approve, and the artist posts it themselves.</p>`,
+    fields: [
+      { k: 'kind', label: 'What is happening', type: 'select', options: [['cancelled', 'The show is cancelled'], ['postponed', 'The show is postponed']] },
+      { k: 'newDate', label: 'New date, if you have one', type: 'date' },
+      { k: 'reason', label: 'Reason', type: 'select', options: CANCEL_REASONS.map(([k, l]) => [k, l[0].toUpperCase() + l.slice(1)]) },
+      { k: 'refund', label: 'What ticket holders are told', type: 'select', options: [['pop', 'Refunds from point of purchase'], ['keep', 'Tickets valid for the new date, refunds on request'], ['seller', 'The ticket seller will contact them']] },
+      { k: 'reasonPublic', label: 'Say the reason in the public statement', type: 'check', full: true },
+      { k: 'note', label: 'Private note for the team (optional)', full: true, ph: 'e.g. Dana will call the venue at 2' },
+      ...groups.map(([k, l, ids]) => ({ k: 'tell_' + k, label: `Tell: ${l} · ${ids.length} ${ids.length === 1 ? 'person' : 'people'}`, type: 'check', full: true })),
+    ],
+    onSave(o) {
+      if (o.kind === 'postponed' && o.newDate && o.newDate <= s.date) { toast('The new date should be after the original'); return false; }
+      const ids = [...new Set(groups.filter(g => o['tell_' + g[0]]).flatMap(g => g[2]))];
+      const c = { kind: o.kind, newDate: o.kind === 'postponed' ? o.newDate : '', reason: o.reason, reasonPublic: !!o.reasonPublic, refund: o.refund, note: o.note, at: 'Just now', by: me(), prev: s.status, told: ids.map((who, i) => ({ who, seen: i % 3 !== 2 })) };   // "seen" is made up here; the real build uses read receipts
+      c.statement = { ...fanStatement(s, c), approved: false };
+      s.cancel = c; s.status = 'cancelled';
+      log(`${o.kind === 'postponed' ? 'Postponed' : 'Cancelled'} ${cityOf(s)} (${short(s.date)}) and told ${ids.length} ${ids.length === 1 ? 'person' : 'people'}`);
+      toast(`${o.kind === 'postponed' ? 'Postponed' : 'Cancelled'} — ${ids.length} ${ids.length === 1 ? 'person' : 'people'} told`);
+    } });
+};
+E.statement = id => {
+  const s = show(id), c = s?.cancel; if (!c) return;
+  openForm({ title: 'Statement for fans', wide: true, value: c.statement,
+    top: `<p class="small muted" style="margin:0">Drafted from the details you gave. Edit the wording, then approve it — ${esc(artist(s.artist).name)} sees it on their home page with Copy and Share buttons. GigTrip never posts on anyone’s behalf.</p>`,
+    fields: [{ k: 'short', label: 'Short post (X, Threads, Bluesky)', type: 'textarea', full: true }, { k: 'caption', label: 'Caption (Instagram, TikTok)', type: 'textarea', full: true }, { k: 'long', label: 'Full statement (Facebook, website, email list)', type: 'textarea', full: true },
+      { k: 'approved', label: `Approved — ${artist(s.artist).name} can post this now`, type: 'check', full: true }],
+    onSave(o) { const was = c.statement.approved; Object.assign(c.statement, o); if (o.approved && !was) log(`Approved the fan statement for ${cityOf(s)}`); toast(o.approved ? 'Approved — the artist can post it' : 'Statement saved'); } });
+};
+// Requests close at the show's cut-off (venue time) on show day, and stay closed afterwards. Management can still add.
+const guestClosed = s => s.date < NOW.date || (s.date === NOW.date && nowIn(showTz(s)).min >= toMin(s.guestClose || '17:00'));
 V.guests = () => {
   if (isVenue() || !canEdit('guests')) S.showId = show('nyc') ? 'nyc' : (DB.shows[0] || {}).id; else pickShowInCur();
   const s = show(S.showId);
@@ -2763,7 +2865,7 @@ V.guests = () => {
   const list = approve ? list0 : venue ? list0.filter(g => g.status === 'approved') : list0.filter(g => g.by === me());
   return `
   <div class="head"><div><div class="eyebrow">${fmtDate(s.date)} · ${esc(s.venue)}</div><h1 class="display">Guest list</h1>
-    <div class="sub muted">${used} of ${s.guestCap} spots used · closes ${fmtTime('17:00')}</div></div>
+    <div class="sub muted">${used} of ${s.guestCap} spots used · ${guestClosed(s) ? 'closed' : 'closes'} ${s.date === NOW.date || guestClosed(s) ? '' : short(s.date) + ' '}at ${fmtTime(s.guestClose || '17:00')}</div></div>
     ${approve && !venue ? `<label class="viewas" for="gpick">Show <select id="gpick">${curShows().filter(x => x.status !== 'cancelled' && x.date >= NOW.date).map(x => `<option value="${x.id}" ${x.id === s.id ? 'selected' : ''}>${short(x.date)} · ${esc(cityOf(x))}</option>`).join('')}</select></label>` : ''}</div>
   <div class="bar ${used > s.guestCap ? 'over' : ''}"><i style="width:${Math.min(100, used / (s.guestCap || 1) * 100)}%"></i></div>
   <div class="grid2 wide-left">
@@ -2774,12 +2876,13 @@ V.guests = () => {
           ${approve ? editBtn('guest', g.id) : ''}
         </div>`).join('')}</div>` : '<p class="muted">Nobody on the list yet.</p>'}
     </section>
-    ${venue ? `<section class="card stack"><h2>For the box office</h2><p class="muted" style="margin:0">The final list locks at ${fmtTime('17:00')}. Wristbands at will-call from ${fmtTime('18:30')}.</p></section>` : `
-    <form class="card stack" id="guestform"><h2>${approve ? 'Add someone' : 'Request a spot'}</h2>
+    ${venue ? `<section class="card stack"><h2>For the box office</h2><p class="muted" style="margin:0">The final list ${guestClosed(s) ? 'locked' : 'locks'} at ${fmtTime(s.guestClose || '17:00')}. Wristbands at will-call from ${fmtTime('18:30')}.</p></section>` : `
+    ${guestClosed(s) && !approve ? `<section class="card stack"><h2>The list is closed</h2><p class="muted" style="margin:0">Requests closed at ${fmtTime(s.guestClose || '17:00')}. If someone still needs to get in, ask your tour manager — they can add a name until doors.</p></section>` : `
+    <form class="card stack" id="guestform"><h2>${approve ? 'Add someone' : 'Request a spot'}</h2>${guestClosed(s) ? '<p class="small muted" style="margin:0">Closed to requests — you can still add a name.</p>' : ''}
       <label class="field" for="gname">Name on the list<input id="gname" required placeholder="e.g. Sofia Lindqvist" autocomplete="off"></label>
       <label class="field" for="gplus">Plus-ones<select id="gplus"><option value="0">Just them</option><option value="1">+1</option><option value="2">+2</option></select></label>
       <button class="btn btn-tape" type="submit">${approve ? 'Add to the list' : 'Send to Dana'}</button>
-    </form>`}
+    </form>`}`}
   </div>`;
 };
 
@@ -2897,7 +3000,7 @@ V.access = () => {
       <p class="note">Assign a tour manager's artists on their card in Party. In this sample, Dana has 5 of the 12 artists.</p></section>
     <section class="card stack"><h2>Money has three levels</h2>
       <dl class="kv small"><dt>My money</dt><dd>own pay, per diems, expenses</dd><dt>Show costs</dt><dd>deals, venue expenses, settlement</dd><dt>Profit</dt><dd>budget, commissions, net</dd></dl>
-      <p class="note">Crew see their own pay and nothing else; the venue sees its own show's settlement and nothing about the tour.</p></section>
+      <p class="note">Crew see their own pay and nothing else; the venue’s production staff see no money at all, and a promoter rep sees only their own show’s settlement.</p></section>
     <section class="card" style="grid-column:1 / -1"><h2 style="margin-bottom:4px">People with their own access</h2>
       ${custom.length ? `<div class="list">${custom.map(k => `<div class="li click" data-act="openPerson" data-id="${k}">${avatar(k)}<div class="grow"><b>${esc(P(k).name)}</b><div class="small muted">${Object.entries(P(k).over).map(([a, v]) => `${AREAS.find(x => x[0] === a)[1].split(' (')[0]}: ${v === 'off' ? 'hidden' : v}`).join(' · ')}</div></div></div>`).join('')}</div>`
         : '<p class="muted" style="margin:0">Nobody yet — everyone follows their role.</p>'}</section>
@@ -2957,6 +3060,8 @@ V.about = () => !isMgr() ? `
     <p class="muted">Use <b>Demo as</b> to switch between management, tour manager, artist, band &amp; crew (you're Nico, the VJ) and venue (Greg, production manager). All people, venues and numbers are made up. Edits stay in this browser — reset them in Settings.</p>
   </section>`;
 
+// A cancellation shows on the pages people land on, above everything else.
+for (const k of ['today', 'myhome']) { const base = V[k]; V[k] = () => { const out = base(), note = cancelNotes(); if (!note) return out; const cut = out.search(/<(section|div class="hgrid"|div class="stack"|button class="tcard")/); return cut < 0 ? out + note : out.slice(0, cut) + note + out.slice(cut); }; }
 // ---------- router ----------
 function route() {
   applyBrand();
@@ -3028,6 +3133,10 @@ const ACT = {
   editView: id => { const v = myViews().find(x => x.id === id); if (!v) return; openForm({ title: 'Your view', value: v, fields: [{ k: 'name', label: 'Name', req: true, full: true }], onSave(o) { v.name = o.name; toast('View renamed'); }, onDelete() { DB.views[me()] = myViews().filter(x => x !== v); toast('View deleted'); } }); },
   cols: () => openArrange({ title: 'Table columns', note: 'Tick the columns you want and put them in your order. This is your own layout — nobody else’s changes.', items: ordered(boardCols().map(c => [c.k, c.l]), myCols().map(c => c.k)), onSave(ids) { pref().cols = ids; toast('Columns saved'); }, onReset() { delete pref().cols; } }),
   customHome: () => openArrange({ title: 'Your home page', note: 'Choose what shows on your home page and in what order. Only your own home changes.', items: ordered(homeAvail(), myHome()), onSave(ids) { pref().home = ids; toast('Home updated'); }, onReset() { delete pref().home; } }),
+  cancelShow: id => E.cancel(id), statement: id => E.statement(id), openShow: id => { S.showId = id; S.showTab = ''; go('show'); },
+  reinstate: id => { const s = show(id); if (!s || !s.cancel) return; s.status = s.cancel.prev || 'confirmed'; delete s.cancel; commit('The show is back on — tell the people you told before', `Put ${cityOf(s)} (${short(s.date)}) back on`); },
+  copyStmt: (id, el) => { const t = show(id)?.cancel?.statement?.[el.dataset.v]; if (!t) return; (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast('Copied — paste it into the app'), () => { const n = document.getElementById(`stmt-${id}-${el.dataset.v}`); if (n) { const r = document.createRange(); r.selectNodeContents(n); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); } toast('Text selected — copy it from here'); }); },
+  shareStmt: (id, el) => { const t = show(id)?.cancel?.statement?.[el.dataset.v]; if (t && navigator.share) navigator.share({ text: t }).catch(() => {}); },
   newField: () => E.field(null), field: id => E.field(id), org: () => E.org(),
   accent: k => { DB.settings.org.accent = k; applyBrand(); commit('Colour changed'); },
   bulkStatus: () => { const st = $('#bulkst').value; S.sel.forEach(id => { const s = show(id); if (s) s.status = st; }); commit(`${S.sel.size} shows set to ${st}`, `Set ${S.sel.size} shows to ${st}`); S.sel.clear(); route(); },
@@ -3117,6 +3226,7 @@ document.addEventListener('submit', e => {
   e.preventDefault();
   const name = $('#gname').value.trim(); if (!name) return;
   const approve = canEdit('guests'), s = show(S.showId) || show('nyc');
+  if (guestClosed(s) && !approve) { toast('The list is closed — ask your tour manager'); return; }
   DB.guests.push({ id: uid('g'), show: s.id, name, plus: +$('#gplus').value, by: me(), status: approve ? 'approved' : 'pending' });
   commit(approve ? 'Added to the list' : 'Sent to Dana for approval', `${approve ? 'Added' : 'Asked for'} guest ${name} (${cityOf(s)})`);
 });

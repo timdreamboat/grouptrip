@@ -92,6 +92,25 @@
   S.tourId = 't2'; render('tour'); check(!/Add cities we recognise/.test(txt()) && DB.shows.every(x => x.ll), 'A sample tour has no route (a city without coordinates)');
   S.role = 'tm'; S.artistId = 'jv'; render('today'); check(!/ E[SD]T · [\s\S]*\(E[SD]T\)/.test(txt()) || (txt().match(/E[SD]T/g) || []).every((z, i, a) => z === a[0]), 'Today shows two different time-zone names for the same venue');
   S.role = 'manager'; S.artistId = 'jv';
+  // Promoter vs venue production, guest list cut-off, cancelling a show (2026-11-17).
+  check(!nav('venue').includes('settle') && nav('promoter').includes('settle') && !nav('promoter').includes('money'), 'Venue production can see the settlement, or the promoter cannot');
+  S.role = 'promoter'; S.showId = 'nyc'; check(!showTabs().some(t => t[0] === 'deal'), 'Promoter can see the Deal tab'); S.showTab = 'sheet'; render('show'); check(/Settlement/.test(txt()) && !/Lobby call/.test(txt()), 'Promoter day sheet is missing the settlement line or shows tour-only lines');
+  { const ny = show('nyc'); S.role = 'crew'; S.artistId = 'jv'; ny.guestClose = '00:00'; render('guests'); check(/list is closed/i.test(txt()) && !main.querySelector('#guestform'), 'Guest requests are still open after the cut-off');
+    S.role = 'tm'; S.showId = 'nyc'; render('guests'); check(!!main.querySelector('#guestform') && /you can still add/i.test(txt()), 'Management cannot add a guest after the cut-off');
+    ny.guestClose = '23:59'; S.role = 'crew'; render('guests'); check(!!main.querySelector('#guestform'), 'Guest requests are closed before the cut-off'); ny.guestClose = '17:00'; }
+  { S.role = 'manager'; S.artistId = 'jv'; S.showId = 'nyc'; const ny = show('nyc');
+    if ((() => { try { E.cancel('nyc'); return document.querySelector('#dlg').open; } catch (e) { failed.push('Cancel show: form crashed — ' + e.message); return false; } })()) {
+      const dd = document.querySelector('#dlg'); dd.querySelector('[name=kind]').value = 'postponed'; dd.querySelector('[name=newDate]').value = '2027-05-20'; dd.querySelector('[name=reason]').value = 'illness'; dd.querySelector('form').requestSubmit(); await wait(60);
+      check(ny.status === 'cancelled' && ny.cancel && ny.cancel.kind === 'postponed' && ny.cancel.told.some(t => t.who === 'greg') && ny.cancel.told.some(t => t.who === 'nico') && !ny.cancel.told.some(t => t.who === 'rae'), 'Postponing did not record who was told (venue, crew, not yourself)');
+      check(!/illness/.test(ny.cancel.statement.short) && /moved to/.test(ny.cancel.statement.short) && ny.cancel.statement.short.length <= 280, 'Fan statement leaked a private reason, misses the new date, or is too long for a short post');
+      render('show'); check(/Postponed — New York/.test(txt()) && /who has been told/i.test(txt()) && /deposit already received/.test(txt()), 'Management show page is missing the cancellation summary');
+      S.role = 'artist'; render('myhome'); check(/don.t post about this yet/i.test(txt()) && !main.querySelector('[data-act="copyStmt"]'), 'Artist can post before the statement is approved');
+      S.role = 'crew'; render('today'); check(/No call times for this date/.test(txt()) && !/deposit|told/i.test(main.querySelector('.cancelcard').innerText), 'Crew are not told the show is off, or see management detail');
+      S.role = 'venue'; render('today'); check(/tour has postponed this show/.test(txt()), 'Venue is not told the show is off'); check(!/Philadelphia|Hold \d|advanced/.test(txt()), 'With its show off, the venue sees the tour’s other dates');
+      ny.cancel.statement.approved = true; S.role = 'artist'; render('myhome'); check(main.querySelectorAll('[data-act="copyStmt"]').length === 3 && /Nothing is posted for you/.test(txt()), 'Artist does not get the approved statement with Copy buttons'); check(fits(), 'Artist home with a statement is wider than the screen');
+      S.role = 'manager'; ACT.reinstate('nyc'); check(ny.status === 'confirmed' && !ny.cancel, 'Putting the show back did not restore it');
+    } }
+  S.role = 'manager'; S.artistId = 'jv';
   // 3. The logo goes to each role's own home; every page has help.
   for (const r of roles) { S.role = r; S.artistId = 'jv'; const home = navFor()[0][0]; check(['home', 'myhome', 'today'].includes(home), `${r}: logo home is ${home}`); for (const [k] of navFor()) if (k !== 'more') check(!!HELP[k] || k === 'about', `${r}: no help text for ${k}`); }
 

@@ -59,6 +59,26 @@ and what's pending**.
   text, small tap targets, broken pictures, plus an eye-test checklist. Order
   for every major GigTrip change: gigtrip-qa → gigtrip-ui-qa → code review →
   publish.
+- Cancel or postpone a show (2026-11-17, owner asked how an artist's
+  cancellation should reach everyone and the fans): management taps
+  **Cancel or postpone** on the show page (`E.cancel`). One form: cancelled
+  or postponed (+ new date), reason (private unless ticked), what ticket
+  holders are told, and who to tell — promoter + venue, band + crew,
+  management + agent, guest-list requesters. The show becomes
+  `status: 'cancelled'` with `show.cancel` (who was told, seen flags — made
+  up in the mock, read receipts in the real build — and the previous status
+  so **Put the show back** works). Everyone's landing page carries a notice
+  worded for them (`cancelCard`). A fan statement is drafted in three
+  lengths (`fanStatement`); the artist is told not to post until management
+  approves it (`E.statement`), then gets Copy / Share / Open in X or Threads.
+  **Owner-level decision baked in: GigTrip never posts to social media and
+  never holds social logins** — the artist posts from their own apps.
+  Needs attention lists unseen notices and an unapproved statement.
+- Also 2026-11-17: **Promoter** is its own demo role (Nina). Venue
+  production staff no longer see the settlement (`access.venue.costs = off`);
+  a promoter rep gets it through their own card. Guest-list requests close
+  at the show's cut-off (`show.guestClose`, default 5 pm venue time);
+  management can still add.
 - Going live (2026-11-17): owner chose **per-artist pricing** ($39 per active
   artist a month, $29 from the sixth; every role included). Sales document:
   https://claude.ai/artifact/W8QpETQ3LsDjg4To1vhrDc · Go-live checklist (ordered,

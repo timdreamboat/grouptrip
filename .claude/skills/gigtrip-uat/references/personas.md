@@ -77,11 +77,22 @@ Comes to:
 1. The day sheet for tonight, the tour team's contacts.
 2. What the tour is bringing versus what the venue provides.
 3. The guest list, final, for the box office.
-4. The settlement, to check numbers and sign.
 
-Watch for: anything about other shows or other artists, the tour's phone
+Watch for: any money at all (the settlement is the promoter's), anything about other shows or other artists, the tour's phone
 numbers beyond the tour manager's, an empty page, a menu item that leads
 nowhere for him.
+
+## Nina — promoter rep (Demo as: Promoter)
+Laptop in the production office, phone at the box office. Same show-only view
+as Greg, plus the money for this one show.
+
+Comes to:
+1. The guest list, final, for the box office.
+2. The settlement: check the numbers with the tour manager and sign.
+3. If the show is cancelled or postponed: what ticket holders are told.
+
+Watch for: the artist's deal beyond this show, the tour's budget or commission,
+anything about other dates.
 
 ## What "seamless" means for all of them
 - The first screen answers the question they came with.
