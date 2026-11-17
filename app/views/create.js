@@ -10,10 +10,11 @@ import { askUsername, withUnlock } from './username.js';
 
 const STEPS = 3;
 
-export function render(root) {
+// preset.kind ('business' | 'family') starts the flow on that kind of trip.
+export function render(root, preset = {}) {
   document.title = 'New trip · GroupTripIt';
   const lastName = store.listTrips().find((t) => t.myName)?.myName;
-  const data = { destination: '', name: '', startDate: '', endDate: '', organizer: lastName ? firstName(lastName) : '', cover: null, kind: 'friends', where: null };
+  const data = { destination: '', name: '', startDate: '', endDate: '', organizer: lastName ? firstName(lastName) : '', cover: null, kind: ['business', 'family'].includes(preset.kind) ? preset.kind : 'friends', where: null };
   let photosFor = null; // destination the photo picker last searched
   let searchTimer;
   let step = 0;
@@ -25,10 +26,10 @@ export function render(root) {
   const views = [
     () => `
       <div class="eyebrow">Step 1 of ${STEPS}</div>
-      <h1 class="display">Where are you going?</h1>
+      <h1 class="display">${data.kind === 'business' ? 'Where is the event?' : 'Where are you going?'}</h1>
       <div class="cover-preview" style="background:${esc(coverBg(data.destination || 'trip', data.cover?.url))}"></div>
-      <input class="input input-xl" name="destination" placeholder="Las Vegas" value="${esc(data.destination)}" autocomplete="off" required>
-      <p class="hint" style="margin-top:10px">A city, a region, a beach — anything.</p>
+      <input class="input input-xl" name="destination" placeholder="${data.kind === 'business' ? 'Scottsdale' : 'Las Vegas'}" value="${esc(data.destination)}" autocomplete="off" required>
+      <p class="hint" style="margin-top:10px">${data.kind === 'business' ? 'The city is enough — the hotel and rooms come later.' : 'A city, a region, a beach — anything.'}</p>
       <div id="dest-map">${data.where ? destMap() : ''}</div>
       <div id="photos-wrap" style="margin-top:18px" ${data.destination ? '' : 'hidden'}>
         <div class="field"><span>Pick a cover photo</span><div id="photos"></div></div>
@@ -66,7 +67,7 @@ export function render(root) {
           ${views[step]()}
           <div class="flow-nav">
             ${step ? `<button type="button" class="btn btn-secondary btn-lg" data-back>${icon('back')}</button>` : ''}
-            <button class="btn btn-primary btn-lg">${step === STEPS - 1 ? `Create trip ${icon('sparkle')}` : step === 1 && !data.startDate ? 'Skip for now' : `Continue ${icon('arrow')}`}</button>
+            <button class="btn btn-primary btn-lg">${step === STEPS - 1 ? `Create ${data.kind === 'business' ? 'event' : 'trip'} ${icon('sparkle')}` : step === 1 && !data.startDate ? 'Skip for now' : `Continue ${icon('arrow')}`}</button>
           </div>
         </form>
       </div>`;

@@ -268,7 +268,8 @@ details.more[open] > summary { margin-bottom: 12px; }
 .tabbar a.on svg.i { stroke-width: 2.3; }
 
 /* Page action: a floating button on phones, a normal header button on desktop */
-.page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin: 16px 2px 20px; }
+.page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin: 16px 2px 20px; flex-wrap: wrap; }
+.page-head > div:first-child { flex: 1 1 200px; min-width: 0; }
 .page-head h1 { font-size: 40px; }
 .page-head .sub { color: var(--muted); font-size: 14px; margin-top: 6px; }
 .page-action {
@@ -587,6 +588,8 @@ dialog.viewer::backdrop { background: #000; }
 .viewer-note span { flex: 1; min-width: 180px; }
 .site-foot { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; margin: 36px 0 12px; font-size: 13px; color: var(--muted); }
 .site-foot a { color: inherit; }
+
+.demo-banner { display: grid; gap: 12px; border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); background: linear-gradient(135deg, var(--accent-soft), var(--surface)); }
 
 /* Phone header: the brand, "+" and @username have to share 375px. */
 @media (max-width: 480px) { .site-head .hide-sm { display: none; } .site-head .btn-primary.btn-sm { padding: 0 10px; } }

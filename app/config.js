@@ -20,3 +20,14 @@ export const PUSH_PUBLIC_KEY = 'BLvMhsoo5jSQOMMxx6LEatOOScH-mChqPU64c0f0HjXv-tia
 // is used in the browser or installed. Turning it on also needs a Brevo or
 // Resend key in the Supabase function secrets (see CLAUDE.md).
 export const EMAIL_ENABLED = false;
+
+// The shared demo event behind business.html ("See it as an attendee /
+// organizer"). Demo usernames are public and protected on the server: nobody
+// can delete the event, change the PIN or lock them (schema.sql v18).
+// supabase/demo/kickoff.sql rebuilds the event.
+export const DEMO = {
+  trip: 'de3005a1e5c1c0ff2027ac3e00000001',
+  attendee: 'demo-attendee',
+  organizer: 'demo-planner',
+  pin: '246810',
+};

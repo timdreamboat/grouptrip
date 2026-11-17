@@ -12,9 +12,26 @@ import { pollCard, openPolls, needsMyVote, handlePollClick } from './polls.js';
 import { photoStrip } from './photos.js';
 import { appCard, handleAppCardClick } from './getapp.js';
 import { todayCard, handleTodayClick, startTodayTicker, isHappening } from './today.js';
+import { DEMO } from '../config.js';
+
+// On the shared demo event: say whose eyes this is, and offer the other view.
+function demoBanner({ trip, isOrg }) {
+  if (trip.id !== DEMO.trip || ![DEMO.attendee, DEMO.organizer].includes(store.username())) return '';
+  return `
+    <section class="card demo-banner">
+      <div><div class="eyebrow">Demo event</div>
+        <div style="font-weight:600;margin-top:2px">${isOrg ? "You're seeing what the organizer sees: everyone, every session, all the spend."
+          : "You're seeing what one attendee sees: only their own schedule, flight, room and expenses."}</div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a class="btn btn-primary btn-sm" href="#/demo/${isOrg ? 'attendee' : 'organizer'}">${isOrg ? "See an attendee's view" : "See the organizer's view"}</a>
+        <a class="btn btn-secondary btn-sm" href="business.html">About GroupTripIt for teams</a>
+      </div>
+    </section>`;
+}
 
 export function render(el, ctx) {
   el.innerHTML = ctx.isOrg ? organizerHome(ctx) : guestHome(ctx);
+  el.querySelector('.hero, .stack-lg > :first-child')?.insertAdjacentHTML('afterend', demoBanner(ctx));
   bind(el, ctx);
   startTodayTicker(el);
 }

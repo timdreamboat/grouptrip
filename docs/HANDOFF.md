@@ -276,6 +276,38 @@ trips with "zz-…" usernames for tests and delete them after.
   people's saved trips), calendar event UIDs (renaming would duplicate events
   in calendar apps) and the `grouptrip.quiet` setting.
 
+## Business front door + demo event (2026-11-17, first draft)
+Owner asked whether to sell a business version; decision: same app, a second
+front door aimed at company events (offsites, kickoffs, conference teams).
+- Landing page: https://timdreamboat.github.io/grouptrip/business.html
+  (`app/business.html`, a plain static page like privacy.html; screenshots in
+  `app/img/biz-*.jpg` are of the demo event). Linked from the home footer.
+  "GroupTripIt for teams" is a working name. The page says pricing is free in
+  pre-release and will be set with pilot teams, and "best up to about 60
+  people" — both are the owner's to confirm. No contact email on it yet
+  (waiting on the 7 Wood Systems domain), so the only actions are "see the
+  demo" and "set up your event".
+- One-tap demo: `#/demo/attendee` and `#/demo/organizer` sign the device in
+  as `@demo-attendee` (Alex Morgan) / `@demo-planner` (Jordan Lee) and open
+  "Acme Sales Kickoff 2027" (business, PRIVATE, Scottsdale, Feb 9–11 2027,
+  28 people — 24 joined, 4 pre-added; share code
+  de3005a1e5c1c0ff2027ac3e00000001). Someone with their own username on the
+  device is asked first. Home shows a "Demo event" banner with a switch to
+  the other role. `DEMO` in `app/config.js`.
+- `#/new/business` starts Create with Business picked and event wording.
+- Protection (v18): `usernames.demo` + `_demo_guard` — demo usernames can't
+  delete the event or the username, leave, remove/reset people, or change
+  the PIN / recovery email; wrong PINs on them aren't counted.
+- Reset: visitors CAN click around (RSVP, add plans, vote, add expenses), so
+  the event drifts. `supabase/demo/kickoff.sql` deletes and rebuilds it — run
+  the whole file in the SQL editor. NOT automatic: a nightly reset job and a
+  block on photo/receipt uploads from demo usernames were drafted on
+  2026-11-17 but not applied (needs the owner's OK). After Feb 11, 2027 the
+  event reads as finished; change `d0` in the file and re-run.
+- Fixed on the way: business Expenses header ran off a phone screen
+  (`.page-head` wraps); organizer People rows now have one "⋯" button
+  (Let back in / Remove) so names aren't squeezed to a letter.
+
 ## Pending on the owner
 0. **Email secrets for PIN recovery** — see "PIN recovery by email" above.
    Since 2026-11-17 the app hides every recovery-email prompt until these

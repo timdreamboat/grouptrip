@@ -295,6 +295,19 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
   is removed. Old sent alerts for those trips are cleared (they carry names).
   NEVER test this on demo usernames.
 
+## Business front door (v18, owner 2026-11-17)
+- `app/business.html` is the pitch page for company events (static, like
+  privacy.html; linked from the home footer). Keep its claims true to what
+  the app does. `#/new/business` opens Create with Business picked.
+- `#/demo/attendee` and `#/demo/organizer` (`openDemo` in app.js, `DEMO` in
+  config.js) sign in as `@demo-attendee` / `@demo-planner` with the public
+  demo PIN and open "Acme Sales Kickoff 2027". Home shows `demoBanner`.
+- Demo usernames (`usernames.demo`) are protected by `_demo_guard`: no
+  deleting the trip or username, leaving, removing/resetting people, or
+  changing the PIN/recovery email; wrong PINs aren't counted. Everything else
+  is open to visitors, so the event drifts — `supabase/demo/kickoff.sql`
+  rebuilds it (run by hand; there is no scheduled reset).
+
 ## Outside connections are safe on their own (v9, owner 2026-09-24)
 Even with a PIN, a GroupTripIt username is a light lock, so partner connections must
 not depend on GroupTripIt identity: Venmo, OpenTable and booking sites always

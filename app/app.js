@@ -1,10 +1,12 @@
 // Router.
 //   #/                     your trips (or the landing page)
-//   #/new                  create a trip
+//   #/new[/business]       create a trip (optionally starting as a business event)
+//   #/demo/<attendee|organizer>  open the shared demo event as that person
 //   #/t/<code>[/<tab>]     a trip — the invite page until you've joined
 //   #/me/<code>/<token>    old private links (before accounts) — just open the trip
 import * as store from './store.js';
-import { toast, esc, icon } from './ui.js';
+import { toast, esc, icon, confirmSheet } from './ui.js';
+import { DEMO } from './config.js';
 import * as home from './views/home.js';
 import * as create from './views/create.js';
 import * as invite from './views/invite.js';
@@ -37,13 +39,45 @@ async function route() {
   document.querySelectorAll('dialog.sheet').forEach((d) => d.close());
 
   if (page === 'me' && code) { location.replace(`#/t/${code}`); return; }
-  if (page === 'new') { current = {}; return paint(() => create.render(root)); }
+  if (page === 'new') { current = {}; return paint(() => create.render(root, { kind: code })); }
+  if (page === 'demo') return openDemo(code === 'organizer' ? 'organizer' : 'attendee');
   if (page === 't' && code) return openTrip(code, extra || 'home');
   current = {};
   paint(() => home.render(root));
   // A message carried over a reload (e.g. after deleting your data).
   try { const msg = sessionStorage.getItem('grouptrip.flash'); if (msg) { sessionStorage.removeItem('grouptrip.flash'); toast(msg); } } catch { /* ignore */ }
   refreshTrips();
+}
+
+// The demo event, signed in as its sample attendee or organizer (public demo
+// usernames). Someone with their own username on this device is asked first,
+// because the demo takes its place here until they sign back in.
+async function openDemo(role) {
+  const who = DEMO[role], mine = store.username();
+  if (mine && mine !== who && mine !== DEMO.attendee && mine !== DEMO.organizer) {
+    const ok = await confirmSheet({
+      title: 'Open the demo event?',
+      message: `It opens as a sample ${role}. On this device that takes the place of @${mine} — your trips are safe, and your username and PIN bring them back.`,
+      confirm: 'Open the demo',
+    });
+    if (!ok) { location.replace('#/'); return; }
+  }
+  root.innerHTML = '<div class="main" style="padding-top:24px"><div class="skeleton" style="height:280px"></div></div>';
+  try {
+    if (mine !== who) {
+      if (pwa.pushEnabled()) await pwa.disablePush().catch(() => {});
+      store.forgetUsername();
+      const r = await store.unlockWithPin(who, DEMO.pin);
+      if (!r.ok) throw new Error(r.error || "The demo isn't available right now");
+      await store.signedIn(r);
+      // The demo never asks a visitor to set up a passkey for it.
+      try { localStorage.setItem('grouptrip.passkey', JSON.stringify({ username: who, here: true })); } catch { /* ignore */ }
+    }
+    location.replace(`#/t/${DEMO.trip}`);
+  } catch (err) {
+    toast(err.message, { error: true });
+    location.replace('#/');
+  }
 }
 
 async function openTrip(code, tab, { animate = true, keepScroll = false } = {}) {

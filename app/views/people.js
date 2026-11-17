@@ -1,6 +1,6 @@
 // People: who's going, their status and flight. Organizers can pre-add
 // names (waiting to be claimed from the invite link) and remove people.
-import { esc, icon, avatar, fmtDay, fmtTime, copy, share, confirmSheet, busy } from '../ui.js';
+import { esc, icon, avatar, fmtDay, fmtTime, copy, share, confirmSheet, busy, sheet } from '../ui.js';
 import * as store from '../store.js';
 import { flightsOf, statusPill, firstName, isPrivate, privacyPicker } from './common.js';
 import { openMe } from './me.js';
@@ -63,8 +63,7 @@ export function render(el, ctx) {
             </div>
             ${isMe ? `<button class="btn btn-xs btn-secondary" data-action="me">Edit</button>` : ''}
             ${isOrg && !m.joined ? `<button class="btn btn-xs btn-secondary" data-nudge="${m.id}">${icon('bell')}Nudge</button>` : ''}
-            ${isOrg && m.joined && !m.isOrganizer ? `<button class="btn btn-xs btn-ghost" data-reset="${m.id}" title="Joined with the wrong username? Reset their spot">${icon('link')}Let back in</button>` : ''}
-            ${isOrg && !m.isOrganizer ? `<button class="btn btn-icon btn-xs btn-ghost" style="width:30px" data-del="${m.id}" aria-label="Remove ${esc(m.name)}">${icon('trash')}</button>` : ''}
+            ${isOrg && !m.isOrganizer ? `<button class="btn btn-icon btn-xs btn-ghost" style="width:32px;flex:none" data-more="${m.id}" aria-label="Options for ${esc(m.name)}">${icon('more')}</button>` : ''}
           </div>`;
         }).join('')}
       </section>
@@ -84,9 +83,27 @@ export function render(el, ctx) {
     if (ok) ctx.refresh(`${firstName(name)} added — share the invite link with them`);
   };
 
-  el.onclick = async (e) => {
-    const t = e.target.closest('[data-action],[data-del],[data-nudge],[data-reset]');
+  // A person's "⋯": the organizer's rarely-used actions live in a sheet, so
+  // names get the row's width on a phone.
+  const openMore = (m) => sheet({
+    title: m.name,
+    body: `
+      <div class="stack" style="gap:10px">
+        ${m.joined ? `<button class="btn btn-secondary btn-block" data-reset="${m.id}">${icon('link')}Let back in</button>
+          <p class="hint" style="margin:-4px 0 6px">Joined with the wrong username, or someone joined as them? This frees their spot so they can tap their name again.</p>` : ''}
+        <button class="btn btn-danger btn-block" data-del="${m.id}">${icon('trash')}Remove from ${trip.kind === 'business' ? 'the event' : 'the trip'}</button>
+      </div>`,
+    onMount(dlg, close) {
+      dlg.querySelectorAll('[data-reset],[data-del]').forEach((b) => { b.onclick = () => { close(); handle(b); }; });
+    },
+  });
+  el.onclick = (e) => {
+    const t = e.target.closest('[data-action],[data-del],[data-nudge],[data-reset],[data-more]');
     if (!t) return;
+    if (t.dataset.more) return openMore(trip.members.find((x) => x.id === t.dataset.more));
+    return handle(t);
+  };
+  const handle = async (t) => {
     const inviteText = `Join our trip "${trip.name}" on GroupTripIt:`;
     if (t.dataset.action === 'share') return share({ title: trip.name, text: inviteText, url: store.inviteLink(trip.id) });
     if (t.dataset.action === 'copy') return copy(store.inviteLink(trip.id), 'Invite link copied');

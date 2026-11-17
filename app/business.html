@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f5f4f0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d0d10" media="(prefers-color-scheme: dark)">
+<title>GroupTripIt for teams — company events on one link</title>
+<meta name="description" content="Offsites, kickoffs and conference teams: every attendee gets their own schedule, flight, hotel and expenses on their phone, from one link.">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  .biz { max-width: 1040px; margin: 0 auto; padding: 16px 16px 72px; }
+  .biz-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .biz-head .brand { text-decoration: none; }
+  .biz-head small { color: var(--muted); font-weight: 500; }
+  .hero-biz { display: grid; gap: 28px; align-items: center; padding: 40px 0 20px; }
+  .hero-biz h1 { font-size: clamp(44px, 9vw, 84px); line-height: .98; margin: 14px 0 0; max-width: 12ch; }
+  .hero-biz h1 em { color: var(--accent); }
+  .hero-biz .lede { font-size: 19px; line-height: 1.5; color: var(--muted); max-width: 46ch; margin: 18px 0 24px; }
+  .cta { display: flex; gap: 10px; flex-wrap: wrap; }
+  .cta-note { font-size: 13px; color: var(--muted); margin-top: 12px; }
+  .phones { display: flex; gap: 14px; justify-content: center; }
+  .phone { width: min(46%, 250px); border-radius: 30px; border: 1px solid var(--line-strong); box-shadow: var(--shadow-lg); overflow: hidden; background: var(--surface); }
+  .phone img { display: block; width: 100%; height: auto; }
+  .phone.back { margin-top: 44px; }
+  .phone.third { display: none; }
+  @media (min-width: 1100px) { .phones .phone { width: 31%; } .phone.third { display: block; margin-top: 88px; } }
+  .biz h2 { font-size: clamp(30px, 5vw, 44px); margin: 64px 0 8px; }
+  .biz .kicker { color: var(--muted); font-size: 17px; max-width: 60ch; margin: 0 0 22px; line-height: 1.5; }
+  .cols { display: grid; gap: 14px; }
+  .cols .card h3 { font-size: 18px; margin: 12px 0 6px; }
+  .cols .card p { margin: 0; color: var(--muted); line-height: 1.5; font-size: 15px; }
+  .split { display: grid; gap: 28px; align-items: center; }
+  .split ul { padding-left: 20px; display: grid; gap: 10px; line-height: 1.5; margin: 0; }
+  .split .phone { width: min(70%, 260px); margin: 0 auto; }
+  .steps-biz { counter-reset: s; display: grid; gap: 14px; }
+  .steps-biz .card { position: relative; padding-left: 64px; }
+  .steps-biz .card::before { counter-increment: s; content: counter(s); position: absolute; left: 18px; top: 18px; width: 32px; height: 32px; border-radius: 50%;
+    display: grid; place-items: center; background: var(--text); color: var(--bg); font-weight: 700; }
+  .steps-biz h3 { margin: 0 0 4px; font-size: 17px; }
+  .steps-biz p { margin: 0; color: var(--muted); line-height: 1.5; }
+  .plain { display: grid; gap: 10px; padding-left: 20px; line-height: 1.55; max-width: 66ch; }
+  .pilot { margin-top: 64px; padding: 28px; border-radius: var(--radius-xl); background: linear-gradient(135deg, var(--accent-soft), var(--surface)); border: 1px solid var(--line); }
+  .pilot h2 { margin-top: 0; }
+  .biz-foot { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 40px; font-size: 13px; color: var(--muted); }
+  .biz-foot a { color: inherit; }
+  @media (min-width: 860px) {
+    .hero-biz { grid-template-columns: 1.1fr .9fr; padding-top: 64px; }
+    .cols { grid-template-columns: repeat(3, 1fr); }
+    .split { grid-template-columns: 1fr 1fr; }
+    .steps-biz { grid-template-columns: repeat(3, 1fr); }
+  }
+</style>
+</head>
+<body>
+<div class="biz">
+  <header class="biz-head">
+    <a class="brand" href="./"><span class="brand-mark"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg></span>GroupTripIt <small>for teams</small></a>
+    <a class="btn btn-secondary btn-sm" href="./#/demo/attendee">See the demo</a>
+  </header>
+
+  <section class="hero-biz">
+    <div>
+      <span class="chip accent">Offsites · sales kickoffs · conference teams · retreats</span>
+      <h1 class="display">Your whole event, on <em>one link</em>.</h1>
+      <p class="lede">Send one link. Every attendee opens it on their phone and sees their own schedule, flight, hotel and expenses. No spreadsheet to keep in sync, no "which room is the breakout in?" emails, no app to install.</p>
+      <div class="cta">
+        <a class="btn btn-accent btn-lg" href="./#/demo/attendee">See it as an attendee</a>
+        <a class="btn btn-secondary btn-lg" href="./#/demo/organizer">See it as the organizer</a>
+      </div>
+      <p class="cta-note">A live sample event: a sales kickoff in Scottsdale. Nothing to sign up for.</p>
+    </div>
+    <div class="phones" aria-hidden="true">
+      <div class="phone"><img src="img/biz-agenda.jpg" alt="" width="750" height="1624" loading="lazy"></div>
+      <div class="phone back"><img src="img/biz-travel.jpg" alt="" width="750" height="1624" loading="lazy"></div>
+      <div class="phone third"><img src="img/biz-expenses.jpg" alt="" width="750" height="1624" loading="lazy"></div>
+    </div>
+  </section>
+
+  <h2 class="display">What each attendee gets</h2>
+  <p class="kicker">Not the master plan with 40 rows they have to search. Their own version of the event.</p>
+  <div class="cols">
+    <div class="card"><div class="tl-icon">📅</div><h3>Their own agenda</h3><p>Sessions for everyone, plus only the breakouts, dinners and meetings they're actually in. It adds to their phone's calendar and stays up to date when you change it.</p></div>
+    <div class="card"><div class="tl-icon">🏨</div><h3>Flight and hotel in one place</h3><p>Type a flight number and the times fill in. The hotel, check-in times, confirmation number and directions are one tap away.</p></div>
+    <div class="card"><div class="tl-icon">🧾</div><h3>Expenses without the envelope of receipts</h3><p>Snap the receipt when it happens. Each person gets a ready-made expense report to print or save as a PDF.</p></div>
+    <div class="card"><div class="tl-icon">🔔</div><h3>Changes reach them</h3><p>Room moved? New dinner time? Update it once and everyone's agenda is already correct. New sessions and a morning reminder on each event day reach people who turned on notifications.</p></div>
+    <div class="card"><div class="tl-icon">🗳</div><h3>Quick decisions</h3><p>Entrée choices, which night for the team dinner, who's bringing what. A poll takes ten seconds, and the organizer can see who hasn't answered.</p></div>
+    <div class="card"><div class="tl-icon">📍</div><h3>What's around</h3><p>Coffee, dinner and things to do near the hotel, closest first, with reviews and directions one tap away.</p></div>
+  </div>
+
+  <h2 class="display">What you get as the organizer</h2>
+  <div class="split">
+    <ul>
+      <li><b>Everyone, at a glance.</b> Who has joined, who hasn't, and when each person lands.</li>
+      <li><b>Sessions for the right people.</b> Mark a breakout for the eight people in it. Only they see it and only they're notified.</li>
+      <li><b>Each person sees only their own.</b> On a private event, attendees don't see each other's flights, rooms or expenses. You see everything.</li>
+      <li><b>All the spend in one report.</b> Company-card items and reimbursable expenses together, by person and by category, with the receipt photos. Export it as a spreadsheet or a PDF.</li>
+      <li><b>One link to send.</b> Add your attendee list ahead of time; each person joins with their name and lands on their own schedule. Nothing to install, no accounts for you to create.</li>
+    </ul>
+    <div class="phone" aria-hidden="true"><img src="img/biz-people.jpg" alt="" width="750" height="1624" loading="lazy"></div>
+  </div>
+
+  <h2 class="display">How it works</h2>
+  <div class="steps-biz">
+    <div class="card"><h3>Set up the event</h3><p>Dates, hotel, sessions and who each one is for. About as long as building the spreadsheet you'd otherwise send.</p></div>
+    <div class="card"><h3>Send one link</h3><p>In the invite email, the team chat, or a calendar invite. People enter their name and they're in.</p></div>
+    <div class="card"><h3>Change things once</h3><p>Everyone's agenda updates. After the event, download the expense report.</p></div>
+  </div>
+
+  <h2 class="display">Plain answers</h2>
+  <ul class="plain">
+    <li><b>Does it book travel?</b> No. Book flights and rooms the way you do now. GroupTripIt is where everyone sees the result.</li>
+    <li><b>Do attendees need an app?</b> No. It opens in the phone's browser and can be added to the home screen. They pick a username and a PIN the first time.</li>
+    <li><b>Who can see what?</b> You choose per event: the whole group sees everything (good for a small team), or each person sees only their own schedule, flight, room and expenses. Details are on the <a href="privacy.html">privacy page</a>.</li>
+    <li><b>Is it ready for a 500-person conference?</b> Not yet. It's in pre-release and best for events up to about 60 people.</li>
+    <li><b>What does it cost?</b> Nothing while it's in pre-release. Pricing for teams will be worked out with the first pilot events.</li>
+  </ul>
+
+  <section class="pilot">
+    <h2 class="display">Running an event in the next few months?</h2>
+    <p class="kicker" style="margin-bottom:18px">Try the sample event first. If it fits, set up your own: it takes a few minutes, and you can add your attendees before sending anything.</p>
+    <div class="cta">
+      <a class="btn btn-accent btn-lg" href="./#/demo/organizer">Open the sample event</a>
+      <a class="btn btn-secondary btn-lg" href="./#/new/business">Set up your event</a>
+    </div>
+  </section>
+
+  <footer class="biz-foot">
+    <a href="./">GroupTripIt for friends and family</a>
+    <a href="privacy.html">Privacy &amp; your data</a>
+    <span>Pre-release · sample data shown</span>
+  </footer>
+</div>
+</body>
+</html>

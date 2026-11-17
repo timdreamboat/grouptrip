@@ -2882,3 +2882,53 @@ end');
   if def not like '%''notes'', null%' then raise exception 'get_trip patch did not apply'; end if;
   execute def;
 end $$;
+
+
+-- ============ v18: shared demo usernames can't be wrecked (2026-11-17) ============
+-- The business landing page opens a demo event in one tap as @demo-attendee
+-- or @demo-planner (public PIN). People may click around — add a plan, vote —
+-- and supabase/demo/kickoff.sql rebuilds the event whenever it needs a reset.
+-- What must never happen from a demo sign-in: deleting the event or the
+-- username, leaving, removing/resetting people, or changing the PIN or
+-- recovery email (which would lock everyone else out). Wrong PIN tries on a
+-- demo username aren't counted, so nobody can lock it either.
+alter table usernames add column demo boolean not null default false;
+update usernames set demo = true where username like 'demo-%';
+
+create function _demo_guard(p_username text) returns void
+language plpgsql stable security definer set search_path = public as $$
+begin
+  if p_username is not null and exists (select 1 from usernames where username = p_username and demo) then
+    raise exception 'This is the shared demo, so that''s switched off here';
+  end if;
+end $$;
+revoke execute on function _demo_guard(text) from public, anon, authenticated;
+
+do $$
+declare r record; def text;
+begin
+  for r in select * from (values
+    ('public.delete_trip(text,text)',           'perform _demo_guard((select username from members where trip_id = _trip(p_code) and token = p_token));'),
+    ('public.leave_trip(text,text)',            'perform _demo_guard((select username from members where trip_id = _trip(p_code) and token = p_token));'),
+    ('public.remove_member(text,text,uuid)',    'perform _demo_guard((select username from members where id = p_id)); perform _demo_guard((select username from members where trip_id = _trip(p_code) and token = p_token));'),
+    ('public.reset_member(text,text,uuid)',     'perform _demo_guard((select username from members where id = p_id));'),
+    ('public.change_pin(text,text,text)',       'perform _demo_guard(_clean_username(p_username));'),
+    ('public.set_recovery_email(text,text,text)', 'perform _demo_guard(_clean_username(p_username));'),
+    ('public._delete_account(text,text)',       'perform _demo_guard(_clean_username(p_username));')
+  ) v(fn, line) loop
+    def := pg_get_functiondef(r.fn::regprocedure);
+    if def like '%_demo_guard%' then continue; end if;
+    def := regexp_replace(def, E'\nbegin\n', E'\nbegin\n  ' || r.line || E'\n');  -- first "begin" only
+    if def not like '%_demo_guard%' then raise exception 'demo guard did not apply to %', r.fn; end if;
+    execute def;
+  end loop;
+end $$;
+
+-- Wrong PINs on a demo username don't count toward a lockout.
+do $$
+declare def text := pg_get_functiondef('public.unlock_username(text,text)'::regprocedure);
+begin
+  def := replace(def, E'\n  n := r.failed + 1;', E'\n  if r.demo then return jsonb_build_object(''ok'', false, ''error'', ''Wrong PIN''); end if;\n  n := r.failed + 1;');
+  if def not like '%r.demo%' then raise exception 'unlock_username patch did not apply'; end if;
+  execute def;
+end $$;
