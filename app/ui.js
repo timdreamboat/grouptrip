@@ -182,6 +182,11 @@ export function sheet({ title = '', body = '', foot = '', wide = false, embed = 
       <button class="btn btn-icon btn-secondary btn-sm" data-close aria-label="Close">${icon('x')}</button></div>
     <div class="sheet-body">${body}</div>
     ${foot ? `<div class="sheet-foot">${foot}</div>` : ''}`;
+  // A closed sheet is normally removed by its 'close' event, but browsers can
+  // delay that event (a backgrounded tab, a busy frame). Sweep leftovers first,
+  // so two forms with the same id never coexist — a save button is tied to its
+  // form by id and would otherwise submit the old one.
+  document.querySelectorAll('dialog.sheet:not([open])').forEach((d) => d.remove());
   document.body.append(dlg);
   const close = () => { dlg.close(); };
   dlg.addEventListener('close', () => dlg.remove());

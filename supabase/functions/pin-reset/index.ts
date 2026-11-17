@@ -1,5 +1,7 @@
 // "Forgot PIN?" — emails a 6-digit reset code to the username's recovery
 // email (the only thing that address is ever used for).
+// POST { check: true } → { configured } — whether an email provider is set,
+// so the app only offers recovery emails once they can actually be sent.
 // POST { username } → { ok: true } always (never says whether an email exists),
 // or 503 when no email provider is configured (secrets: BREVO_API_KEY or
 // RESEND_API_KEY, plus EMAIL_FROM). The code itself is checked by the
@@ -59,8 +61,9 @@ function codeEmail(username: string, code: string) {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   if (req.method !== 'POST') return json({ error: 'POST only' }, 405);
+  const { username, check } = await req.json().catch(() => ({}));
+  if (check) return json({ configured: emailConfigured() });
   if (!emailConfigured()) return json({ error: "Email isn't set up yet, so codes can't be sent. Ask the person who runs GroupTripIt." }, 503);
-  const { username } = await req.json().catch(() => ({}));
   if (typeof username !== 'string' || !username.trim()) return json({ error: 'Missing username' }, 400);
 
   const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/_pin_reset_begin`, {

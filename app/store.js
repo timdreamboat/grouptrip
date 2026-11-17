@@ -85,7 +85,23 @@ export const validUsername = (u) => /^[a-z0-9_.-]{3,30}$/.test(cleanUsername(u))
 export const validPin = (p) => /^[0-9]{6}$/.test(String(p || ''));
 
 // { taken, hasPin, hasPasskey } for a typed username.
-export const usernameStatus = (u) => rpc('username_status', { p_username: cleanUsername(u) });
+// canReset is only true when the reset email can actually be sent.
+export const usernameStatus = async (u) => {
+  const [s, canEmail] = await Promise.all([rpc('username_status', { p_username: cleanUsername(u) }), recoveryEmailAvailable()]);
+  return { ...s, canReset: Boolean(s.canReset && canEmail) };
+};
+// Whether PIN reset emails can be sent yet (the pin-reset function has a
+// provider key). Asked once per visit; until it's true the app doesn't offer
+// recovery emails at all, rather than promising a code that can't arrive.
+let emailReady;
+export function recoveryEmailAvailable() {
+  emailReady ??= fetch(`${SUPABASE_URL}/functions/v1/pin-reset`, {
+    method: 'POST',
+    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ check: true }),
+  }).then((r) => (r.ok ? r.json() : null)).then((r) => Boolean(r?.configured)).catch(() => false);
+  return emailReady;
+}
 export const createPin = (u, pin, email = null) => rpc('create_pin', { p_username: cleanUsername(u), p_pin: pin, p_email: email || null });
 // Recovery email: only ever used to send a PIN reset code.
 export const recoveryEmail = () => rpc('recovery_email', { p_username: username(), p_device_key: deviceKey() });

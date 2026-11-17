@@ -5,6 +5,7 @@ import { esc, icon, avatar, fmtDay, fmtTime, tripDays, embedSheet, copy } from '
 import * as embed from '../embeds.js';
 import { memberById, firstName, stayOf, myPlans } from './common.js';
 import { placeQuery } from './tripmap.js';
+import { openExplore } from './explore.js';
 
 const pad = (n) => String(n).padStart(2, '0');
 const localIso = (d = new Date()) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -74,8 +75,11 @@ export function todayCard(ctx) {
     </article>` : `
     <article class="card today-next">
       <div class="today-title">Nothing planned today</div>
-      <div class="small muted">Enjoy the free day${isOrg ? ' — or add something to the plan' : ''}.</div>
-      ${isOrg ? `<div class="tl-actions"><a class="btn btn-sm btn-secondary" href="#/t/${trip.id}/plan">${icon('plus')}Add a plan</a></div>` : ''}
+      <div class="small muted">Enjoy the free day — or find something to do nearby.</div>
+      <div class="tl-actions">
+        ${trip.destination ? `<button class="btn btn-sm btn-primary" data-today-find="todo">${icon('search')}Find something to do</button>` : ''}
+        ${isOrg ? `<a class="btn btn-sm btn-secondary" href="#/t/${trip.id}/plan">${icon('plus')}Add a plan</a>` : ''}
+      </div>
     </article>`}
 
     ${later.length ? `
@@ -122,6 +126,7 @@ export function todayCard(ctx) {
     </article>` : ''}
 
     <div class="today-actions">
+      ${trip.destination ? `<button class="btn btn-secondary btn-sm" data-today-find="eat">${icon('search')}Find places</button>` : ''}
       <a class="btn btn-secondary btn-sm" href="#/t/${trip.id}/money">${icon('wallet')}Add expense</a>
       <a class="btn btn-secondary btn-sm" href="#/t/${trip.id}/photos">${icon('sparkle')}Add photos</a>
       <a class="btn btn-secondary btn-sm" href="#/t/${trip.id}/plan">${icon('map')}Map</a>
@@ -141,9 +146,11 @@ export function startTodayTicker(el) {
   }, 30000);
 }
 
-export function handleTodayClick(e, { trip }) {
-  const t = e.target.closest('[data-today-live],[data-today-conf],[data-today-ot]');
+export function handleTodayClick(e, ctx) {
+  const { trip } = ctx;
+  const t = e.target.closest('[data-today-live],[data-today-conf],[data-today-ot],[data-today-find]');
   if (!t) return false;
+  if (t.dataset.todayFind) { openExplore(ctx, { category: t.dataset.todayFind }); return true; }
   if (t.dataset.todayLive) {
     const f = trip.flights.find((x) => x.id === t.dataset.todayLive);
     const p = embed.parseFlight(f.flightNumber);

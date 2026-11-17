@@ -8,6 +8,9 @@ import { GOOGLE_MAPS_KEY, GOOGLE_MAP_ID } from '../config.js';
 import { distanceText, middleOf, routeUrl } from '../places.js';
 import { guestsOf, namesOf, calendarOrder } from './common.js';
 
+// "Everyone" for the group's place, names otherwise (matches the Travel card).
+const whoStays = (trip, st) => (st.everyone ? 'Everyone' : namesOf(guestsOf(trip, st), trip.me?.id));
+
 export const hasGoogleKey = Boolean(GOOGLE_MAPS_KEY);
 
 // What Google should search for: the place, near the destination.
@@ -31,7 +34,7 @@ export function stayCardHTML(st, trip) {
     <div class="pin-card">
       <div class="pin-card-head"><span class="pin-num stay">${icon('bed', 'tiny')}</span><b>${esc(st.name)}</b></div>
       ${st.address ? `<div class="pin-row">${icon('pin', 'tiny')}${esc(st.address)}</div>` : ''}
-      ${guestsOf(trip, st).length ? `<div class="pin-row">${avatarStack(guestsOf(trip, st), 5, 20)}<span>${esc(namesOf(guestsOf(trip, st), trip.me?.id))}</span></div>` : ''}
+      ${guestsOf(trip, st).length ? `<div class="pin-row">${avatarStack(guestsOf(trip, st), 5, 20)}<span>${esc(whoStays(trip, st))}</span></div>` : ''}
       ${st.checkIn ? `<div class="pin-row">${icon('calendar', 'tiny')}In ${esc(when(st.checkIn, st.checkInTime))}${st.checkOut ? ` · Out ${esc(when(st.checkOut, st.checkOutTime))}` : ''}</div>` : ''}
       ${st.confirmation ? `<div class="pin-notes">Confirmation: ${esc(st.confirmation)}</div>` : ''}
       <a class="pin-link" href="https://www.google.com/maps/dir/?api=1&destination=${dest}" target="_blank" rel="noopener noreferrer">Directions ${icon('external', 'tiny')}</a>
@@ -70,7 +73,7 @@ export function fromHotelsHTML(it, trip) {
         return `
         <div class="from-row">
           <span class="pin-num stay">${icon('bed', 'tiny')}</span>
-          <div class="from-name"><b>${esc(st.name)}</b>${guests.length ? `<span>${esc(namesOf(guests, trip.me?.id))}</span>` : ''}</div>
+          <div class="from-name"><b>${esc(st.name)}</b>${guests.length ? `<span>${esc(whoStays(trip, st))}</span>` : ''}</div>
           ${dist ? `<span class="from-dist">${esc(dist)}</span>` : ''}
           <a class="pin-link" target="_blank" rel="noopener noreferrer" href="${esc(routeUrl({ lat: st.lat, lon: st.lon, q: stayQuery(st, trip) }, to))}">Route ${icon('external', 'tiny')}</a>
         </div>`;
@@ -185,7 +188,7 @@ function mountEmbed(el, detailEl, trip, pins, stays) {
   const spots = [
     ...stays.map((st) => ({ id: st.id, stay: true, label: icon('bed', 'tiny'), q: at(st) ?? stayQuery(st, trip), card: () => stayCardHTML(st, trip),
       chip: `${icon('bed', 'tiny')}${guestsOf(trip, st).length ? avatarStack(guestsOf(trip, st), 3, 20) : ''}`,
-      title: [st.name, namesOf(guestsOf(trip, st), trip.me?.id)].filter(Boolean).join(' — ') })),
+      title: [st.name, whoStays(trip, st)].filter(Boolean).join(' — ') })),
     ...pins.map((it, i) => ({ id: it.id, label: String(i + 1), title: it.title, q: at(it) ?? placeQuery(it, trip), card: () => cardHTML(it, i + 1, trip) })),
   ];
   const show = (spot) => {

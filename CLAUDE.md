@@ -55,7 +55,8 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
    50 with the category's OSM tags, "Show more" samples further out);
    name search (`searchPlaces()`) is limited to ~40 km around `tripCenter()`
    (the shared stay if pinned, else the destination) and sorted by distance,
-   falling back to further-away results only when nothing local matches.
+   falling back to further-away results only when nothing local matches,
+   and never beyond a day trip (`DAY_TRIP_KM`, ~150 mi).
    The plan/hotel type-ahead uses the same search. Guests can't add plans,
    so they get "Put it to a vote": picks collect in a tray at the bottom of
    the sheet, "Start the vote" adds them to an open poll that takes options
@@ -125,8 +126,13 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
   Function `pin-reset` → `_pin_reset_begin` (6-digit code, 15 min, 5 tries,
   one request / 2 min) → `reset_pin_with_code` sets the PIN and signs out
   every other device. Needs `BREVO_API_KEY` (or `RESEND_API_KEY`) +
-  `EMAIL_FROM` as function secrets — until then the function answers 503
-  and the app says email isn't set up. `EMAIL_ENABLED` (notifications)
+  `EMAIL_FROM` as function secrets — until then the function answers 503.
+  The app asks the function (`{check:true}` → `recoveryEmailAvailable()`)
+  and offers recovery emails (sign-up step, settings row, "Email me a reset
+  code") only once sending works — it switches on by itself when the
+  secrets are added. A brand-new username gets ONE optional last step
+  (`easyBack`: recovery email if available + passkey), not two sheets;
+  signing in to an existing username still gets the passkey offer. `EMAIL_ENABLED` (notifications)
   stays off; this is a separate, narrow use the owner approved. Other ways
   back: Change PIN on a signed-in device, a passkey, or organizer "Let back in".
   `views/username.js` has the sheets, `passkey.js` the browser side;
@@ -194,6 +200,19 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
   print dialog, "Save as PDF" downloads it; card is always shown, wording changes once the trip has ended); non-organizers only receive their own
   expenses (enforced in `get_trip`, which wraps `_get_trip_all` — change trip
   contents in `_get_trip_all`). Family trips default expense splits to shares.
+- During the trip (`isHappening()` in today.js): Home is about today — the
+  organizer's invite card shrinks to one row, "Trip readiness" and flight
+  chasing go away; guests aren't asked to RSVP, add a flight or pack; the
+  "Next up" card only shows when the next thing is on a later day (Today
+  covers today; `nextUp()` skips things that already started). The plan form
+  defaults to today. Today has "Find places" / "Find something to do".
+- My trips: happening-now and upcoming first (soonest at the top), finished
+  trips under "Past trips", most recent first.
+- Plans picked from Find places or the type-ahead store the street address
+  on the place line when the title already names the place (`placeLine()`).
+- `sheet()` removes any closed leftover sheets before opening a new one:
+  the 'close' event can be delayed, and a save button is tied to its form
+  by id (a stale `#item-form` got re-submitted in testing).
 - After the trip (`tripOver()` in common.js, last day in the past): Home
   drops RSVP, to-dos, open polls, weather and arrivals and leads with a
   "That's a wrap" card (settle up / expense report + photos) — UAT finding,

@@ -11,7 +11,7 @@ import { weatherEmbed } from '../places.js';
 import { pollCard, openPolls, needsMyVote, handlePollClick } from './polls.js';
 import { photoStrip } from './photos.js';
 import { appCard, handleAppCardClick } from './getapp.js';
-import { todayCard, handleTodayClick, startTodayTicker } from './today.js';
+import { todayCard, handleTodayClick, startTodayTicker, isHappening } from './today.js';
 
 export function render(el, ctx) {
   el.innerHTML = ctx.isOrg ? organizerHome(ctx) : guestHome(ctx);
@@ -22,6 +22,10 @@ export function render(el, ctx) {
 function nextUpCard({ trip }) {
   const n = nextUp(trip);
   if (!n) return '';
+  // During the trip, Today (above) already shows what's next today.
+  const d = new Date();
+  const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  if (isHappening(trip) && n.day === today) return '';
   return `
     <a class="card row-link" href="#/t/${trip.id}/${n.kind === 'checkin' ? 'travel' : 'plan'}" style="display:flex;gap:14px;align-items:center;text-decoration:none">
       <div class="tl-icon ${n.opentableRid ? 'ot' : ''}">${icon(n.kind === 'checkin' ? 'bed' : n.opentableRid ? 'utensils' : 'calendar')}</div>
@@ -50,9 +54,12 @@ function organizerHome(ctx) {
   ];
   const pct = Math.round((steps.filter((s) => s.done).length / steps.length) * 100);
 
+  // While the trip is on, Home is about today: no readiness list, no flight
+  // chasing, and the invite shrinks to one row.
+  const live = isHappening(trip);
   const waiting = [
     ...people.filter((m) => !m.joined).map((m) => ({ m, why: "Hasn't joined yet", kind: 'join' })),
-    ...g.filter((m) => m.joined && !flightsOf(trip, m.id).length && m.id !== trip.me.id).map((m) => ({ m, why: 'No flight yet', kind: 'flight' })),
+    ...(live ? [] : g.filter((m) => m.joined && !flightsOf(trip, m.id).length && m.id !== trip.me.id).map((m) => ({ m, why: 'No flight yet', kind: 'flight' }))),
   ];
   const spent = trip.expenses.reduce((s, e) => s + e.amount, 0);
 
@@ -79,10 +86,18 @@ function organizerHome(ctx) {
       <button class="btn btn-icon btn-sm chip glass" style="width:36px;height:36px;padding:0" data-action="edit-trip" aria-label="Edit trip">${icon('pencil')}</button>` })}
     ${todayCard(ctx)}
 
+    ${live ? `
+    <section class="card" style="display:flex;align-items:center;gap:12px">
+      <div class="tl-icon">${icon('users')}</div>
+      <div class="grow" style="flex:1;min-width:0"><div style="font-weight:600">Invite link</div>
+        <div class="small muted">Someone joining late? Send them this.</div></div>
+      <button class="btn btn-sm btn-secondary" data-action="copy-invite" aria-label="Copy invite link">${icon('copy')}Copy</button>
+      <button class="btn btn-sm btn-accent" data-action="share-invite">${icon('share')}Share</button>
+    </section>` : `
     <section class="card invite-card-org stack">
       <div>
         <h2>Invite your ${words(trip).crew}</h2>
-        <p class="hint" style="margin-top:4px">Anyone with this link can join, add their flight and split costs.</p>
+        <p class="hint" style="margin-top:4px">Anyone with this link can join, add their flight and ${isBusiness(trip) ? 'log their expenses' : 'split costs'}.</p>
       </div>
       <div class="link-box"><code>${esc(store.inviteLink(trip.id))}</code>
         <button class="btn btn-sm btn-secondary" data-action="copy-invite">${icon('copy')}Copy</button></div>
@@ -105,7 +120,7 @@ function organizerHome(ctx) {
             </${s.href ? 'a' : 'button'}>`).join('')}
         </div>
       </div>
-    </section>
+    </section>`}
 
     ${waiting.length ? `
     <section>
@@ -205,10 +220,11 @@ function guestHome(ctx) {
   const unclaimed = trip.lists.filter((l) => !l.personal && !l.claimedBy).length;
   const toVote = needsMyVote(trip).length;
   const toReimburse = trip.expenses.filter((e) => e.paidBy === me.id && !e.companyPaid && !e.reimbursed).reduce((t, e) => t + e.amount, 0);
+  const live = isHappening(trip); // you're there: no RSVP, arrival or packing prompts
   const todos = [
-    { done: myFlights.length > 0, title: 'Add your flight', sub: myFlights.length ? `${myFlights[0].flightNumber} · ${fmtDay(myFlights[0].date)}` : 'So we know when you land', action: 'add-flight', hide: me.rsvp === 'declined' },
+    { done: myFlights.length > 0, title: 'Add your flight', sub: myFlights.length ? `${myFlights[0].flightNumber} · ${fmtDay(myFlights[0].date)}` : 'So we know when you land', action: 'add-flight', hide: me.rsvp === 'declined' || live },
     { done: Boolean(me.venmo), title: 'Add your Venmo', sub: me.venmo ? `@${me.venmo}` : `So ${words(trip).crew === 'crew' ? 'friends' : 'everyone'} can pay you back in one tap`, action: 'me', hide: isBusiness(trip) },
-    { done: myList.length > 0 && myList.every((l) => l.done), title: 'Pack your bag', sub: myList.length ? `${myList.filter((l) => l.done).length} of ${myList.length} packed` : 'Your private packing list', href: 'lists', hide: me.rsvp === 'declined' },
+    { done: myList.length > 0 && myList.every((l) => l.done), title: 'Pack your bag', sub: myList.length ? `${myList.filter((l) => l.done).length} of ${myList.length} packed` : 'Your private packing list', href: 'lists', hide: me.rsvp === 'declined' || live },
     ...(toVote ? [{ done: false, title: `Vote in ${toVote} poll${toVote === 1 ? '' : 's'}`, sub: 'The group is deciding', href: 'polls' }] : []),
     ...(unclaimed && trip.privacy !== 'private' ? [{ done: false, title: 'Help cover the group list', sub: `${unclaimed} thing${unclaimed === 1 ? '' : 's'} nobody's bringing yet`, href: 'lists' }] : []),
     ...(bal < 0 && !isBusiness(trip) ? [{ done: false, title: 'Settle up', sub: `You owe ${fmt(-bal, trip.currency)}`, href: 'money' }] : []),
@@ -230,14 +246,16 @@ function guestHome(ctx) {
       : bal < 0 ? { title: `You owe ${fmt(-bal, trip.currency)}`, sub: 'Pay with Venmo, then mark it paid', href: 'money', cta: 'Settle up' }
       : bal > 0 ? { title: `You're owed ${fmt(bal, trip.currency)}`, sub: 'Friends can pay you from the Money tab', href: 'money', cta: 'Money' }
       : { title: 'All square', sub: 'Nothing left to settle — thanks for coming', href: 'money', cta: 'Money' }) : `
+    ${live ? '' : `
     <section class="card stack">
       <div><h2>Are you going?</h2></div>
       <div class="segmented" role="group" aria-label="RSVP">
         ${[['going', 'Going'], ['maybe', 'Maybe'], ['declined', "Can't go"]].map(([v, l]) =>
           `<button data-rsvp="${v}" class="${me.rsvp === v ? 'on' : ''}" aria-pressed="${me.rsvp === v}">${l}</button>`).join('')}
       </div>
-    </section>
+    </section>`}
 
+    ${todos.length ? `
     <section>
       <div class="section-head"><h2>Your to-dos</h2><span class="sub">${left ? `${done ? `${done} done · ` : ''}${left} left` : 'All set'}</span></div>
       <div class="card card-tight rows">
@@ -248,18 +266,20 @@ function guestHome(ctx) {
             ${t.done && !t.action ? '' : icon('chevron')}
           </${t.href ? 'a' : 'button'}>`).join('')}
       </div>
-    </section>`}
+    </section>` : ''}`}
 
     <section class="stack">
       ${nextUpCard(ctx)}
-      <div class="stat-grid">
+      ${over ? '' : `<div class="stat-grid">
         ${isBusiness(trip) ? `<a class="stat" href="#/t/${trip.id}/money" style="text-decoration:none">
           <div class="num">${fmt(toReimburse, trip.currency)}</div><div class="lbl">To be reimbursed</div></a>` : `
         <a class="stat" href="#/t/${trip.id}/money" style="text-decoration:none">
           <div class="num ${bal > 0 ? 'amt pos' : bal < 0 ? 'amt neg' : ''}">${fmt(Math.abs(bal), trip.currency)}</div>
           <div class="lbl">${bal > 0 ? "You're owed" : bal < 0 ? 'You owe' : 'All square'}</div></a>`}
-        <a class="stat" href="#/t/${trip.id}/people" style="text-decoration:none"><div class="num">${going(trip).length}</div><div class="lbl">Going</div></a>
-      </div>
+        ${trip.memberCount != null
+          ? `<a class="stat" href="#/t/${trip.id}/people" style="text-decoration:none"><div class="num">${trip.memberCount}</div><div class="lbl">People</div></a>`
+          : `<a class="stat" href="#/t/${trip.id}/people" style="text-decoration:none"><div class="num">${going(trip).length}</div><div class="lbl">Going</div></a>`}
+      </div>`}
     </section>
 
     ${extras(ctx)}

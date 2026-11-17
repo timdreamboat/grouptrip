@@ -47,10 +47,10 @@ export function openMe(ctx) {
       </div>
 
       <div class="card" style="margin-top:12px;box-shadow:none">
-        <h3 style="display:flex;align-items:center;gap:8px">${icon('users')}Your username</h3>
+        <h3 style="display:flex;align-items:center;gap:8px">${icon('users')}Your username &amp; sign-in</h3>
         ${store.username()
-          ? `<p class="hint" style="margin:6px 0 12px">You're <b>@${esc(store.username())}</b>. Enter it on any phone or laptop to see your trips there.</p>
-             <button class="btn btn-secondary btn-block" data-account>${icon('users')}Switch username</button>`
+          ? `<p class="hint" style="margin:6px 0 12px">You're <b>@${esc(store.username())}</b>. Your username and PIN bring your trips to any phone or laptop.</p>
+             <button class="btn btn-secondary btn-block" data-account>${icon('lock')}Username, PIN &amp; passkeys</button>`
           : `<p class="hint" style="margin:6px 0 12px">This trip is only on this device. Pick a username to see it anywhere.</p>
              <button class="btn btn-secondary btn-block" data-account>${icon('users')}Pick a username</button>`}
       </div>

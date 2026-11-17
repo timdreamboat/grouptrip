@@ -156,7 +156,7 @@ export function openExplore(ctx, { category = 'eat', onPick = null } = {}) {
           return;
         }
         if (mine !== ticket) return; // a newer search replaced this one
-        if (!places.length) return state(text ? `No "${text}" found` : `No ${cat.label.toLowerCase()} found nearby`, text ? 'Try a different name, or pick a category.' : 'Try another category, or search by name.');
+        if (!places.length) return state(text ? `No "${text}" near ${center.label.split(',')[0]}` : `No ${cat.label.toLowerCase()} found nearby`, text ? 'Try a different name, or pick a category.' : 'Try another category, or search by name.');
         drawList();
       };
 
@@ -236,7 +236,7 @@ export function openExplore(ctx, { category = 'eat', onPick = null } = {}) {
         const use = e.target.closest('[data-use]');
         if (use) {
           const p = places[open];
-          const picked = { name: p.name, lat: p.lat, lon: p.lon, label: [p.name, p.address].filter(Boolean).join(', ') };
+          const picked = { name: p.name, short: p.short, lat: p.lat, lon: p.lon, label: [p.name, p.address].filter(Boolean).join(', ') };
           close();
           if (onPick) return onPick(picked);
           const { openAddItem } = await import('./plan.js');

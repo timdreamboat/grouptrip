@@ -188,6 +188,7 @@ export function routeUrl(from, to) {
 // have a trip in Los Angeles I should only see options in Los Angeles,
 // closest to furthest").
 const AREA_KM = 40; // "in the city": the metro area around the trip
+const DAY_TRIP_KM = 250; // the furthest a search ever reaches (about 150 mi)
 
 // Where "near" is measured from: the place everyone's staying (if it has a
 // pin), else the destination's center — looked up once if the trip has none.
@@ -219,11 +220,12 @@ function toPlace({ properties: p, geometry }, from, miles) {
   const [lon, lat] = geometry.coordinates;
   const town = p.city || p.town || p.village || p.district || p.county || '';
   const km = from ? distanceKm(from, { lat, lon }) : null;
-  const dist = km == null ? '' : km < 0.08 ? 'right here' : distanceText(from, { lat, lon }, miles);
+  const dist = km == null ? '' : km < 0.08 ? (miles ? '< 0.1 mi' : '< 100 m') : distanceText(from, { lat, lon }, miles);
   const where = [p.name && street ? street : null, town, p.state].filter((x) => x && x !== name).join(', ');
   return {
     name, lat, lon, km, dist, kind: kindName(p.osm_value), town, street: p.osm_key === 'highway',
     address: [street || null, town, p.state, p.postcode].filter(Boolean).join(', '),
+    short: p.name && street ? [street, town].filter(Boolean).join(', ') : '', // "333 South Alameda Street, Los Angeles"
     detail: [dist, where || p.country].filter(Boolean).join(' · '),
   };
 }
@@ -264,8 +266,9 @@ export async function nearbyPlaces(center, tags, { radiusKm = AREA_KM, miles = t
 export const mergePlaces = (a, b) => tidy([...a, ...b]);
 
 // Places by name around a point, closest first. Only the trip's area; when
-// nothing there matches, `wide: true` results from further away (each row
-// says how far), so a day trip out of town can still be found.
+// nothing there matches, `wide: true` results from up to a day trip away
+// (each row says how far). Beyond that, nothing: "Ace Hotel" on a Los Angeles
+// trip must not offer Pittsburgh.
 // `streets: false` leaves out roads (the finder wants places to go; the plan
 // form's type-ahead keeps them, for addresses).
 export async function searchPlaces(text, center, { tags = [], miles = true, signal, limit = 30, streets = true } = {}) {
@@ -282,7 +285,8 @@ export async function searchPlaces(text, center, { tags = [], miles = true, sign
   if (!center) return { places: (await ask(false)).slice(0, limit), wide: false };
   const local = (await ask(true)).filter((p) => p.km <= AREA_KM * 1.5);
   if (local.length) return { places: local.slice(0, limit), wide: false };
-  return { places: (await ask(false)).slice(0, Math.min(limit, 8)), wide: true };
+  // Nothing local: a day trip away at most — never across the country.
+  return { places: (await ask(false)).filter((p) => p.km <= DAY_TRIP_KM).slice(0, Math.min(limit, 8)), wide: true };
 }
 
 // Type-ahead for the place fields in the plan and hotel forms. `near` is a

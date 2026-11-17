@@ -54,11 +54,14 @@ export const calendarOrder = (a, b) => a.day.localeCompare(b.day)
   || (a.time || '').localeCompare(b.time || '');
 
 // The next thing on the calendar, check-in or plan.
+// Today's things that have already started don't count (same rule as Today's "Next").
 export function nextUp(trip) {
   const now = new Date();
-  const todayIso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const two = (n) => String(n).padStart(2, '0');
+  const todayIso = `${now.getFullYear()}-${two(now.getMonth() + 1)}-${two(now.getDate())}`;
+  const clock = `${two(now.getHours())}:${two(now.getMinutes())}`;
   const dated = [...myPlans(trip).filter((i) => i.day), ...myCheckIns(trip)].sort(calendarOrder);
-  return dated.find((i) => i.day >= todayIso) ?? null;
+  return dated.find((i) => i.day > todayIso || (i.day === todayIso && (!i.time || i.time >= clock))) ?? null;
 }
 
 export function heroHTML(trip, { top = '', size = 'lg' } = {}) {

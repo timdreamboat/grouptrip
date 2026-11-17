@@ -117,6 +117,36 @@ function passkeyOffer(box, head, close) {
   box.querySelector('[data-add]').onclick = async (e) => { if (await addPasskey(e.currentTarget)) close(); };
 }
 
+// Brand-new username: one optional last step instead of two — a recovery
+// email (only when reset emails can be sent) and/or a passkey. "Done" moves on.
+function easyBack(box, head, close, { offerPasskey, canEmail }) {
+  if (offerPasskey) pkSave({ count: pkState().count + 1, at: Date.now() });
+  head.textContent = "You're in — one optional thing";
+  box.innerHTML = `
+    <form class="form" novalidate>
+      <p class="hint" style="margin:0">Make it easy to get back in later. ${offerPasskey && canEmail ? 'Skip either if you like — both live' : 'Skip it if you like — it lives'} under your username.</p>
+      ${canEmail ? `<label class="field"><span>Recovery email — if you forget your PIN</span>
+        <input name="email" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com"></label>
+        <p class="hint" style="margin:-8px 0 0">Only ever used to send a reset code.</p>` : ''}
+      ${offerPasskey ? `<button type="button" class="btn btn-secondary btn-block" data-add>${icon('lock')}Use Face ID or fingerprint next time</button>` : ''}
+      <button class="btn btn-primary btn-lg btn-block">Done ${icon('arrow')}</button>
+    </form>`;
+  const form = box.querySelector('form');
+  form.querySelector('[data-add]')?.addEventListener('click', async (e) => {
+    const b = e.currentTarget;
+    if (await addPasskey(b)) { b.disabled = true; b.innerHTML = `${icon('check')}Passkey saved`; }
+  });
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    const email = form.elements.email?.value.trim();
+    if (email) {
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { form.elements.email.focus(); return toast("That email address doesn't look right", { error: true }); }
+      if (!(await busy(form.querySelector('.btn-primary'), () => store.setRecoveryEmail(email)))) return;
+    }
+    close();
+  };
+}
+
 // Later: My trips asks once every few days, at most 3 times in all.
 export async function maybeOfferPasskey() {
   if (!(await shouldOffer({ later: true })) || document.querySelector('dialog[open]')) return;
@@ -139,12 +169,14 @@ export function askUsername({ title = 'Your username', reason = 'Your trips are 
         let status = null;
         dlg.addEventListener('close', () => resolve(done));
 
-        const finish = async (proof, { viaPasskey = false } = {}) => {
+        const finish = async (proof, { viaPasskey = false, isNew = false } = {}) => {
           const r = await store.signedIn(proof);
           done = proof.username;
           if (viaPasskey) pkSave({ here: true });
           if (r.trips?.length) toast(`Welcome back, @${proof.username} — ${r.trips.length} trip${r.trips.length === 1 ? '' : 's'} found`);
-          if (await shouldOffer({ later: false })) passkeyOffer(box, head, close);
+          const [offerPasskey, canEmail] = await Promise.all([shouldOffer({ later: false }), isNew ? store.recoveryEmailAvailable() : false]);
+          if (isNew && (offerPasskey || canEmail)) easyBack(box, head, close, { offerPasskey, canEmail });
+          else if (offerPasskey) passkeyOffer(box, head, close);
           else close();
         };
         const signInWithPasskey = async (btn, name = null) => {
@@ -177,30 +209,6 @@ export function askUsername({ title = 'Your username', reason = 'Your trips are 
           };
         };
 
-        // Optional recovery email, asked once when the PIN is created.
-        const emailStep = (name, pin) => {
-          head.textContent = 'If you forget your PIN';
-          box.innerHTML = `
-            <form class="form" novalidate>
-              <p class="hint" style="margin:0">Add an email and we can send you a reset code. It's used for nothing else — no trip updates, ever.</p>
-              <input class="input input-xl" name="email" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" aria-label="Recovery email" style="font-size:18px">
-              <button class="btn btn-primary btn-lg btn-block">Save and continue ${icon('arrow')}</button>
-              <button type="button" class="btn btn-ghost btn-block" data-skip>Skip for now</button>
-            </form>`;
-          const form = box.querySelector('form');
-          setTimeout(() => form.elements.email.focus(), 50);
-          const go = async (btn, email) => {
-            const r = await busy(btn, () => store.createPin(name, pin, email));
-            if (r) await finish(r);
-          };
-          form.onsubmit = (e) => {
-            e.preventDefault();
-            const email = form.elements.email.value.trim();
-            if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { form.elements.email.focus(); return toast("That email address doesn't look right", { error: true }); }
-            go(form.querySelector('.btn-primary'), email);
-          };
-          form.querySelector('[data-skip]').onclick = (e) => go(e.currentTarget, null);
-        };
         // "Email me a reset code": the code, then a new PIN.
         const codeStep = (name, error = null) => {
           head.textContent = 'Check your email';
@@ -245,7 +253,7 @@ export function askUsername({ title = 'Your username', reason = 'Your trips are 
                 </div>
                 <div data-forgot-text hidden class="stack" style="gap:10px">
                   ${s.canReset ? `<button type="button" class="btn btn-secondary btn-block" data-email-code>${icon('bell')}Email me a reset code</button>` : ''}
-                  <p class="hint" style="margin:0">${s.canReset ? 'Or, on' : 'No recovery email is set for this username. On'} a phone or laptop where you're still in GroupTripIt, tap
+                  <p class="hint" style="margin:0">${s.canReset ? 'Or, on' : 'On'} a phone or laptop where you're still in GroupTripIt, tap
                   your username and choose <b>Change PIN</b>. Or use your passkey. Otherwise, ask a trip's organizer to
                   <b>Let you back in</b> — you'll rejoin with a new username, and your RSVP, flights and expenses stay.</p>
                 </div>`,
@@ -266,7 +274,7 @@ export function askUsername({ title = 'Your username', reason = 'Your trips are 
               intro: `${s.taken ? `Add a 6-digit PIN to ${who} so only you can use it.` : `Pick a 6-digit PIN for ${who}.`}
                 You'll enter it when you use GroupTripIt on a new phone or laptop.`,
               extra: `<div style="text-align:center">${other}</div>`,
-              onPin: async (pin) => emailStep(s.username, pin),
+              onPin: async (pin) => finish(await store.createPin(s.username, pin), { isNew: true }),
               onRedraw: wireOther,
             });
           }
@@ -311,12 +319,13 @@ export function openUsername() {
           ${pk.passkeySupported() ? `<button class="btn btn-secondary btn-block" data-add>${icon('plus')}Add a passkey</button>` : ''}
           <button class="btn btn-secondary btn-block" data-pin>${icon('lock')}Change PIN</button>
         </div>
+        <div data-recovery hidden>
         <h3 style="display:flex;align-items:center;gap:8px;margin:18px 0 6px">${icon('bell')}If you forget your PIN</h3>
         <div class="row" style="min-height:48px;padding:6px 0">
           <div class="grow"><div style="font-weight:600" data-email>Loading…</div>
             <div class="small muted">Only used to send a reset code — never trip updates.</div></div>
           <button class="btn btn-xs btn-secondary" data-set-email>Change</button>
-        </div>` : `
+        </div></div>` : `
         <button class="btn btn-primary btn-block" data-unlock>${icon('lock')}Enter your PIN</button>
         <p class="hint" style="margin:6px 0 0">This device hasn't been checked with your PIN yet.</p>`}
       <button class="btn btn-ghost btn-block" data-switch style="margin-top:8px">${icon('logout')}Use a different username</button>`,
@@ -340,7 +349,8 @@ export function openUsername() {
       draw();
       const emailEl = dlg.querySelector('[data-email]');
       const drawEmail = async () => {
-        if (!emailEl) return;
+        if (!emailEl || !(await store.recoveryEmailAvailable())) return;
+        dlg.querySelector('[data-recovery]').hidden = false;
         try {
           const email = await store.recoveryEmail();
           emailEl.textContent = email || 'No recovery email yet';

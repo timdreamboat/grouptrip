@@ -243,6 +243,8 @@ trips with "zz-…" usernames for tests and delete them after.
 
 ## Pending on the owner
 0. **Email secrets for PIN recovery** — see "PIN recovery by email" above.
+   Since 2026-11-17 the app hides every recovery-email prompt until these
+   exist, and shows them by itself once they do (no deploy needed).
 - **Claim the name** — grouptripit.com (and grouptripit.app) were
   unregistered on 2026-09-28, and @grouptripit looked free on Instagram,
   TikTok, X, Facebook, YouTube, Pinterest, Bluesky and GitHub. Once the

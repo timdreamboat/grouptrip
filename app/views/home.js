@@ -7,32 +7,16 @@ export function render(root) {
   document.title = 'GroupTripIt';
   const user = store.username();
   const trips = store.listTrips().filter((t) => t.role !== 'invited');
-  const sorted = [...trips].sort((a, b) => (a.startDate || '9999').localeCompare(b.startDate || '9999'));
-
-  root.innerHTML = `
-    <div class="site">
-      <header class="site-head">
-        <a class="brand" href="#/"><span class="brand-mark">${icon('plane')}</span>GroupTripIt</a>
-        <div style="display:flex;gap:8px;align-items:center">
-          ${trips.length ? `<a class="btn btn-primary btn-sm" href="#/new">${icon('plus')}New trip</a>` : ''}
-          ${user ? `<button class="btn btn-secondary btn-sm" data-account aria-label="Your username"><span style="max-width:96px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">@${esc(user)}</span></button>`
-                 : `<button class="btn btn-secondary btn-sm" data-signin>Enter username</button>`}
-        </div>
-      </header>
-      ${!user && trips.length ? `
-      <div class="card report-cta" style="margin-top:18px">
-        <div class="grow"><div class="title">Pick a username</div>
-          <div class="sub">Your trips get saved under it, so you can see them on any device.</div></div>
-        <button class="btn btn-primary btn-sm" data-signin>Pick username</button>
-      </div>` : ''}
-
-      ${trips.length ? `
-        <div class="page-head" style="margin-top:24px"><div><h1 class="display">My trips</h1>
-          <div class="sub">${trips.length} trip${trips.length === 1 ? '' : 's'}${user ? '' : ' on this device'}</div></div></div>
-        <div class="trip-grid">
-          ${sorted.map((t) => {
-            const cd = countdown(t);
-            return `
+  // Happening now and upcoming first (soonest at the top, undated last);
+  // finished trips go under "Past trips", most recent first.
+  const d = new Date();
+  const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const isPast = (t) => Boolean(t.startDate) && (t.endDate || t.startDate) < today;
+  const current = trips.filter((t) => !isPast(t)).sort((a, b) => (a.startDate || '9999').localeCompare(b.startDate || '9999'));
+  const past = trips.filter(isPast).sort((a, b) => (b.endDate || b.startDate).localeCompare(a.endDate || a.startDate));
+  const card = (t) => {
+    const cd = countdown(t);
+    return `
             <div class="trip-card-wrap">
             <a class="trip-card" href="#/t/${esc(t.id)}">
               <div class="cover" style="background:${esc(coverBg(t.destination || t.name, t.cover))}">
@@ -49,9 +33,35 @@ export function render(root) {
             </a>
             <button class="card-menu" data-menu="${esc(t.id)}" aria-label="Options for ${esc(t.name)}">${icon('more')}</button>
             </div>`;
-          }).join('')}
+  };
+
+  root.innerHTML = `
+    <div class="site">
+      <header class="site-head">
+        <a class="brand" href="#/"><span class="brand-mark">${icon('plane')}</span>GroupTripIt</a>
+        <div style="display:flex;gap:8px;align-items:center">
+          ${trips.length ? `<a class="btn btn-primary btn-sm" href="#/new" aria-label="New trip">${icon('plus')}<span class="hide-sm">New trip</span></a>` : ''}
+          ${user ? `<button class="btn btn-secondary btn-sm" data-account aria-label="Your username"><span style="max-width:96px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">@${esc(user)}</span></button>`
+                 : `<button class="btn btn-secondary btn-sm" data-signin>Enter username</button>`}
+        </div>
+      </header>
+      ${!user && trips.length ? `
+      <div class="card report-cta" style="margin-top:18px">
+        <div class="grow"><div class="title">Pick a username</div>
+          <div class="sub">Your trips get saved under it, so you can see them on any device.</div></div>
+        <button class="btn btn-primary btn-sm" data-signin>Pick username</button>
+      </div>` : ''}
+
+      ${trips.length ? `
+        <div class="page-head" style="margin-top:24px"><div><h1 class="display">My trips</h1>
+          <div class="sub">${trips.length} trip${trips.length === 1 ? '' : 's'}${user ? '' : ' on this device'}</div></div></div>
+        <div class="trip-grid">
+          ${current.map(card).join('')}
           <a class="new-card" href="#/new"><span class="tl-icon">${icon('plus')}</span>Plan a new trip</a>
-        </div>`
+        </div>
+        ${past.length ? `
+        <div class="section-head" style="margin:28px 2px 12px"><h2>Past trips</h2><span class="sub">${past.length}</span></div>
+        <div class="trip-grid">${past.map(card).join('')}</div>` : ''}`
       : `
         <section class="landing">
           <span class="chip accent">${icon('sparkle')}Free · no account needed · works on any phone</span>

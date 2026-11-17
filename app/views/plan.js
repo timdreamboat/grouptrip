@@ -4,7 +4,8 @@
 import { esc, icon, avatar, fmtDay, fmtTime, tripDays, sheet, embedSheet, confirmSheet, busy, toast, copy, emptyState, safeUrl, siteName, suggest } from '../ui.js';
 import * as store from '../store.js';
 import * as embed from '../embeds.js';
-import { going, organizer, firstName, nameOf, words, isPrivate, isSharedStay } from './common.js';
+import { going, organizer, firstName, nameOf, words, isPrivate, isSharedStay, tripOver } from './common.js';
+import { isHappening } from './today.js';
 import { handleStayClick } from './stays.js';
 import { mountTripMap, focusPin, pinned, staysOnMap, stayQuery, hasGoogleKey, googleFindPlace, placeQuery, fromHotelsHTML } from './tripmap.js';
 import { distanceText, placeSuggester, tripCenter } from '../places.js';
@@ -83,7 +84,7 @@ export function render(el, ctx) {
           `<option value="${esc(m.id)}" ${who === m.id ? 'selected' : ''}>${esc(nameOfMember(m))}'s schedule</option>`).join('')}
       </select></label>`) : ''}
 
-    ${trip.destination ? exploreStrip() : ''}
+    ${trip.destination && !tripOver(trip) ? exploreStrip() : ''}
 
     ${mapCard(trip)}
 
@@ -288,6 +289,12 @@ function item(it, { isOrg, trip }, pinNo = 0) {
 }
 
 // Add a plan, or edit one (preset.item). preset.title pre-fills a new plan.
+const todayIso = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+// What goes on a plan's place line for a picked place: its street address when
+// the title already names it ("Dinner at Tokyo Haus"), else "Name, address".
+const placeLine = (p, title) => (!p.short ? p.name
+  : title.toLowerCase().includes(p.name.toLowerCase()) ? p.short : `${p.name}, ${p.short}`);
+
 export function openAddItem(ctx, day, preset = {}) {
   const { trip } = ctx;
   const it = preset.item;
@@ -300,7 +307,7 @@ export function openAddItem(ctx, day, preset = {}) {
       <form class="form" id="item-form">
         <label class="field"><span>What's the plan?</span><input name="title" required maxlength="200" placeholder="Dinner at the lake house" value="${esc(it?.title ?? preset.title ?? '')}"></label>
         <div class="grid-2">
-          <label class="field"><span>Day</span><input type="date" name="day" value="${it ? v('day') : esc(day || trip.startDate || '')}"></label>
+          <label class="field"><span>Day</span><input type="date" name="day" value="${it ? v('day') : esc(day || (isHappening(trip) ? todayIso() : trip.startDate) || '')}"></label>
           <label class="field"><span>Time</span><input type="time" name="time" value="${v('time')}"></label>
         </div>
         <div class="field"><span>Who's it for?</span>
@@ -372,8 +379,9 @@ export function openAddItem(ctx, day, preset = {}) {
       const pin = (p) => {
         clearTimeout(timer);
         const label = p.label ?? [p.name, p.address].filter(Boolean).join(', ');
-        form.elements.place.value = p.name;
-        found = { q: p.name, hit: { lat: p.lat, lon: p.lon, label } };
+        const line = placeLine(p, form.elements.title.value);
+        form.elements.place.value = line;
+        found = { q: line, hit: { lat: p.lat, lon: p.lon, label } };
         status.className = 'place-status found';
         status.innerHTML = `${icon('pin', 'tiny')}Pinned: ${esc(label)}
           <iframe class="place-preview" title="Map preview" loading="lazy" src="${esc(embed.mapEmbed(label))}"></iframe>`;
@@ -385,7 +393,7 @@ export function openAddItem(ctx, day, preset = {}) {
       });
       if (!it && preset.place) pin(preset.place);
       dlg.querySelector('[data-find]')?.addEventListener('click', () => openExplore(ctx, {
-        onPick: (p) => { pin(p); if (!form.elements.title.value.trim()) form.elements.title.value = p.name; },
+        onPick: (p) => { if (!form.elements.title.value.trim()) form.elements.title.value = p.name; pin(p); },
       }));
 
       const forBox = dlg.querySelector('#for-people');

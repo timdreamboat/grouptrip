@@ -98,7 +98,8 @@ export function render(el, ctx) {
             const effect = iPaid ? e.amount - myShare : -myShare;
             const canEdit = isOrg || iPaid || e.createdBy === meId;
             const how = e.splitMode === 'equal' || !e.splitMode
-              ? (e.splits.length === trip.members.length ? 'split with everyone' : `split ${e.splits.length} ways`)
+              ? (e.splits.length === 1 ? `just ${e.splits[0].memberId === meId ? 'you' : who(e.splits[0].memberId)}`
+                : e.splits.length === trip.members.length ? 'split with everyone' : `split ${e.splits.length} ways`)
               : e.splitMode === 'shares' ? 'split by shares' : 'split by amounts';
             return `
             <div class="row">
@@ -111,7 +112,7 @@ export function render(el, ctx) {
               </div>
               <div style="text-align:right">
                 <div class="amt ${effect > 0 ? 'pos' : effect < 0 ? 'neg' : ''}">${effect === 0 ? '—' : money(Math.abs(effect))}</div>
-                <div class="small muted">${effect > 0 ? 'you lent' : effect < 0 ? 'you owe' : 'not involved'}</div>
+                <div class="small muted">${effect > 0 ? 'you lent' : effect < 0 ? 'you owe' : iPaid || myShare ? 'your own' : 'not involved'}</div>
               </div>
               ${canEdit ? `<div style="display:flex;flex-direction:column">
                 <button class="btn btn-icon btn-xs btn-ghost" style="width:30px" data-edit="${e.id}" aria-label="Edit expense">${icon('pencil')}</button>
