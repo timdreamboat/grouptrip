@@ -129,7 +129,9 @@ export async function handlePollClick(e, ctx) {
 }
 
 // ---------- new poll ----------
-function openNewPoll(ctx, preset = { kind: 'text', question: '' }) {
+// preset.options pre-fills the choices (Find places → "Put it to a vote");
+// preset.onDone runs after the poll is saved instead of the usual refresh.
+export function openNewPoll(ctx, preset = { kind: 'text', question: '' }) {
   let kind = preset.kind;
   const { trip } = ctx;
   const textRow = (v = '') => `<div class="opt-input"><input class="input" name="opt" maxlength="200" placeholder="Option" value="${esc(v)}"></div>`;
@@ -162,7 +164,9 @@ function openNewPoll(ctx, preset = { kind: 'text', question: '' }) {
         form.elements.question.placeholder = k === 'date' ? 'Which dates work?' : 'Where should we eat?';
         opts.innerHTML = k === 'date'
           ? dateRow(trip.startDate || '', trip.endDate || '') + dateRow()
-          : textRow() + textRow();
+          : k === preset.kind && preset.options?.length
+            ? preset.options.map(textRow).join('') + (preset.options.length < 2 ? textRow() : '')
+            : textRow() + textRow();
       };
       setKind(kind);
       dlg.querySelectorAll('[data-kind]').forEach((b) => b.onclick = () => setKind(b.dataset.kind));
@@ -184,7 +188,7 @@ function openNewPoll(ctx, preset = { kind: 'text', question: '' }) {
           question: form.elements.question.value.trim() || form.elements.question.placeholder,
           kind, multi: form.elements.multi.checked, allowAdd: form.elements.allowAdd.checked, options,
         }));
-        if (ok) { close(); ctx.refresh('Poll started — share it with the group'); }
+        if (ok) { close(); if (preset.onDone) preset.onDone(); else ctx.refresh('Poll started — share it with the group'); }
       };
     },
   });

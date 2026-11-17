@@ -269,9 +269,6 @@ trips with "zz-…" usernames for tests and delete them after.
   plan" with the ticket link) need a free Ticketmaster Discovery API key
   (developer.ticketmaster.com) set as an Edge Function secret — offered to
   the owner 2026-11-17, not built.
-- Guests can browse Find places but only the organizer can add plans; a
-  "put it to a vote" button (new poll pre-filled with the place) is the
-  natural next step.
 - App Store + Google Play (native apps): plan drafted in
   `docs/APP-STORES.md` (Capacitor shell around `app/`). Owner: no changes yet.
 - South Lake Tahoe's Wikidata photo is a dusk street scene (picker's one weak

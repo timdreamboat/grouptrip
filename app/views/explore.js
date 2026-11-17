@@ -3,16 +3,17 @@
 // for this). Places come from OpenStreetMap through Photon (free, keyless);
 // reviews, photos and hours stay on Google Maps, tables on OpenTable and
 // tickets on the ticket sites — each opens on its own site.
-import { esc, icon, sheet, toast } from '../ui.js';
+import { esc, icon, sheet, toast, busy } from '../ui.js';
+import * as store from '../store.js';
 import * as embed from '../embeds.js';
 import { tripCenter, nearbyPlaces, searchPlaces, mergePlaces } from '../places.js';
 import { words } from './common.js';
 
 // OpenStreetMap tags per category; `plan` names the plan ("Dinner at …").
 export const CATEGORIES = [
-  { id: 'eat', label: 'Restaurants', emoji: '🍽', tags: ['amenity:restaurant'], plan: (n) => `Dinner at ${n}`, opentable: true },
-  { id: 'drinks', label: 'Bars & nightlife', emoji: '🍸', tags: ['amenity:bar', 'amenity:pub', 'amenity:nightclub', 'amenity:biergarten'], plan: (n) => `Drinks at ${n}` },
-  { id: 'coffee', label: 'Coffee', emoji: '☕', tags: ['amenity:cafe', 'shop:bakery'], plan: (n) => `Coffee at ${n}` },
+  { id: 'eat', label: 'Restaurants', emoji: '🍽', tags: ['amenity:restaurant'], plan: (n) => `Dinner at ${n}`, opentable: true, ask: 'Where should we eat?' },
+  { id: 'drinks', label: 'Bars & nightlife', emoji: '🍸', tags: ['amenity:bar', 'amenity:pub', 'amenity:nightclub', 'amenity:biergarten'], plan: (n) => `Drinks at ${n}`, ask: 'Where should we go for drinks?' },
+  { id: 'coffee', label: 'Coffee', emoji: '☕', tags: ['amenity:cafe', 'shop:bakery'], plan: (n) => `Coffee at ${n}`, ask: 'Where should we get coffee?' },
   { id: 'todo', label: 'Things to do', emoji: '🎡', tags: ['tourism:attraction', 'tourism:theme_park', 'tourism:zoo', 'tourism:aquarium', 'leisure:bowling_alley', 'leisure:amusement_arcade', 'leisure:escape_game', 'leisure:miniature_golf', 'leisure:water_park'] },
   { id: 'shows', label: 'Shows & music', emoji: '🎭', tags: ['amenity:theatre', 'amenity:cinema', 'amenity:arts_centre', 'amenity:music_venue', 'amenity:concert_hall', 'amenity:events_venue', 'leisure:stadium'] },
   { id: 'casinos', label: 'Casinos', emoji: '🎰', tags: ['amenity:casino'], radiusKm: 100 },
@@ -54,6 +55,11 @@ export function openExplore(ctx, { category = 'eat', onPick = null } = {}) {
   const miles = trip.currency === 'USD';
   let cat = CATEGORIES.find((c) => c.id === category) ?? CATEGORIES[0];
   let center = null, places = [], open = null, ticket = 0, wide = false, text = '', ring = 0;
+  // Guests can't add plans, so they shortlist places and put them to a vote.
+  const canVote = !isOrg && !onPick && Boolean(trip.me);
+  const ballot = []; // places picked for the vote
+  let ask = '';      // the poll's question, from the first pick's category
+  const inBallot = (p) => ballot.some((b) => b.name === p.name && b.lat === p.lat);
   // Measure from the place everyone's staying, or the middle of town.
   const origins = [
     ...trip.stays.filter((st) => st.lat != null).map((st) => ({ id: st.id, lat: st.lat, lon: st.lon, label: st.name })),
@@ -69,6 +75,7 @@ export function openExplore(ctx, { category = 'eat', onPick = null } = {}) {
         <div class="explore-cats" role="tablist">${CATEGORIES.map((c) => `<button role="tab" data-cat="${c.id}"><span aria-hidden="true">${c.emoji}</span>${c.label}</button>`).join('')}</div>
         <div class="explore-near small muted" id="ex-near"></div>
         <div id="ex-list"></div>
+        <div class="explore-tray" id="ex-tray" hidden></div>
       </div>`,
     onMount(dlg, close) {
       const list = dlg.querySelector('#ex-list'), near = dlg.querySelector('#ex-near'), input = dlg.querySelector('#ex-q');
@@ -88,12 +95,21 @@ export function openExplore(ctx, { category = 'eat', onPick = null } = {}) {
           <iframe class="place-preview" title="Map of ${esc(p.name)}" loading="lazy" src="${esc(embed.mapEmbed([p.name, p.address].filter(Boolean).join(', ')))}"></iframe>
           <div class="tl-actions">
             ${onPick ? `<button class="btn btn-primary btn-sm" data-use>${icon('check')}Use this place</button>`
-              : isOrg ? `<button class="btn btn-primary btn-sm" data-use>${icon('plus')}${esc(words(trip).addPlan)}</button>` : ''}
+              : isOrg ? `<button class="btn btn-primary btn-sm" data-use>${icon('plus')}${esc(words(trip).addPlan)}</button>`
+              : canVote ? `<button class="btn ${inBallot(p) ? 'btn-secondary' : 'btn-primary'} btn-sm" data-vote>${icon(inBallot(p) ? 'check' : 'list')}${inBallot(p) ? 'Picked — remove' : 'Put it to a vote'}</button>` : ''}
             <a class="btn btn-secondary btn-sm" href="${esc(googleMaps(p))}" target="_blank" rel="noopener noreferrer" title="Reviews, photos and hours on Google Maps">Reviews &amp; hours ${icon('external')}</a>
             ${cat.opentable && !text ? `<a class="btn btn-outline btn-sm" href="${esc(embed.openTableSearch(`${p.name} ${p.town}`))}" target="_blank" rel="noopener noreferrer">Find on OpenTable ${icon('external')}</a>` : ''}
           </div>
-          ${!onPick && !isOrg ? '<p class="hint" style="margin:8px 0 0">Like it? Tell your organizer, or start a poll in Group.</p>' : ''}
         </div>`;
+      // The shortlist bar at the bottom of the sheet.
+      const tray = dlg.querySelector('#ex-tray');
+      const drawTray = () => {
+        tray.hidden = !ballot.length;
+        tray.innerHTML = ballot.length ? `
+          <div class="grow"><b>${ballot.length} picked for a vote</b>
+            <span class="small muted">${esc(ballot.map((b) => b.name).join(' · '))}</span></div>
+          <button class="btn btn-primary btn-sm" data-start-vote>${icon('check')}Start the vote</button>` : '';
+      };
       const drawList = () => {
         list.innerHTML = `
           ${wide ? `<p class="hint" style="margin:0 0 8px">${icon('info', 'tiny')} Nothing by that name near ${esc(center?.label || 'the trip')} — these are further away.</p>` : ''}
@@ -144,6 +160,39 @@ export function openExplore(ctx, { category = 'eat', onPick = null } = {}) {
         drawList();
       };
 
+      // Put the shortlist into a poll: an open one that takes new options, or a new one.
+      const toPolls = (message) => {
+        try { sessionStorage.setItem('grouptrip.flash', message); } catch { /* ignore */ }
+        location.hash = `#/t/${trip.id}/polls`; // also closes this sheet
+      };
+      const startVote = async (btn) => {
+        const labels = ballot.map((b) => b.name);
+        const fresh = await busy(btn, () => store.getTrip(trip.id));
+        if (!fresh) return;
+        const polls = fresh.polls.filter((p) => !p.closed && p.kind === 'text' && (p.allowAdd || p.createdBy === trip.me.id));
+        const { openNewPoll } = await import('./polls.js');
+        const fresh1 = () => openNewPoll(ctx, { kind: 'text', question: ask, options: labels, onDone: () => toPolls('Poll started — the group can vote now') });
+        if (!polls.length) return fresh1();
+        sheet({
+          title: 'Put it to a vote',
+          body: `<p class="hint" style="margin:0 0 6px">Add ${labels.length === 1 ? 'it' : 'them'} to a poll that's already open, or start a new one.</p>
+            <div class="rows">${polls.map((p) => `<button class="row row-link" data-poll="${esc(p.id)}" style="width:100%;background:none;border:0;text-align:left;cursor:pointer;color:inherit;font:inherit">
+              <span class="tl-icon">${icon('list')}</span><span class="grow"><span class="title">${esc(p.question)}</span>
+              <span class="sub">${p.options.length} option${p.options.length === 1 ? '' : 's'} so far</span></span>${icon('plus')}</button>`).join('')}</div>
+            <button class="btn btn-secondary btn-block" data-new-poll style="margin-top:12px">${icon('plus')}Start a new poll</button>`,
+          onMount(pick, closePick) {
+            pick.querySelector('[data-new-poll]').onclick = () => { closePick(); fresh1(); };
+            pick.querySelectorAll('[data-poll]').forEach((b) => b.onclick = async () => {
+              const poll = polls.find((p) => p.id === b.dataset.poll);
+              const have = new Set(poll.options.map((o) => o.label.trim().toLowerCase()));
+              const add = labels.filter((l) => !have.has(l.trim().toLowerCase()));
+              const ok = await busy(b, async () => { for (const label of add) await store.addPollOption(trip.id, poll.id, { label }); return true; });
+              if (ok) toPolls(add.length ? `Added to "${poll.question}"` : "Already in that poll");
+            });
+          },
+        });
+      };
+
       let timer;
       input.addEventListener('input', () => {
         clearTimeout(timer);
@@ -175,6 +224,15 @@ export function openExplore(ctx, { category = 'eat', onPick = null } = {}) {
           if (places.length === before) { ring = 99; toast("That's everything nearby"); }
           return drawList();
         }
+        if (e.target.closest('[data-vote]')) {
+          const p = places[open];
+          const at = ballot.findIndex((b) => b.name === p.name && b.lat === p.lat);
+          if (at >= 0) ballot.splice(at, 1);
+          else { if (!ballot.length) ask = (!text && cat.ask) || 'What should we do?'; ballot.push(p); }
+          drawList(); drawTray();
+          return;
+        }
+        if (e.target.closest('[data-start-vote]')) return startVote(e.target.closest('[data-start-vote]'));
         const use = e.target.closest('[data-use]');
         if (use) {
           const p = places[open];

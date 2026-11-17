@@ -56,7 +56,11 @@ Owner-approved exceptions (2026-09-22) — the only in-app processing allowed:
    name search (`searchPlaces()`) is limited to ~40 km around `tripCenter()`
    (the shared stay if pinned, else the destination) and sorted by distance,
    falling back to further-away results only when nothing local matches.
-   The plan/hotel type-ahead uses the same search. Reviews/photos/hours stay
+   The plan/hotel type-ahead uses the same search. Guests can't add plans,
+   so they get "Put it to a vote": picks collect in a tray at the bottom of
+   the sheet, "Start the vote" adds them to an open poll that takes options
+   or opens `openNewPoll()` pre-filled (question from the category), then
+   lands on Polls. Reviews/photos/hours stay
    on Google Maps, tables on OpenTable, tickets on Ticketmaster/Eventbrite/
    SeatGeek/Google events (new-tab links searched for the destination and
    dates — no free keyless events source). Overpass was tried and was down
