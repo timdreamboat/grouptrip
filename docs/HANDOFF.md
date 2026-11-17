@@ -59,6 +59,14 @@ and what's pending**.
   text, small tap targets, broken pictures, plus an eye-test checklist. Order
   for every major GigTrip change: gigtrip-qa → gigtrip-ui-qa → code review →
   publish.
+- Going live (2026-11-17): owner chose **per-artist pricing** ($39 per active
+  artist a month, $29 from the sixth; every role included). Sales document:
+  https://claude.ai/artifact/W8QpETQ3LsDjg4To1vhrDc · Go-live checklist (ordered,
+  with the services to sign up for): https://claude.ai/artifact/FZPT3VzVPpEyvnGKLR98MT
+  **Waiting on the owner:** approval + organization name to create a private
+  `gigtrip` repository and move everything GigTrip out of this public repo
+  (the competitor analysis is public today); Omnipath templates; AWS and
+  Google Cloud accounts. Nothing has been moved or deleted yet.
 - Switch from RoadOps / Master Tour (2026-11-17, owner: "build the import
   from RoadOps and Master Tour"): two sources in the import wizard marked
   "switch everything" (`SWITCH`). The Files step takes several exports at
