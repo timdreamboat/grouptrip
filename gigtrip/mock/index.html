@@ -2788,10 +2788,20 @@ function fanStatement(s, c) {
   };
 }
 const STMT_KINDS = [['short', 'Short post', 'X, Threads, Bluesky'], ['caption', 'Caption', 'Instagram, TikTok'], ['long', 'Full statement', 'Facebook, website, email list']];
+// "Open in…" for each network, like "Open in Maps": the text is copied first, then the person's own app opens.
+// Networks that accept a ready-written post get it filled in; the others open for a paste. GigTrip never signs in to any of them.
+const NETWORKS = {
+  x: ['X', 'short', t => 'https://x.com/intent/post?text=' + encodeURIComponent(t), true],
+  threads: ['Threads', 'short', t => 'https://www.threads.net/intent/post?text=' + encodeURIComponent(t), true],
+  bluesky: ['Bluesky', 'short', t => 'https://bsky.app/intent/compose?text=' + encodeURIComponent(t), true],
+  instagram: ['Instagram', 'caption', () => 'https://www.instagram.com/', false],
+  tiktok: ['TikTok', 'caption', () => 'https://www.tiktok.com/', false],
+  facebook: ['Facebook', 'long', () => 'https://www.facebook.com/', false],
+};
 function statementBlocks(s, withButtons) {
   const st = s.cancel.statement;
   return STMT_KINDS.map(([k, l, where]) => `<div class="stack" style="gap:6px"><div class="row between wrap"><b>${l}</b><span class="small muted">${where} · ${st[k].length} characters</span></div><div class="stmt" id="stmt-${s.id}-${k}">${esc(st[k])}</div>
-    ${withButtons ? `<div class="row wrap" style="gap:6px"><button class="btn btn-tape btn-sm" type="button" data-act="copyStmt" data-id="${s.id}" data-v="${k}">Copy</button>${navigator.share ? `<button class="btn btn-secondary btn-sm" type="button" data-act="shareStmt" data-id="${s.id}" data-v="${k}">Share…</button>` : ''}${k === 'short' ? `<a class="btn btn-outline btn-sm" target="_blank" rel="noopener noreferrer" href="https://twitter.com/intent/tweet?text=${encodeURIComponent(st[k])}">Open in X ${icon('ext')}</a><a class="btn btn-outline btn-sm" target="_blank" rel="noopener noreferrer" href="https://www.threads.net/intent/post?text=${encodeURIComponent(st[k])}">Open in Threads ${icon('ext')}</a>` : ''}</div>` : ''}</div>`).join('');
+    ${withButtons ? `<div class="row wrap" style="gap:6px"><button class="btn btn-tape btn-sm" type="button" data-act="copyStmt" data-id="${s.id}" data-v="${k}">Copy</button>${navigator.share ? `<button class="btn btn-secondary btn-sm" type="button" data-act="shareStmt" data-id="${s.id}" data-v="${k}">Share…</button>` : ''}${Object.entries(NETWORKS).filter(([, n]) => n[1] === k).map(([id, n]) => `<button class="btn btn-outline btn-sm" type="button" data-act="postTo" data-id="${s.id}" data-v="${id}" title="${n[3] ? 'Opens ' + n[0] + ' with the post written' : 'Copies the text, then opens ' + n[0] + ' to paste it'}">Open in ${n[0]} ${icon('ext')}</button>`).join('')}</div>` : ''}</div>`).join('');
 }
 function cancelCard(s) {
   const c = s.cancel; if (!c) return '';
@@ -2809,7 +2819,7 @@ function cancelCard(s) {
       <div class="stack" style="gap:10px"><div class="row between wrap"><div class="eyebrow">Statement for fans</div><span class="chip ${c.statement.approved ? 'st-confirmed' : 'st-pending'} plain">${c.statement.approved ? `Approved — ${esc(artist(s.artist).name)} can post it` : 'Not approved yet — the artist is asked to wait'}</span></div>${statementBlocks(s, true)}</div>
       <div class="addbar"><button class="btn btn-primary btn-sm" type="button" data-act="statement" data-id="${s.id}">${icon('edit')} Edit or approve the statement</button><button class="btn btn-outline btn-sm" type="button" data-act="reinstate" data-id="${s.id}">Put the show back</button></div>`;
   } else if (kind === 'artist') {
-    body = c.statement.approved ? `<p style="margin:0">Your team has told the venue, the promoter and the crew. Here is the statement to post — copy it into each app. Nothing is posted for you.</p>${statementBlocks(s, true)}`
+    body = c.statement.approved ? `<p style="margin:0">Your team has told the venue, the promoter and the crew. Here is the statement to post. Tap an app to open it with the text ready — you press Post. Nothing is posted for you.</p>${statementBlocks(s, true)}`
       : `<p style="margin:0"><b>Please don’t post about this yet.</b> Your team is telling the venue, the promoter and the ticket seller first, and preparing a statement for you. It will appear here when it’s ready.</p>`;
   } else if (isVenue()) {
     body = `<p style="margin:0">The tour has ${post ? 'postponed' : 'cancelled'} this show${c.newDate ? ` and is proposing ${longDate(c.newDate)}` : ''}. The tour manager will call about holds, staffing and the deposit.</p><p class="small muted" style="margin:0">For ticket holders: ${esc(REFUNDS[c.refund] || REFUNDS.pop)}.</p>`;
@@ -3136,6 +3146,7 @@ const ACT = {
   cancelShow: id => E.cancel(id), statement: id => E.statement(id), openShow: id => { S.showId = id; S.showTab = ''; go('show'); },
   reinstate: id => { const s = show(id); if (!s || !s.cancel) return; s.status = s.cancel.prev || 'confirmed'; delete s.cancel; commit('The show is back on — tell the people you told before', `Put ${cityOf(s)} (${short(s.date)}) back on`); },
   copyStmt: (id, el) => { const t = show(id)?.cancel?.statement?.[el.dataset.v]; if (!t) return; (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast('Copied — paste it into the app'), () => { const n = document.getElementById(`stmt-${id}-${el.dataset.v}`); if (n) { const r = document.createRange(); r.selectNodeContents(n); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); } toast('Text selected — copy it from here'); }); },
+  postTo: (id, el) => { const n = NETWORKS[el.dataset.v], t = n && show(id)?.cancel?.statement?.[n[1]]; if (!t) return; if (navigator.clipboard) navigator.clipboard.writeText(t).catch(() => {}); window.open(n[2](t), '_blank', 'noopener'); toast(n[3] ? `${n[0]} is opening with your post written` : `Copied — paste it in ${n[0]}`); },
   shareStmt: (id, el) => { const t = show(id)?.cancel?.statement?.[el.dataset.v]; if (t && navigator.share) navigator.share({ text: t }).catch(() => {}); },
   newField: () => E.field(null), field: id => E.field(id), org: () => E.org(),
   accent: k => { DB.settings.org.accent = k; applyBrand(); commit('Colour changed'); },

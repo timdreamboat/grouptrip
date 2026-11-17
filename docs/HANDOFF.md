@@ -70,7 +70,10 @@ and what's pending**.
   so **Put the show back** works). Everyone's landing page carries a notice
   worded for them (`cancelCard`). A fan statement is drafted in three
   lengths (`fanStatement`); the artist is told not to post until management
-  approves it (`E.statement`), then gets Copy / Share / Open in X or Threads.
+  approves it (`E.statement`), then gets Copy, Share and "Open in…" buttons
+  for X, Threads, Bluesky, Instagram, TikTok and Facebook (`NETWORKS`, like
+  "Open in Maps": the text is copied, then the person's own app opens; the
+  first three accept the post pre-written, the others open for a paste).
   **Owner-level decision baked in: GigTrip never posts to social media and
   never holds social logins** — the artist posts from their own apps.
   Needs attention lists unseen notices and an unapproved statement.
