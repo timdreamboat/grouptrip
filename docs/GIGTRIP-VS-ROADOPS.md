@@ -37,7 +37,7 @@ listing (v1.22.0, 4.8★ from 64 ratings), and two comparison articles by TourPr
    season board, custom fields on shows/people, a home page each person can arrange, company branding.
 2. Table stakes to stop losing on a checklist: offline, forward-an-email / AI import, push with read receipts,
    PDFs (day sheet, guest list, rooming list), live flight status, calendar feeds.
-3. Switching tools: import from a RoadOps export and from Master Tour, done-for-you migration, run both in
+3. Switching tools — IN THE PROTOTYPE since 2026-11-17 (needs a real export from each to verify column names): import from a RoadOps export and from Master Tour, done-for-you migration, run both in
    parallel for a tour.
 4. Pricing: per company, unlimited free seats for artists/crew/venues; RoadOps charges on total head-count.
 5. Trust for big offices: published privacy policy, SOC 2 path, SSO, audit log. RoadOps states AWS + encryption

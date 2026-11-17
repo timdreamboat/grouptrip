@@ -183,6 +183,42 @@
     undoImport(DB.imports[0].id);
   } catch (e) { failed.push(`Import: crashed — ${e.message}`); if (d.open) d.close(); }
 
+  // 7b. Switching from Master Tour and RoadOps (2026-11-17): several export files in one go, previewed on a copy, undoable.
+  // The files in gigtrip/demo/switch/ are our own examples in a typical layout — not real exports (see its README).
+  for (const [src, art, want] of [['mastertour', 'co', { shows: 6, people: 6, lines: 5, travel: 6, slots: 30 }], ['roadops', 'kes', { shows: 4, people: 4, guests: 3, rooms: 4, travel: 5, slots: 7 }]]) {
+    try {
+      S.role = 'manager'; S.artistId = 'all';
+      const snap = () => JSON.stringify([DB.shows.length, Object.keys(DB.people).length, DB.travel.length, DB.slots.length, DB.guests.length, DB.showExp.length, DB.tasks.length, DB.imports.length]);
+      const before = snap();
+      openImportWizard({ source: src }); W.step = 1; W.defaultArtist = art; renderWizard(); await loadSamples();
+      check(W.batch.length === SWITCH[src].samples.length, `${src}: read ${W.batch.length} of ${SWITCH[src].samples.length} example files`);
+      check(W.batch.every(it => IMPORT_KINDS[it.kind].fields.filter(f => f[3]).every(f => it.map[f[0]] != null)), `${src}: a file's needed columns were not recognised (${W.batch.map(it => it.file.name + '→' + it.kind).join(', ')})`);
+      if (src === 'roadops') { const ds = parseDaySheet(SWITCH.roadops.paste); check(ds && ds.data.length === 7 && ds.dsDate === '2027-07-13', 'Pasted day sheet was not read'); if (ds) W.batch.push(ds); }
+      renderWizard(); check(!d.querySelector('[data-w="next"]').disabled, `${src}: Next is disabled with every file recognised`);
+      const pv = runBatch(true);
+      check(snap() === before, `${src}: the preview changed real data`);
+      for (const [k, n] of Object.entries(want)) check(pv.counts[k] === n, `${src}: preview counted ${pv.counts[k]} ${k} (expected ${n})`);
+      const res = runBatch(false); d.close();
+      const mine = DB.shows.filter(x => x.src && x.artist === art);
+      check(mine.length === want.shows && mine.every(x => x.status === 'confirmed' && /, [A-Z]{2}$/.test(x.city)), `${src}: shows did not come in as confirmed with "City, ST"`);
+      check(Object.values(DB.people).filter(x => x.src).length === want.people && Object.values(DB.people).filter(x => x.src).every(x => x.kind === 'crew' && x.artists[0] === art), `${src}: team did not come in as crew on the chosen artist`);
+      if (src === 'mastertour') {
+        const vic = mine.find(x => /Victoria/.test(x.city));
+        check(vic && DB.showExp.filter(e => e.show === vic.id).length === 5 && DB.showExp.filter(e => e.show === vic.id).reduce((a, e) => a + e.cents, 0) === 838000, 'Master Tour line items did not land on the right show in cents');
+        check(vic && DB.slots.filter(x => x.show === vic.id).length === 5 && DB.travel.some(x => x.type === 'hotel' && x.name === 'Harbourview Inn' && x.checkIn === '2027-07-09'), 'Master Tour day-sheet times or hotel did not come in');
+      } else {
+        const wpg = mine.find(x => /Winnipeg/.test(x.city));
+        const fl = DB.travel.find(x => x.type === 'flight' && x.src && x.conf === 'H2MZXD');
+        check(fl && fl.from === 'YUL' && fl.to === 'YWG' && fl.dep === '09:40' && fl.arr === '11:35' && fl.flight === 'WS 579' && P(fl.who).name === 'Corinne Abel', 'RoadOps flight did not come in with route, times, confirmation and passenger');
+        check(Object.values(DB.people).find(x => x.name === 'Ines Marchetti')?.room === '804' && DB.travel.some(x => x.type === 'hotel' && x.name === 'The Fort Garry Hotel' && x.checkOut === '2027-07-14'), 'RoadOps rooming list did not set rooms or the hotel');
+        check(wpg && DB.slots.filter(x => x.show === wpg.id).length === 7 && DB.guests.filter(x => x.show === wpg.id).length === 3, 'RoadOps day sheet or guest list did not land on the Winnipeg show');
+      }
+      S.role = 'manager'; S.artistId = art; render('travel'); check(fits(), `${src}: Travel page with imported rows is wider than the screen`); render('party'); check(fits(), `${src}: Party page with imported people is wider than the screen`);
+      while (DB.imports.length) undoImport(DB.imports[0].id);
+      check(snap() === before, `${src}: undoing every import left data behind`);
+    } catch (e) { failed.push(`${src} switch: crashed — ${e.message}`); if (d.open) d.close(); }
+  }
+
   // 8. Export has every show for the current artist context, as spreadsheet rows.
   try { openExport('shows'); const rows = document.querySelector('#f-export').value.trim().split('\n'); check(rows.length === curShows().length + 1, `Export has ${rows.length - 1} rows (expected ${curShows().length})`); d.close(); } catch (e) { failed.push(`Export: crashed — ${e.message}`); if (d.open) d.close(); }
 

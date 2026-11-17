@@ -493,6 +493,12 @@ dialog.sheet .field select, dialog.sheet .field input { max-width: 100%; }
 .arr input { width: 18px; height: 18px; accent-color: var(--good); flex: none; margin: 0; }
 .swatch { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--line-strong); cursor: pointer; padding: 0; flex: none; }
 .swatch[aria-pressed="true"] { outline: 2px solid var(--text); outline-offset: 2px; }
+.swlist { display: grid; gap: 6px; }
+.swlist > div { display: grid; gap: 1px; padding: 8px 12px; border-radius: 12px; background: var(--surface-2); }
+.batch .li { flex-wrap: wrap; }
+.batch .li .grow { flex: 1 1 220px; overflow-wrap: anywhere; }   /* on a phone the name takes its own line and the controls sit under it */
+.batch .pillsel { max-width: 160px; }
+.linkbtn { border: 0; background: none; padding: 0; font: inherit; color: var(--accent-ink); text-decoration: underline; cursor: pointer; }
 .cfline { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
 </style>
 
@@ -811,7 +817,7 @@ function addDemoImages(d) {
 }
 const FILES = {};   // uploaded files live in memory for the mock (object URLs)
 function load() { try { const v = JSON.parse(localStorage.getItem(KEY)); return v && v.v === 5 ? ensureShape(addDemoImages(v)) : null; } catch { return null; } }
-function save() { try { localStorage.setItem(KEY, JSON.stringify(DB)); } catch {} }
+function save() { if (typeof SIM !== 'undefined' && SIM) return; try { localStorage.setItem(KEY, JSON.stringify(DB)); } catch {} }
 let DB = load() || seed();
 
 const store = {
@@ -1133,7 +1139,8 @@ function passHTML(x, { edit = false, compact = false } = {}) {
 // A hotel: check-in/out, who is in which room (from each person's card), confirmation, directions, booking site.
 function hotelHTML(x, { edit = false, compact = false } = {}) {
   const past = (x.checkOut || x.date) < NOW.date;
-  const guests = whoOf(x).filter(k => DB.people[k]);
+  // A hotel belongs to one artist's touring party: list the people who travel with that artist (the first one on their card).
+  const guests = whoOf(x).filter(k => DB.people[k] && (!x.artist || !(P(k).artists || []).length || P(k).artists[0] === x.artist || P(k).artists[0] === '*'));
   const rooms = {}; guests.forEach(k => { const r = P(k).room || '—'; (rooms[r] = rooms[r] || []).push(P(k).name.split(' ')[0]); });
   const url = safeUrl(x.url), nights = nightsBetween(x.checkIn, x.checkOut), myRoom = P(me()).room;
   return `<section class="card hotel">
@@ -1592,20 +1599,45 @@ function startCard() {
 
 // ---------- import: sources, kinds, matching ----------
 const SOURCES = [
-  { id: 'excel', name: 'Excel, Google Sheets or Numbers', hint: 'Upload the file as it is (.xlsx or .csv). Google Sheets: File → Download → Microsoft Excel. Numbers: File → Export To → Excel.', kinds: ['shows', 'tasks', 'contacts', 'travel', 'guests', 'budget'] },
+  { id: 'excel', name: 'Excel, Google Sheets or Numbers', hint: 'Upload the file as it is (.xlsx or .csv). Google Sheets: File → Download → Microsoft Excel. Numbers: File → Export To → Excel.', kinds: ['shows', 'tasks', 'contacts', 'people', 'travel', 'guests', 'budget'] },
   { id: 'clickup', name: 'ClickUp', hint: 'Open the list, then ··· → Export → CSV. Task names, statuses, assignees and due dates become advance tasks on the matching show.', kinds: ['tasks'] },
-  { id: 'mastertour', name: 'Master Tour', hint: 'Tour → Export → Excel: Schedule, Contacts or Personnel. Dates, cities, venues and set times become shows and day sheets.', kinds: ['shows', 'contacts', 'travel'] },
+  { id: 'roadops', name: 'RoadOps — switch everything', hint: 'Drop all your RoadOps files at once: the calendar feed, team, Flight Board, rooming list and guest list. Paste a shared day sheet too.', kinds: ['shows', 'people', 'travel', 'rooms', 'guests', 'contacts', 'daysheet'] },
+  { id: 'mastertour', name: 'Master Tour — switch everything', hint: 'Drop all your Master Tour exports at once: Tour Details, Tour Personnel, Line Items and guest lists. Shows, day sheets, hotels, team and settlement costs come across together.', kinds: ['shows', 'people', 'lines', 'guests', 'contacts', 'travel', 'daysheet'] },
   { id: 'daysheets', name: 'Daysheets', hint: 'Export the schedule, travel or personnel as CSV from the tour’s settings.', kinds: ['shows', 'travel', 'contacts'] },
   { id: 'agprism', name: 'Artist Growth, Prism or Gigwell', hint: 'Export events, holds or settlements as CSV from the calendar or a report.', kinds: ['shows', 'budget'] },
   { id: 'ics', name: 'A calendar (Google, Apple, Outlook)', hint: 'Export the calendar as an .ics file. Each event becomes a show: date, city and venue from the title and location.', kinds: ['shows'] },
   { id: 'other', name: 'Notion, Airtable or any other CSV', hint: 'Any spreadsheet-style export works. You match the columns on the next step.', kinds: ['shows', 'tasks', 'contacts', 'travel', 'guests', 'budget'] },
 ];
+// Switching from another tour app: several export files in one go, imported in the order they depend on each other.
+// Neither company publishes its column names, so files are recognised by their columns and file name, and anything
+// unrecognised is matched by hand (Columns). `exports` = what to ask the old app for, and what it becomes here.
+const SWITCH = {
+  mastertour: { name: 'Master Tour', exports: [
+    ['Tour Details', 'File › Export › Export Tour Details As CSV, then choose the From and To dates', 'Shows, day-sheet times and hotels'],
+    ['Tour Personnel', 'Tour ⚙ › Personnel › Export Personnel', 'Your team, in Party'],
+    ['Line Items', 'Open a tour date › Accounting › Line Items › Export Line Items', 'Settlement costs on that show'],
+    ['Guest list', 'Export a show’s guest list as CSV', 'Guest list'],
+  ], samples: ['mastertour-tour-details.csv', 'mastertour-personnel.csv', 'mastertour-line-items.csv'] },
+  roadops: { name: 'RoadOps', exports: [
+    ['Calendar', 'Subscribe to the team calendar (iCal), then save or export it as an .ics file', 'Shows'],
+    ['Team', 'Your team list as a CSV', 'Your team, in Party'],
+    ['Flight Board', 'Flight Board › export CSV', 'Flights as boarding passes'],
+    ['Rooming list', 'Lodging › rooming list › export CSV', 'Hotels and who is in which room'],
+    ['Guest list', 'Guest list report for a show', 'Guest list'],
+    ['Day sheet', 'Share a day sheet as text, then paste it below', 'Day-sheet times'],
+  ], samples: ['roadops-calendar.ics', 'roadops-team.csv', 'roadops-flight-board.csv', 'roadops-rooming-list.csv', 'roadops-guest-list.csv'],
+    paste: 'Tue, Jul 13, 2027 — Winnipeg, MB · The Exchange Hall\n11:00 AM  Bus arrives\n1:00 PM  Load-in\n4:00 PM  Soundcheck\n6:00 PM  Dinner\n7:00 PM  Doors\n9:15 PM  Kestrel\n11:00 PM  Curfew' },
+};
+const BATCH_ORDER = ['shows', 'people', 'contacts', 'travel', 'rooms', 'guests', 'lines', 'budget', 'tasks', 'daysheet'];
+const FILE_HINTS = [[/personnel|team|crew|party|staff/, 'people'], [/room/, 'rooms'], [/guest/, 'guests'], [/flight|travel|ground/, 'travel'], [/line.?item|settle|account/, 'lines'], [/contact/, 'contacts'], [/detail|schedule|routing|itinerary|calendar|dates/, 'shows']];
+let SIM = false;   // true while a switch is being previewed on a copy of the data: nothing is saved
 // field: [key, label, header words we recognise, required?]
 const IMPORT_KINDS = {
   shows: { label: 'Shows and dates', where: 'Season board', go: 'board', fields: [
     ['date', 'Date', ['date', 'show date', 'event date', 'day', 'start', 'dtstart'], true], ['artist', 'Artist', ['artist', 'act', 'band', 'client', 'talent']],
     ['city', 'City', ['city', 'market', 'location', 'town', 'city/state']], ['venue', 'Venue', ['venue', 'hall', 'club', 'room', 'place', 'summary']],
-    ['cap', 'Capacity', ['capacity', 'cap', 'tickets', 'size']], ['status', 'Status', ['status', 'state', 'hold status', 'confirmed', 'type']],
+    ['state', 'State / province', ['state', 'province', 'prov', 'region', 'state/province']], ['dayType', 'Day type', ['day type', 'event type', 'type of day', 'schedule type']],
+    ['cap', 'Capacity', ['capacity', 'cap', 'tickets', 'size']], ['status', 'Status', ['status', 'hold status', 'confirmed', 'type']], ['hotel', 'Hotel', ['hotel', 'lodging', 'accommodation', 'accommodations']],
     ['dealType', 'Deal type', ['deal type', 'deal', 'terms', 'deal structure']], ['g', 'Guarantee', ['guarantee', 'fee', 'gtd', 'amount', 'offer', 'price']],
     ['pct', 'Artist %', ['%', 'percent', 'split', 'backend', 'artist pct']], ['dep', 'Deposit', ['deposit', 'dep']], ['depDue', 'Deposit due', ['deposit due', 'due date', 'due']],
     ['depPaid', 'Deposit received', ['deposit paid', 'deposit received', 'paid', 'received']], ['cur', 'Currency', ['currency', 'ccy', 'cur']], ['tour', 'Tour', ['tour', 'run', 'leg']],
@@ -1625,14 +1657,31 @@ const IMPORT_KINDS = {
   ] },
   travel: { label: 'Travel', where: 'Travel', go: 'travel', fields: [
     ['date', 'Date', ['date', 'dep date', 'departure date', 'day', 'check in', 'check-in'], true], ['type', 'Type', ['type', 'mode', 'category', 'kind']],
-    ['label', 'Route or hotel', ['route', 'from', 'origin', 'depart from', 'hotel', 'name', 'description', 'title']], ['to', 'To', ['to', 'arrive', 'arrival', 'destination', 'arrive at']],
-    ['time', 'Time', ['time', 'dep', 'departure', 'depart', 'dep time', 'departure time']], ['detail', 'Details', ['flight', 'flight number', 'flight no', 'confirmation', 'conf', 'pnr', 'record locator', 'details', 'notes', 'airline']],
+    ['label', 'Route or hotel', ['route', 'from', 'origin', 'depart from', 'departure airport', 'origin airport', 'hotel', 'name', 'description', 'title']], ['to', 'To', ['to', 'arrive', 'destination', 'arrive at', 'arrival airport', 'destination airport']],
+    ['time', 'Time', ['time', 'departure time', 'dep time', 'dep', 'departure', 'depart']], ['arr', 'Arrival time', ['arrival time', 'arr time', 'arrives', 'arrival', 'eta']],
+    ['flightNo', 'Flight number', ['flight number', 'flight no', 'flight #', 'flight']], ['conf', 'Confirmation', ['confirmation number', 'confirmation', 'conf', 'pnr', 'record locator', 'locator']],
+    ['detail', 'Details', ['details', 'notes', 'airline', 'carrier']],
     ['who', 'Who', ['passenger', 'passengers', 'who', 'traveler', 'traveller', 'travelers', 'name', 'guest']],
   ] },
   guests: { label: 'Guest list', where: 'Guest list', go: 'guests', fields: [
     ['name', 'Guest name', ['name', 'guest', 'guest name', 'full name'], true], ['plus', 'Plus-ones', ['+1', 'plus', 'plus ones', 'plus-ones', 'guests', 'qty', 'quantity', 'tickets']],
     ['by', 'Requested by', ['requested by', 'for', 'by', 'host', 'contact', 'from']], ['show', 'Show', ['show', 'date', 'event', 'city']], ['status', 'Status', ['status', 'approved', 'type']],
   ] },
+  people: { label: 'Team (people on the tour)', where: 'Party', go: 'party', fields: [
+    ['name', 'Name', ['name', 'full name', 'person', 'member'], true], ['role', 'Job title', ['title', 'role', 'position', 'job', 'job title', 'department']],
+    ['ph', 'Phone', ['mobile', 'phone', 'cell', 'tel', 'telephone', 'phone number']], ['email', 'Email', ['email', 'e-mail', 'mail']],
+    ['perDiem', 'Per diem', ['per diem', 'perdiem', 'pd']], ['party', 'Travel party', ['travel party', 'party', 'group', 'team']],
+  ] },
+  rooms: { label: 'Rooming list', where: 'Travel › Hotels', go: 'travel', fields: [
+    ['name', 'Guest', ['guest', 'guest name', 'name', 'occupant', 'traveler', 'traveller'], true], ['hotel', 'Hotel', ['hotel', 'hotel name', 'property', 'lodging'], true],
+    ['room', 'Room', ['room', 'room number', 'room no', 'room #']], ['checkIn', 'Check in', ['check in', 'checkin', 'arrival', 'arrive']], ['checkOut', 'Check out', ['check out', 'checkout', 'departure', 'depart']],
+    ['conf', 'Confirmation', ['confirmation', 'confirmation number', 'conf']], ['address', 'Hotel address', ['address', 'hotel address', 'street']],
+  ] },
+  lines: { label: 'Settlement line items', where: 'Settle', go: 'settle', fields: [
+    ['label', 'Line item', ['line item', 'item', 'description', 'name', 'category', 'expense'], true], ['amount', 'Amount', ['amount', 'total', 'cost', 'actual', 'value', 'price'], true],
+    ['show', 'Show or date', ['show', 'date', 'event', 'city', 'venue']], ['type', 'Income or expense', ['type', 'kind', 'income/expense']],
+  ] },
+  daysheet: { label: 'A day sheet (times)', where: 'Show › Day sheet', go: 'show', fields: [['time', 'Time', ['time'], true], ['label', 'What', ['what', 'item', 'event', 'label'], true]] },
   budget: { label: 'Budget lines', where: 'Money › Tour budget', go: 'money', fields: [
     ['cat', 'Category', ['category', 'line', 'line item', 'item', 'description', 'name', 'expense'], true], ['budget', 'Budget', ['budget', 'planned', 'estimate', 'estimated', 'projected']],
     ['actual', 'Actual', ['actual', 'spent', 'spend', 'to date', 'paid']], ['tour', 'Tour', ['tour', 'run']],
@@ -1649,13 +1698,16 @@ function guessMap(kind, head) {
   }
   return map;
 }
-function detectKind(head, source) {
+function detectKind(head, source, fileName = '') {
   const allowed = (SOURCES.find(s => s.id === source) || {}).kinds || Object.keys(IMPORT_KINDS);
   let bestK = allowed[0], bestScore = -1;
   for (const k of allowed) {
     const m = guessMap(k, head);
     const req = IMPORT_KINDS[k].fields.filter(f => f[3]).every(f => m[f[0]] != null);
-    const score = Object.keys(m).length + (req ? 3 : -5) + (k === 'shows' && m.city != null && m.venue != null ? 2 : 0) + (k === 'tasks' && m.owner != null && m.status != null ? 2 : 0);
+    const hint = (FILE_HINTS.find(([re]) => re.test(fileName.toLowerCase())) || [])[1];
+    if (k === 'daysheet') continue;   // only ever from the paste box
+    const score = Object.keys(m).length + (req ? 3 : -5) + (k === 'shows' && m.city != null && m.venue != null ? 2 : 0) + (k === 'tasks' && m.owner != null && m.status != null ? 2 : 0)
+      + (k === 'rooms' && m.room != null ? 4 : 0) + (k === 'people' && m.perDiem != null ? 3 : 0) + (k === 'travel' && m.flightNo != null ? 3 : 0) + (k === 'lines' && m.show != null ? 1 : 0) + (hint === k && req ? 6 : 0);
     if (score > bestScore) { bestScore = score; bestK = k; }
   }
   return bestK;
@@ -1760,7 +1812,7 @@ function splitHeader(rows) {
 // ---------- the wizard ----------
 const W = { step: 0 };
 function openImportWizard(preset = {}) {
-  Object.assign(W, { step: 0, source: preset.source || null, file: null, sheets: [], sheet: 0, head: [], data: [], kind: null, map: {}, defaultArtist: cur() !== 'all' ? cur() : (DB.artists[0]?.id || ''), defaultShow: null, createArtists: true, result: null });
+  Object.assign(W, { step: 0, source: preset.source || null, batch: [], editing: null, ics: false, dsDate: '', file: null, sheets: [], sheet: 0, head: [], data: [], kind: null, map: {}, defaultArtist: cur() !== 'all' ? cur() : (DB.artists[0]?.id || ''), defaultShow: null, createArtists: true, result: null });
   renderWizard();
 }
 function renderWizard() {
@@ -1768,10 +1820,24 @@ function renderWizard() {
   const src = SOURCES.find(s => s.id === W.source);
   const stepsBar = `<ol class="wsteps" aria-label="Import steps">${['Source', 'File', 'Match', 'Check', 'Done'].map((l, i) => `<li class="${i < W.step ? 'past' : ''} ${i === W.step ? 'now' : ''}"><span>${i + 1}</span>${l}</li>`).join('')}</ol>`;
   let body = '', foot = '';
+  const sw = SWITCH[W.source];
   if (W.step === 0) {
     body = `<p class="muted" style="margin:0">Where is the data today? Pick one and we'll tell you how to get the file.</p>
       <div class="srcgrid">${SOURCES.map(s => `<button type="button" class="srccard" data-src="${s.id}" aria-pressed="${W.source === s.id}"><b>${esc(s.name)}</b><span class="small muted">${esc(s.hint)}</span></button>`).join('')}</div>`;
     foot = `<button class="btn btn-primary" type="button" data-w="next" ${W.source ? '' : 'disabled'}>Next: choose the file</button>`;
+  } else if (W.step === 1 && sw) {
+    const need = it => IMPORT_KINDS[it.kind].fields.filter(f => f[3] && it.map[f[0]] == null).map(f => f[1]);
+    const blocked = W.batch.some(it => need(it).length);
+    body = `<p class="muted" style="margin:0">Export these from ${esc(sw.name)} and drop them all here together. Bring what you have — every file is optional.</p>
+      <div class="swlist">${sw.exports.map(([n, how, becomes]) => `<div><b>${esc(n)}</b><span class="small muted">${esc(how)}</span><span class="small">→ ${esc(becomes)}</span></div>`).join('')}</div>
+      <label class="field" for="w-art2">These files are for<select id="w-art2">${DB.artists.map(a => `<option value="${a.id}" ${W.defaultArtist === a.id ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}</select></label>
+      <label class="upload" data-wdrop><input type="file" id="w-file" multiple accept=".xlsx,.xls,.csv,.tsv,.txt,.ics">${icon('upload')}<b>Drop the files here or tap to choose</b><span class="small">Several at once is fine — CSV, Excel or .ics</span></label>
+      ${W.batch.length ? `<div class="list batch">${W.batch.map((it, i) => `<div class="li"><div class="grow"><b>${esc(it.file.name)}</b><div class="small muted">${it.data.length} row${it.data.length === 1 ? '' : 's'} · ${it.kind === 'daysheet' ? (it.dsDate ? 'for the show on ' + short(it.dsDate) : 'for the next show') : `matched ${Object.keys(it.map).length} of ${it.head.length} columns`}${need(it).length ? ` · <span class="late">needs: ${esc(need(it).join(', '))}</span>` : ''}</div></div>
+        ${it.kind === 'daysheet' ? '<span class="chip plain">Day sheet</span>' : `<label class="sr" for="w-bk-${i}">What this file is</label><select id="w-bk-${i}" data-bkind="${i}" class="pillsel">${src.kinds.filter(k => k !== 'daysheet').map(k => `<option value="${k}" ${k === it.kind ? 'selected' : ''}>${esc(IMPORT_KINDS[k].label)}</option>`).join('')}</select><button type="button" class="btn btn-secondary btn-sm" data-bcols="${i}">Columns</button>`}
+        <button type="button" class="iconbtn" data-brm="${i}" aria-label="Remove ${esc(it.file.name)}">×</button></div>`).join('')}</div>` : ''}
+      <details><summary class="small muted" style="cursor:pointer">Or paste a day sheet shared as text</summary><textarea class="csv field" id="w-ds" placeholder="Paste the day sheet — a date line, then one time per line, e.g. 4:00 PM  Soundcheck" style="width:100%;margin-top:8px;border:1px solid var(--line-strong);border-radius:12px;padding:10px;background:var(--surface);color:var(--text);min-height:110px"></textarea><div class="row wrap" style="gap:8px;margin-top:8px"><button class="btn btn-secondary btn-sm" type="button" data-w="dspaste">Use this day sheet</button>${sw.paste ? '<button class="btn btn-outline btn-sm" type="button" data-w="dssample">Paste an example</button>' : ''}</div></details>
+      <p class="small muted" style="margin:0">Files are recognised by their columns. If a column isn’t matched, tap Columns and point it at the right one. No sample handy? <button type="button" class="linkbtn" data-w="samples">Try it with example ${esc(sw.name)} files</button> (made up by us, in a typical layout).</p>`;
+    foot = `<button class="btn btn-secondary" type="button" data-w="back">Back</button><button class="btn btn-primary" type="button" data-w="next" ${W.batch.length && !blocked ? '' : 'disabled'}>Next: check</button>`;
   } else if (W.step === 1) {
     const sheetPick = W.sheets.length > 1 ? `<label class="field" for="w-sheet">This file has ${W.sheets.length} sheets — which one first?<select id="w-sheet">${W.sheets.map((s, i) => `<option value="${i}" ${i === W.sheet ? 'selected' : ''}>${esc(s.name)} · ${s.rows.length - 1} rows</option>`).join('')}</select></label>` : '';
     body = `<div class="note">${esc(src.hint)}</div>
@@ -1782,7 +1848,7 @@ function renderWizard() {
   } else if (W.step === 2) {
     const K = IMPORT_KINDS[W.kind];
     const sample = W.data[0] || [];
-    const allowed = src.kinds;
+    const allowed = src.kinds.filter(k => k !== 'daysheet');
     body = `<label class="field" for="w-kind">What is in this ${W.sheets.length > 1 ? 'sheet' : 'file'}?<select id="w-kind">${allowed.map(k => `<option value="${k}" ${k === W.kind ? 'selected' : ''}>${IMPORT_KINDS[k].label} → ${IMPORT_KINDS[k].where}</option>`).join('')}</select></label>
       <p class="small muted" style="margin:0">We matched ${Object.keys(W.map).length} of your ${W.head.length} columns. Fix any that look wrong; leave the rest as "skip".</p>
       <div class="maprows">${K.fields.map(([k, label, , req]) => `<label class="maprow" for="w-m-${k}"><span class="lbl">${label}${req ? ' <span class="req">needed</span>' : ''}</span>
@@ -1790,7 +1856,14 @@ function renderWizard() {
         <span class="small muted eg">${W.map[k] != null ? esc(String(sample[W.map[k]] ?? '').slice(0, 28)) : ''}</span></label>`).join('')}</div>
       ${W.kind === 'shows' && W.map.artist == null ? `<label class="field" for="w-art">No artist column — put every row under<select id="w-art">${DB.artists.map(a => `<option value="${a.id}" ${W.defaultArtist === a.id ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}</select></label>` : ''}
       ${['tasks', 'contacts', 'guests'].includes(W.kind) ? `<label class="field" for="w-show">When a row doesn't say which show, attach it to<select id="w-show"><option value="">— skip that row —</option>${curShows().filter(s => s.status !== 'cancelled').map(s => `<option value="${s.id}" ${W.defaultShow === s.id ? 'selected' : ''}>${short(s.date)} · ${esc(cityOf(s))} · ${esc(s.venue)}</option>`).join('')}</select></label>` : ''}`;
-    foot = `<button class="btn btn-secondary" type="button" data-w="back">Back</button><button class="btn btn-primary" type="button" data-w="next">Next: check</button>`;
+    foot = sw ? `<button class="btn btn-primary" type="button" data-w="next">Done with this file</button>` : `<button class="btn btn-secondary" type="button" data-w="back">Back</button><button class="btn btn-primary" type="button" data-w="next">Next: check</button>`;
+  } else if (W.step === 3 && sw) {
+    const pv = runBatch(true); W.pv = pv;
+    body = `<div class="stats">${Object.entries(pv.counts).filter(([, n]) => n).map(([k, n]) => `<div class="card stat" style="padding:12px 14px"><span class="eyebrow">${COUNT_LABELS[k]}</span><b>${n}</b></div>`).join('') || '<p class="muted" style="margin:0">Nothing new in these files.</p>'}</div>
+      <div class="list">${pv.per.map(x => `<div class="li"><div class="grow"><b>${esc(x.file)}</b><div class="small muted">${esc(x.kind)} · ${esc(x.text || 'nothing new')}${x.skipped ? ` · ${x.skipped} skipped` : ''}</div></div></div>`).join('')}</div>
+      ${pv.skipped.length ? `<div class="note">Skipping ${pv.skipped.length} row${pv.skipped.length > 1 ? 's' : ''}: ${esc(pv.skipped.slice(0, 4).join(' · '))}${pv.skipped.length > 4 ? ' …' : ''}</div>` : ''}
+      <p class="small muted" style="margin:0">Everyone comes in as Band &amp; crew — raise anyone’s access in Party afterwards. Each file can be undone on its own under Settings › Imports, so you can run ${esc(sw.name)} and GigTrip side by side for a tour.</p>`;
+    foot = `<button class="btn btn-secondary" type="button" data-w="back">Back</button><button class="btn btn-tape" type="button" data-w="run" ${pv.total ? '' : 'disabled'}>Bring it all in</button>`;
   } else if (W.step === 3) {
     const pv = buildImport(true);
     body = `<div class="stats">${Object.entries(pv.counts).filter(([, n]) => n).map(([k, n]) => `<div class="card stat" style="padding:12px 14px"><span class="eyebrow">${COUNT_LABELS[k]}</span><b>${n}</b></div>`).join('')}</div>
@@ -1812,8 +1885,8 @@ function renderWizard() {
   if (!d.open) d.showModal();
   bindWizard();
 }
-const COUNT_LABELS = { shows: 'Shows', updated: 'Shows updated', artists: 'New artists', tasks: 'Advance tasks', slots: 'Day-sheet times', contacts: 'Contacts', travel: 'Travel items', guests: 'Guests', budget: 'Budget lines', tours: 'Tours' };
-const WHERE = { shows: ['the Season board', 'board'], updated: ['the Season board', 'board'], artists: ['the Artists page', 'home'], tasks: ['each show’s Advance tab', 'show'], slots: ['each show’s Day sheet', 'show'], contacts: ['each show’s Contacts tab', 'show'], travel: ['Travel', 'travel'], guests: ['the Guest list', 'guests'], budget: ['Money › Tour budget', 'money'], tours: ['Tours', 'tour'] };
+const COUNT_LABELS = { shows: 'Shows', updated: 'Shows updated', artists: 'New artists', tasks: 'Advance tasks', slots: 'Day-sheet times', contacts: 'Contacts', people: 'People', travel: 'Travel items', rooms: 'Room assignments', guests: 'Guests', lines: 'Settlement lines', budget: 'Budget lines', tours: 'Tours' };
+const WHERE = { shows: ['the Season board', 'board'], updated: ['the Season board', 'board'], artists: ['the Artists page', 'home'], tasks: ['each show’s Advance tab', 'show'], slots: ['each show’s Day sheet', 'show'], contacts: ['each show’s Contacts tab', 'show'], travel: ['Travel', 'travel'], guests: ['the Guest list', 'guests'], budget: ['Money › Tour budget', 'money'], tours: ['Tours', 'tour'], people: ['Party', 'party'], rooms: ['Travel › Hotels', 'travel'], lines: ['each show’s Settlement', 'settle'] };
 function bindWizard() {
   const d = $('#dlg'), form = $('#wform');
   form.addEventListener('submit', e => e.preventDefault());
@@ -1821,6 +1894,13 @@ function bindWizard() {
   form.querySelectorAll('[data-w]').forEach(b => b.addEventListener('click', e => {
     const a = b.dataset.w;
     if (a === 'close') { e.preventDefault(); d.close(); if (b.dataset.godone) go(b.dataset.godone); else if (b.getAttribute('href')) go(b.getAttribute('href').slice(1)); else route(); }
+    const sw = SWITCH[W.source];
+    if (sw && a === 'back') { W.step = W.step === 3 ? 1 : 0; renderWizard(); return; }
+    if (sw && a === 'next') { if (W.step === 2) { Object.assign(W.batch[W.editing], { kind: W.kind, map: { ...W.map } }); W.step = 1; } else W.step = 3; renderWizard(); return; }
+    if (sw && a === 'run') { W.result = runBatch(false); W.step = 4; renderWizard(); return; }
+    if (a === 'samples') { loadSamples(); return; }
+    if (a === 'dssample') { $('#w-ds').value = sw.paste.replace(/\\n/g, '\n'); return; }
+    if (a === 'dspaste') { const it = parseDaySheet($('#w-ds').value); if (!it) return toast('No times found — each line should start with a time, like 4:00 PM Soundcheck'); W.batch.push(it); renderWizard(); return; }
     if (a === 'back') { W.step = Math.max(0, W.step - 1); renderWizard(); }
     if (a === 'next') { if (W.step === 1) prepSheet(); W.step++; renderWizard(); }
     if (a === 'paste') { const rows = parseCSV($('#w-paste').value); if (rows.length < 2) return toast('Paste at least a header row and one row'); W.file = { name: 'Pasted rows', size: $('#w-paste').value.length }; W.sheets = [{ name: 'Pasted', rows }]; W.sheet = 0; renderWizard(); }
@@ -1829,9 +1909,13 @@ function bindWizard() {
     if (a === 'restart') { openImportWizard({ source: W.source }); }
   }));
   const fi = $('#w-file');
-  if (fi) fi.addEventListener('change', async e => { const f = e.target.files[0]; if (!f) return; await takeFile(f); });
+  if (fi) fi.addEventListener('change', async e => { if (!e.target.files[0]) return; if (SWITCH[W.source]) await takeFiles([...e.target.files]); else await takeFile(e.target.files[0]); });
+  form.querySelectorAll('[data-bkind]').forEach(el => el.addEventListener('change', () => { const it = W.batch[+el.dataset.bkind]; it.kind = el.value; it.map = guessMap(it.kind, it.head); renderWizard(); }));
+  form.querySelectorAll('[data-bcols]').forEach(el => el.addEventListener('click', () => { const i = +el.dataset.bcols, it = W.batch[i]; Object.assign(W, { editing: i, head: it.head, data: it.data, kind: it.kind, map: { ...it.map }, sheets: [{ name: it.sheet }], sheet: 0, step: 2 }); renderWizard(); }));
+  form.querySelectorAll('[data-brm]').forEach(el => el.addEventListener('click', () => { W.batch.splice(+el.dataset.brm, 1); renderWizard(); }));
+  const a2 = $('#w-art2'); if (a2) a2.addEventListener('change', () => { W.defaultArtist = a2.value; });
   const zone = form.querySelector('[data-wdrop]');
-  if (zone) ['dragover', 'dragleave', 'drop'].forEach(ev => zone.addEventListener(ev, async e => { e.preventDefault(); zone.classList.toggle('drag', ev === 'dragover'); if (ev === 'drop' && e.dataTransfer.files[0]) await takeFile(e.dataTransfer.files[0]); }));
+  if (zone) ['dragover', 'dragleave', 'drop'].forEach(ev => zone.addEventListener(ev, async e => { e.preventDefault(); zone.classList.toggle('drag', ev === 'dragover'); if (ev === 'drop' && e.dataTransfer.files[0]) { if (SWITCH[W.source]) await takeFiles([...e.dataTransfer.files]); else await takeFile(e.dataTransfer.files[0]); } }));
   const sp = $('#w-sheet'); if (sp) sp.addEventListener('change', () => { W.sheet = +sp.value; });
   const kp = $('#w-kind'); if (kp) kp.addEventListener('change', () => { W.kind = kp.value; W.map = guessMap(W.kind, W.head); renderWizard(); });
   form.querySelectorAll('[data-map]').forEach(s => s.addEventListener('change', () => { if (s.value === '') delete W.map[s.dataset.map]; else W.map[s.dataset.map] = +s.value; renderWizard(); }));
@@ -1841,6 +1925,44 @@ function bindWizard() {
 async function takeFile(f) {
   try { toast('Reading ' + f.name + '…'); const r = await readFile(f); if (!r.sheets.length) return toast('That file looks empty'); W.file = f; W.sheets = r.sheets; W.sheet = 0; if (r.ics) W.source = 'ics'; renderWizard(); }
   catch (err) { toast(err.message || 'Could not read that file'); }
+}
+// ----- switching from another tour app: many files, one go -----
+async function takeFiles(files) {
+  for (const f of files) {
+    try { const r = await readFile(f); r.sheets.forEach(sh => { const { head, data } = splitHeader(sh.rows); if (!data.length) return; const kind = r.ics ? 'shows' : detectKind(head, W.source, f.name + ' ' + (r.sheets.length > 1 ? sh.name : '')); W.batch.push({ file: { name: r.sheets.length > 1 ? `${f.name} · ${sh.name}` : f.name, size: f.size }, sheet: sh.name, head, data, kind, map: guessMap(kind, head), ics: !!r.ics }); }); }
+    catch (err) { toast(`${f.name}: ${err.message || 'could not be read'}`); }
+  }
+  renderWizard();
+}
+async function loadSamples() {
+  const base = IMG_BASE.replace('img/', 'switch/'), files = [];
+  for (const n of SWITCH[W.source].samples) { try { const r = await fetch(base + n); if (r.ok) files.push(new File([await r.blob()], n)); } catch {} }
+  if (!files.length) return toast('The example files could not be loaded here');
+  await takeFiles(files);
+}
+// A day sheet shared as text: an optional date line, then lines that start with a time.
+function parseDaySheet(text) {
+  const rows = [];
+  String(text || '').split(/\r?\n/).forEach(line => { const m = line.match(/^\s*[•*\-–]?\s*(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)\s*(?:[-–—|:]\s*|\s+)(\S.*)$/i); if (!m || !/[:apm]/i.test(m[1])) return; const t = parseTime(m[1]); if (t) rows.push([t, m[2].trim()]); });
+  if (!rows.length) return null;
+  const dm = String(text).match(/\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{2,4}|(?:[A-Za-z]{3,},?\s+)?[A-Za-z]{3,}\.?\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{4}/);
+  return { file: { name: 'Pasted day sheet', size: text.length }, sheet: '', head: ['Time', 'What'], data: rows, kind: 'daysheet', map: { time: 0, label: 1 }, dsDate: dm ? parseDate(dm[0]) : '' };
+}
+// Import every file in dependency order. sim = on a copy of the data, to show what would happen.
+function runBatch(sim) {
+  const items = [...W.batch].sort((a, b) => BATCH_ORDER.indexOf(a.kind) - BATCH_ORDER.indexOf(b.kind));
+  const real = DB, out = { counts: {}, skipped: [], per: [], total: 0 }, keep = { source: W.source, defaultArtist: W.defaultArtist, defaultShow: W.defaultShow || (DB.shows.filter(x => x.artist === W.defaultArtist && x.date >= NOW.date && x.status !== 'cancelled').sort((x, y) => x.date.localeCompare(y.date))[0] || {}).id || null };
+  if (sim) { DB = JSON.parse(JSON.stringify(DB)); SIM = true; }
+  try {
+    for (const it of items) {
+      Object.assign(W, keep, { head: it.head, data: it.data, kind: it.kind, map: it.map, file: it.file, sheets: [{ name: it.sheet }], sheet: 0, ics: it.ics, dsDate: it.dsDate || '', switching: true });
+      const r = buildImport(false);
+      Object.entries(r.counts).forEach(([k, n]) => { out.counts[k] = (out.counts[k] || 0) + n; });
+      out.skipped.push(...r.skipped); out.total += Object.values(r.counts).reduce((a, n) => a + n, 0);
+      out.per.push({ file: it.file.name, kind: IMPORT_KINDS[it.kind].label, skipped: r.skipped.length, text: Object.entries(r.counts).filter(([, n]) => n).map(([k, n]) => `${n} ${COUNT_LABELS[k].toLowerCase()}`).join(', ') });
+    }
+  } finally { W.switching = false; W.ics = false; W.dsDate = ''; if (sim) { DB = real; SIM = false; } }
+  return out;
 }
 function prepSheet() {
   const { head, data } = splitHeader(W.sheets[W.sheet].rows);
@@ -1853,8 +1975,11 @@ function prepSheet() {
 function buildImport(dry) {
   const impId = dry ? null : uid('imp');
   const g = (r, k) => W.map[k] != null ? String(r[W.map[k]] ?? '').trim() : '';
-  const counts = { shows: 0, updated: 0, artists: 0, tasks: 0, slots: 0, contacts: 0, travel: 0, guests: 0, budget: 0, tours: 0 };
-  const skipped = [], preview = [], ids = { shows: [], artists: [], tasks: [], slots: [], contacts: [], travel: [], guests: [], budget: [], tours: [] };
+  const counts = { shows: 0, updated: 0, artists: 0, tasks: 0, slots: 0, contacts: 0, people: 0, travel: 0, rooms: 0, guests: 0, lines: 0, budget: 0, tours: 0 };
+  const skipped = [], preview = [], ids = { shows: [], artists: [], tasks: [], slots: [], contacts: [], people: [], travel: [], guests: [], lines: [], budget: [], tours: [] };
+  const oldRooms = {};
+  const exactPerson = n => Object.keys(DB.people).find(k => norm(DB.people[k].name) === norm(n)) || null;
+  const forArtist = W.defaultArtist || (cur() !== 'all' ? cur() : 'jv');
   const artistsBefore = DB.artists.length;
   const snapshotArtists = DB.artists.map(a => a.id), newNames = new Set();
   const K = W.kind;
@@ -1864,7 +1989,9 @@ function buildImport(dry) {
     W.data.forEach((r, i) => {
       const date = parseDate(g(r, 'date'));
       let city = g(r, 'city'), venue = g(r, 'venue'), titleArtist = '';
-      if (W.source === 'ics' || (!city && venue)) {
+      if (g(r, 'state') && city && !/,/.test(city)) city = `${city}, ${g(r, 'state')}`;
+      if (g(r, 'dayType') && /off|travel|rehears|promo|press|fly|drive|hold day|load out only/i.test(g(r, 'dayType')) && !/show/i.test(g(r, 'dayType'))) { skipped.push(`row ${i + 2}: ${g(r, 'dayType')} — not a show`); return; }
+      if (W.source === 'ics' || W.ics || (!city && venue)) {
         let parts = venue.split(/\s*(?:[–—|@]|\s-\s|:\s)\s*/).map(x => x.trim()).filter(Boolean);
         const ai = parts.findIndex(x => findArtist(x, false)); if (ai >= 0) { titleArtist = parts[ai]; parts.splice(ai, 1); }
         if (parts.length >= 2) { city = parts[0]; venue = parts.slice(1).join(' · '); } else { venue = parts[0] || venue; city = (g(r, 'address').split(',').slice(-1)[0] || '').trim() || venue; }
@@ -1875,17 +2002,20 @@ function buildImport(dry) {
       const aName = g(r, 'artist') || titleArtist;
       let a = aName ? (dry ? (findArtist(aName, false) || { id: null, name: aName, isNew: true }) : findArtist(aName, W.createArtists, impId)) : artist(W.defaultArtist);
       if (a && a.isNew && !newNames.has(norm(aName))) { newNames.add(norm(aName)); counts.artists++; }
-      const status = mapStatus(g(r, 'status'));
+      const status = g(r, 'status') || !W.switching ? mapStatus(g(r, 'status')) : 'confirmed';   // a date in a tour app's itinerary is a booked show
+      const hotelName = g(r, 'hotel');
+      const addHotel = () => { if (!hotelName || /^(n\/?a|none|tbc|tbd|-|bus)$/i.test(hotelName) || DB.travel.some(x => x.type === 'hotel' && norm(x.name || x.label) === norm(hotelName) && (x.checkIn || x.date) === date)) return; counts.travel++; if (dry) return; const h = tag({ id: uid('v'), type: 'hotel', date, name: hotelName, label: hotelName, checkIn: date, checkOut: addDays(date, 1), address: '', time: '', detail: `${short(date)} · ${city}`, who: 'road', artist: a ? a.id : forArtist }); DB.travel.push(h); ids.travel.push(h.id); };
       const dealType = /flat/.test(norm(g(r, 'dealType'))) ? 'flat' : /door/.test(norm(g(r, 'dealType'))) ? 'door' : /fest/.test(norm(g(r, 'dealType'))) ? 'fest' : 'vs';
       const gCents = cents(g(r, 'g')), dep = cents(g(r, 'dep'));
       preview.push([date, a ? a.name : '', city, venue, status, gCents ? money(gCents) + (dealType === 'vs' ? ' vs %' : '') : '—']);
       const existing = DB.shows.find(s => s.date === date && (norm(s.city) === norm(city) || (venue && norm(s.venue) === norm(venue))));
       if (existing) {
         counts.updated++;
+        addHotel();
         if (!dry) { if (!existing.venue || existing.venue === 'TBC') existing.venue = venue || existing.venue; if (!existing.cap && g(r, 'cap')) existing.cap = parseInt(g(r, 'cap'), 10) || 0; if (!existing.deal.g && gCents) existing.deal.g = gCents; if (!existing.deal.dep && dep) existing.deal.dep = dep; if (!existing.address && g(r, 'address')) existing.address = g(r, 'address'); addSlots(existing, r, g, impId, counts, ids); }
         return;
       }
-      counts.shows++;
+      counts.shows++; addHotel();
       if (dry) { addSlots({ id: '__dry', artist: a && a.id }, r, g, null, counts, ids); return; }
       let tourId = '';
       const tName = g(r, 'tour');
@@ -1930,12 +2060,14 @@ function buildImport(dry) {
     W.data.forEach((r, i) => {
       const date = parseDate(g(r, 'date')); if (!date) { skipped.push(`row ${i + 2}: no date`); return; }
       const tRaw = norm(g(r, 'type') + ' ' + g(r, 'detail') + ' ' + g(r, 'label'));
-      const type = /flight|air|fly|[a-z]{2}\s?\d{2,4}/.test(norm(g(r, 'type'))) || /flight|airline|pnr/.test(tRaw) && !/hotel/.test(norm(g(r, 'type'))) ? 'flight' : /hotel|room|stay|check/.test(tRaw) ? 'hotel' : /van|bus|drive|ground|car|shuttle/.test(tRaw) ? 'van' : (g(r, 'type') ? 'other' : 'flight');
+      const type = g(r, 'flightNo') || /flight|air|fly|[a-z]{2}\s?\d{2,4}/.test(norm(g(r, 'type'))) || /flight|airline|pnr/.test(tRaw) && !/hotel/.test(norm(g(r, 'type'))) ? 'flight' : /hotel|room|stay|check/.test(tRaw) ? 'hotel' : /van|bus|drive|ground|car|shuttle/.test(tRaw) ? 'van' : (g(r, 'type') ? 'other' : 'flight');
       const label = [g(r, 'label'), g(r, 'to')].filter(Boolean).join(' → ') || g(r, 'detail') || 'Travel';
-      const whoName = g(r, 'who'); const who = whoName ? (/all|everyone|band|crew|party/.test(norm(whoName)) ? 'road' : findPerson(whoName) || 'road') : 'road';
+      const whoName = g(r, 'who'); const who = whoName ? (/^(all|everyone|band|crew|party|touring party)$/.test(norm(whoName)) ? 'road' : exactPerson(whoName) || findPerson(whoName) || 'road') : 'road';
       preview.push([date, type, label, parseTime(g(r, 'time')), whoLabel(who)]);
       counts.travel++; if (dry) return;
-      const v = enrichTravel(tag({ id: uid('v'), type, date, label, time: parseTime(g(r, 'time')), detail: g(r, 'detail'), who, artist: cur() !== 'all' ? cur() : 'jv' })); DB.travel.push(v); ids.travel.push(v.id);
+      const v = enrichTravel(tag({ id: uid('v'), type, date, label, time: parseTime(g(r, 'time')), detail: [g(r, 'detail'), g(r, 'flightNo'), parseTime(g(r, 'arr')) ? 'arrives ' + parseTime(g(r, 'arr')) : '', g(r, 'conf') ? 'conf ' + g(r, 'conf') : ''].filter(Boolean).join(' · '), who, artist: W.switching ? forArtist : (cur() !== 'all' ? cur() : 'jv') }));
+      if (g(r, 'flightNo')) v.flight = parseFlight(g(r, 'flightNo'))?.pretty || g(r, 'flightNo'); if (parseTime(g(r, 'arr'))) v.arr = parseTime(g(r, 'arr')); if (g(r, 'conf')) v.conf = g(r, 'conf');
+      DB.travel.push(v); ids.travel.push(v.id);
     });
   } else if (K === 'guests') {
     preview.push(['Guest', '+', 'For', 'Show', 'Status']);
@@ -1948,6 +2080,54 @@ function buildImport(dry) {
       preview.push([name, plus, P(by).name, `${short(s.date)} ${cityOf(s)}`, status]);
       counts.guests++; if (dry) return;
       const gg = tag({ id: uid('g'), show: s.id, name, plus, by, status }); DB.guests.push(gg); ids.guests.push(gg.id);
+    });
+  } else if (K === 'people') {
+    preview.push(['Name', 'Job', 'Phone or email']);
+    W.data.forEach((r, i) => {
+      const name = g(r, 'name'); if (!name) { skipped.push(`row ${i + 2}: no name`); return; }
+      if (exactPerson(name)) { skipped.push(`${name} is already in Party`); return; }
+      preview.push([name, g(r, 'role'), g(r, 'ph') || g(r, 'email')]);
+      counts.people++; if (dry) return;
+      const k = uid('p'); DB.people[k] = tag({ name, kind: 'crew', role: [g(r, 'role'), g(r, 'party')].filter(Boolean).join(' · '), group: 'road', ph: g(r, 'ph') || g(r, 'email'), email: g(r, 'email'), hue: Math.floor(Math.random() * 360), over: {}, artists: [forArtist] }); ids.people.push(k);
+    });
+  } else if (K === 'rooms') {
+    preview.push(['Guest', 'Hotel', 'Room', 'Check in']);
+    const seenHotels = new Set();
+    W.data.forEach((r, i) => {
+      const name = g(r, 'name'), hotel = g(r, 'hotel'); if (!name || !hotel) { skipped.push(`row ${i + 2}: no guest or hotel`); return; }
+      const ci = parseDate(g(r, 'checkIn')), co = parseDate(g(r, 'checkOut'));
+      const hk = norm(hotel) + '|' + ci;
+      if (!seenHotels.has(hk) && !DB.travel.some(x => x.type === 'hotel' && norm(x.name || x.label) === norm(hotel) && (!ci || (x.checkIn || x.date) === ci))) {
+        seenHotels.add(hk); counts.travel++;
+        if (!dry) { const h = tag({ id: uid('v'), type: 'hotel', date: ci || NOW.date, name: hotel, label: hotel, address: g(r, 'address'), checkIn: ci || NOW.date, checkOut: co || (ci ? addDays(ci, 1) : ''), conf: g(r, 'conf'), time: '', detail: '', who: 'road', artist: forArtist }); DB.travel.push(h); ids.travel.push(h.id); }
+      }
+      const pk = exactPerson(name) || findPerson(name);
+      if (!pk) { skipped.push(`${name}: not in Party yet — bring the team file too`); return; }
+      preview.push([name, hotel, g(r, 'room'), ci ? short(ci) : '']);
+      if (!g(r, 'room')) return;
+      counts.rooms++; if (dry) return;
+      if (!(pk in oldRooms)) oldRooms[pk] = DB.people[pk].room || ''; DB.people[pk].room = g(r, 'room');
+    });
+  } else if (K === 'lines') {
+    preview.push(['Line item', 'Amount', 'Show']);
+    W.data.forEach((r, i) => {
+      const label = g(r, 'label'), amt = cents(g(r, 'amount')); if (!label || !amt) { skipped.push(`row ${i + 2}: no line item or amount`); return; }
+      if (/income|revenue|ticket sales|gross/i.test(g(r, 'type'))) { skipped.push(`${label}: income — GigTrip works that out from tickets sold`); return; }
+      const s = findShow(g(r, 'show'), parseDate(g(r, 'show'))) || (W.defaultShow ? show(W.defaultShow) : null);
+      if (!s) { skipped.push(`row ${i + 2}: ${label} — no show`); return; }
+      preview.push([label, money(Math.abs(amt)), `${short(s.date)} ${cityOf(s)}`]);
+      counts.lines++; if (dry) return;
+      const e = tag({ id: uid('e'), show: s.id, label, cents: Math.abs(amt) }); DB.showExp.push(e); ids.lines.push(e.id);
+    });
+  } else if (K === 'daysheet') {
+    preview.push(['Time', 'What']);
+    const s = (W.dsDate && (DB.shows.find(x => x.date === W.dsDate && x.artist === forArtist) || DB.shows.find(x => x.date === W.dsDate))) || (W.dsDate ? null : (W.defaultShow ? show(W.defaultShow) : null));
+    if (!s) skipped.push(W.dsDate ? `Day sheet: no show on ${short(W.dsDate)}` : 'Day sheet: no show to attach it to');
+    else W.data.forEach(r => {
+      const time = parseTime(g(r, 'time')), label = g(r, 'label'); if (!time || !label) return;
+      if (DB.slots.some(x => x.show === s.id && x.time === time && norm(x.label) === norm(label))) return;
+      preview.push([time, label]); counts.slots++; if (dry) return;
+      const sl = tag({ id: uid('s'), show: s.id, time, label, who: '', key: norm(label) === norm(artist(s.artist).name) }); DB.slots.push(sl); ids.slots.push(sl.id);
     });
   } else if (K === 'budget') {
     preview.push(['Category', 'Budget', 'Actual', 'Tour']);
@@ -1964,7 +2144,7 @@ function buildImport(dry) {
   if (!dry) {
     ids.artists = DB.artists.filter(a => !snapshotArtists.includes(a.id)).map(a => a.id);
     counts.artists = ids.artists.length;
-    const rec = { id: impId, at: 'Just now', date: NOW.date, source: SOURCES.find(s => s.id === W.source).name, file: W.file ? W.file.name : 'Pasted', sheet: W.sheets.length > 1 ? W.sheets[W.sheet].name : '', kind: IMPORT_KINDS[K].label, counts, ids, skipped: skipped.length, by: me() };
+    const rec = { id: impId, at: 'Just now', date: NOW.date, source: SOURCES.find(s => s.id === W.source).name, file: W.file ? W.file.name : 'Pasted', sheet: W.sheets.length > 1 ? W.sheets[W.sheet].name : '', kind: IMPORT_KINDS[K].label, counts, ids, skipped: skipped.length, by: me(), rooms: oldRooms };
     DB.imports.unshift(rec);
     const total = Object.entries(counts).filter(([k]) => k !== 'updated').reduce((a, [, n]) => a + n, 0);
     log(`Imported ${total} item${total === 1 ? '' : 's'} (${IMPORT_KINDS[K].label.toLowerCase()}) from ${rec.source}`);
@@ -1987,6 +2167,8 @@ function undoImport(id) {
   const showIds = new Set(rec.ids.shows || []);
   ['tasks', 'slots', 'contacts', 'guests', 'travel', 'budget', 'docs', 'showExp'].forEach(k => { DB[k] = DB[k].filter(x => x.src !== id && !showIds.has(x.show)); });
   drop('shows'); drop('tours');
+  Object.keys(DB.people).forEach(k => { if (DB.people[k].src === id) delete DB.people[k]; });
+  Object.entries(rec.rooms || {}).forEach(([k, room]) => { if (DB.people[k]) DB.people[k].room = room; });
   DB.artists = DB.artists.filter(a => a.src !== id || DB.shows.some(s => s.artist === a.id));
   DB.imports = DB.imports.filter(x => x !== rec);
   if (!show(S.showId)) S.showId = null;
@@ -2035,7 +2217,7 @@ V.imports = () => `
     <div class="row between wrap"><div><h2>${esc(r.file)}${r.sheet ? ` · ${esc(r.sheet)}` : ''}</h2><div class="small muted">${esc(r.source)} · ${esc(r.kind)} · ${esc(r.at)} by ${esc(P(r.by).name)}${r.skipped ? ` · ${r.skipped} rows skipped` : ''}</div></div>
       <button class="btn btn-outline btn-sm" data-act="undoImport" data-id="${r.id}">Undo this import</button></div>
     <div class="donelist">${Object.entries(r.counts).filter(([, n]) => n).map(([k, n]) => `<a href="#${WHERE[k][1]}"><span class="cnt2">${n}</span><span class="grow"><b>${COUNT_LABELS[k]}</b><span class="small muted">on ${WHERE[k][0]}</span></span>${icon('chev')}</a>`).join('')}</div>
-  </section>`).join('') : `<section class="card stack"><h2>Nothing imported yet</h2><p class="muted" style="margin:0">Bring your dates sheet from Excel, or an export from ClickUp, Master Tour, Daysheets, Artist Growth, Prism or a calendar. You match the columns, check a preview, and see exactly where every row landed.</p>
+  </section>`).join('') : `<section class="card stack"><h2>Nothing imported yet</h2><p class="muted" style="margin:0">Bring your dates sheet from Excel, switch everything over from RoadOps or Master Tour in one go, or import from ClickUp, Daysheets, Artist Growth, Prism or a calendar. You match the columns, check a preview, and see exactly where every row landed.</p>
     <div class="srcgrid">${SOURCES.map(s => `<button type="button" class="srccard" data-act="importFrom" data-id="${s.id}"><b>${esc(s.name)}</b><span class="small muted">${esc(s.hint)}</span></button>`).join('')}</div></section>`}`;
 
 

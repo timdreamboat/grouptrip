@@ -59,6 +59,25 @@ and what's pending**.
   text, small tap targets, broken pictures, plus an eye-test checklist. Order
   for every major GigTrip change: gigtrip-qa → gigtrip-ui-qa → code review →
   publish.
+- Switch from RoadOps / Master Tour (2026-11-17, owner: "build the import
+  from RoadOps and Master Tour"): two sources in the import wizard marked
+  "switch everything" (`SWITCH`). The Files step takes several exports at
+  once (plus a day sheet pasted as text), recognises each by its columns and
+  file name (`detectKind` + `FILE_HINTS`), lets you fix any with **Columns**,
+  previews the whole lot on a copy of the data (`runBatch(true)`, `SIM`
+  stops saving) and imports in dependency order (`BATCH_ORDER`): shows →
+  team → travel → rooming list → guests → settlement lines → day sheet. New
+  import kinds: `people` (Party, always as Band & crew), `rooms` (hotel +
+  room on each person's card, old rooms restored on undo), `lines`
+  (settlement costs in cents; income rows skipped), `daysheet`. Each file is
+  its own import record, so each can be undone.
+  **Not verified against real exports**: neither company publishes its
+  column names (Master Tour documents three CSV exports — Tour Details,
+  Tour Personnel, Line Items — without columns; RoadOps documents none).
+  `gigtrip/demo/switch/` holds our own example files in a typical layout
+  (see its README); the wizard's "Try it with example files" loads them.
+  When a real export arrives, run it through and add its header words to
+  `IMPORT_KINDS`.
 - Custom views (2026-11-17, owner: "flexibility for users to customize their
   view" — the gap against RoadOps, see `docs/GIGTRIP-VS-ROADOPS.md`):
   - Each person (`DB.prefs[person]`, `DB.views[person]`): Season table
