@@ -82,6 +82,16 @@
   { const imgs = [...main.querySelectorAll('img.aph')]; await Promise.all(imgs.map(i => i.complete ? null : new Promise(r => { i.onload = i.onerror = r; }))); check(imgs.length >= 12 && imgs.every(i => i.naturalWidth > 0), 'An artist picture on the Artists page did not load (wrong demo/img path?)'); }
   { const ok = await new Promise(r => { const i = new Image(); i.onload = () => r(true); i.onerror = () => r(false); i.src = DB.tours[0].cover; }); check(ok, `Tour cover did not load: ${DB.tours[0].cover}`); }
 
+  // UAT 2026-11-17 blockers and friction, so they can't come back.
+  S.role = 'crew'; S.artistId = 'jv'; render('travel'); check(/Room 616/.test(txt()) && !/Room 614|Room 610|Juniper/.test(main.querySelector('.hotel')?.innerText || ''), 'Crew can see other people’s hotel rooms');
+  S.role = 'artist'; render('travel'); check(/Room 614/.test(txt()) && !/Room 610|Room 616/.test(txt()), 'Artist can see other people’s hotel rooms');
+  S.role = 'crew'; S.showId = 'nyc'; S.showTab = 'advance'; render('show'); check(!/Contract signed|Deposit received/.test(txt()) && /Tech rider sent/.test(txt()), 'Crew see the office’s contract and deposit tasks');
+  S.role = 'venue'; S.showTab = 'sheet'; render('show'); check(!/Reserve on OpenTable/.test(txt()), 'Venue sees the tour’s dinner booking button');
+  render('about'); check(!/Prototype|Demo as|Excel/i.test(txt()), 'Venue sees the company pitch on the help page');
+  S.role = 'manager'; S.artistId = 'co'; const coShow = DB.shows.find(x => x.artist === 'co' && x.date >= NOW.date); S.showId = coShow.id; S.showTab = 'supply'; render('show'); check(!/Greg Ho|Canal Street|Theo Marsh/.test(main.querySelector('.card.stack')?.innerText.replace(/^[\s\S]*?Contacts/, '') || ''), 'Another show lists the New York venue’s people or another artist’s band under Who brings what');
+  S.tourId = 't2'; render('tour'); check(!/Add cities we recognise/.test(txt()) && DB.shows.every(x => x.ll), 'A sample tour has no route (a city without coordinates)');
+  S.role = 'tm'; S.artistId = 'jv'; render('today'); check(!/ E[SD]T · [\s\S]*\(E[SD]T\)/.test(txt()) || (txt().match(/E[SD]T/g) || []).every((z, i, a) => z === a[0]), 'Today shows two different time-zone names for the same venue');
+  S.role = 'manager'; S.artistId = 'jv';
   // 3. The logo goes to each role's own home; every page has help.
   for (const r of roles) { S.role = r; S.artistId = 'jv'; const home = navFor()[0][0]; check(['home', 'myhome', 'today'].includes(home), `${r}: logo home is ${home}`); for (const [k] of navFor()) if (k !== 'more') check(!!HELP[k] || k === 'about', `${r}: no help text for ${k}`); }
 
